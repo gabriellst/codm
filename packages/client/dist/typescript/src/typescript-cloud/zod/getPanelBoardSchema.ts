@@ -3,8 +3,10 @@
 * Do not edit manually.
 */
 
+import { batchSchema } from "./batchSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
+import { panelHealthSchema } from "./panelHealthSchema.ts";
 import { z } from "zod/v4";
 
 export const getPanelBoardPathParamsSchema = z.object({
@@ -19,6 +21,12 @@ export const getPanelBoard200Schema = z.object({
     "name": z.string()
     }),
 "daemonLastSeenAt": z.optional(z.string()),
+get "health"(){
+                return panelHealthSchema.optional()
+              },
+get "batches"(){
+                return z.array(batchSchema)
+              },
 "issues": z.array(z.object({
     "issueId": z.uuid(),
 "key": z.string(),

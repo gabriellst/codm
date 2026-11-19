@@ -1372,6 +1372,34 @@
                         "updatedAt"
                       ]
                     }
+                  },
+                  "batches": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "threadId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "batch": {
+                          "$ref": "#/components/schemas/Batch"
+                        }
+                      },
+                      "required": [
+                        "threadId",
+                        "batch"
+                      ]
+                    }
+                  },
+                  "health": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PanelHealth"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -2004,6 +2032,19 @@
                     "daemonLastSeenAt": {
                       "type": "string"
                     },
+                    "health": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PanelHealth"
+                        }
+                      ]
+                    },
+                    "batches": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Batch"
+                      }
+                    },
                     "issues": {
                       "type": "array",
                       "items": {
@@ -2047,6 +2088,7 @@
                   },
                   "required": [
                     "group",
+                    "batches",
                     "issues"
                   ],
                   "additionalProperties": false
@@ -3418,6 +3460,7 @@
           "FORBIDDEN",
           "GATEWAY_UNAVAILABLE",
           "HANDLER_NOT_BOUND",
+          "HEALTH_NOT_SAMPLED",
           "INVALIDATED_AUTH_TOKEN",
           "INVALID_AUTH_TOKEN",
           "INVALID_CONTROLLER_EXAMPLES",
@@ -3581,6 +3624,272 @@
         "required": [
           "id",
           "label"
+        ]
+      },
+      "BatchStatus": {
+        "type": "string",
+        "enum": [
+          "INCOMPLETE",
+          "RECORDED"
+        ]
+      },
+      "Batch": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchStatus"
+          },
+          "sourceEntryId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchItem"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "status",
+          "sourceEntryId",
+          "items"
+        ]
+      },
+      "BatchItem": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "destination": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatchItemDestination"
+              }
+            ]
+          }
+        },
+        "required": [
+          "n",
+          "excerpt"
+        ]
+      },
+      "BatchItemDestinationKind": {
+        "type": "string",
+        "enum": [
+          "ALREADY_LIVE",
+          "ATTACHED",
+          "DECLINED",
+          "DEFERRED",
+          "NEEDS_DECISION",
+          "NEW_ISSUE"
+        ]
+      },
+      "BatchItemDestination": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "NEW_ISSUE"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "ATTACHED"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "ALREADY_LIVE"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "kind",
+              "note"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "DECLINED"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "kind",
+              "reason"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "DEFERRED"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "until": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "kind",
+              "reason"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "NEEDS_DECISION"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "stopId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId",
+              "stopId"
+            ]
+          }
+        ]
+      },
+      "QuotaState": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "NEAR",
+          "HOLDING",
+          "REFUSED"
+        ]
+      },
+      "PanelHealth": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/QuotaState"
+          },
+          "windowPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "weekPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "slots": {
+            "type": "object",
+            "properties": {
+              "inUse": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "effective": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "inUse",
+              "effective"
+            ]
+          },
+          "queuePending": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "daemonSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "state",
+          "windowPercent",
+          "weekPercent",
+          "slots",
+          "queuePending",
+          "daemonSeenAt"
         ]
       },
       "IssueStatus": {
@@ -3851,6 +4160,7 @@
     "FORBIDDEN",
     "GATEWAY_UNAVAILABLE",
     "HANDLER_NOT_BOUND",
+    "HEALTH_NOT_SAMPLED",
     "INVALIDATED_AUTH_TOKEN",
     "INVALID_AUTH_TOKEN",
     "INVALID_CONTROLLER_EXAMPLES",

@@ -58,6 +58,7 @@ const (
 	FORBIDDEN                       ApiErrors = "FORBIDDEN"
 	GATEWAYUNAVAILABLE              ApiErrors = "GATEWAY_UNAVAILABLE"
 	HANDLERNOTBOUND                 ApiErrors = "HANDLER_NOT_BOUND"
+	HEALTHNOTSAMPLED                ApiErrors = "HEALTH_NOT_SAMPLED"
 	INVALIDATEDAUTHTOKEN            ApiErrors = "INVALIDATED_AUTH_TOKEN"
 	INVALIDAUTHTOKEN                ApiErrors = "INVALID_AUTH_TOKEN"
 	INVALIDCONTROLLEREXAMPLES       ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
@@ -229,6 +230,8 @@ func (e ApiErrors) Valid() bool {
 	case GATEWAYUNAVAILABLE:
 		return true
 	case HANDLERNOTBOUND:
+		return true
+	case HEALTHNOTSAMPLED:
 		return true
 	case INVALIDATEDAUTHTOKEN:
 		return true
@@ -490,24 +493,72 @@ func (e AskEffect) Valid() bool {
 	}
 }
 
+// Defines values for BatchItemDestinationKind.
+const (
+	BatchItemDestinationKindALREADYLIVE   BatchItemDestinationKind = "ALREADY_LIVE"
+	BatchItemDestinationKindATTACHED      BatchItemDestinationKind = "ATTACHED"
+	BatchItemDestinationKindDECLINED      BatchItemDestinationKind = "DECLINED"
+	BatchItemDestinationKindDEFERRED      BatchItemDestinationKind = "DEFERRED"
+	BatchItemDestinationKindNEEDSDECISION BatchItemDestinationKind = "NEEDS_DECISION"
+	BatchItemDestinationKindNEWISSUE      BatchItemDestinationKind = "NEW_ISSUE"
+)
+
+// Valid indicates whether the value is a known member of the BatchItemDestinationKind enum.
+func (e BatchItemDestinationKind) Valid() bool {
+	switch e {
+	case BatchItemDestinationKindALREADYLIVE:
+		return true
+	case BatchItemDestinationKindATTACHED:
+		return true
+	case BatchItemDestinationKindDECLINED:
+		return true
+	case BatchItemDestinationKindDEFERRED:
+		return true
+	case BatchItemDestinationKindNEEDSDECISION:
+		return true
+	case BatchItemDestinationKindNEWISSUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BatchStatus.
+const (
+	INCOMPLETE BatchStatus = "INCOMPLETE"
+	RECORDED   BatchStatus = "RECORDED"
+)
+
+// Valid indicates whether the value is a known member of the BatchStatus enum.
+func (e BatchStatus) Valid() bool {
+	switch e {
+	case INCOMPLETE:
+		return true
+	case RECORDED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassificationMethod.
 const (
-	CLARIFIED    ClassificationMethod = "CLARIFIED"
-	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
-	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
-	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+	ClassificationMethodCLARIFIED    ClassificationMethod = "CLARIFIED"
+	ClassificationMethodCONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	ClassificationMethodNEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	ClassificationMethodREPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
 )
 
 // Valid indicates whether the value is a known member of the ClassificationMethod enum.
 func (e ClassificationMethod) Valid() bool {
 	switch e {
-	case CLARIFIED:
+	case ClassificationMethodCLARIFIED:
 		return true
-	case CONTEXTMATCH:
+	case ClassificationMethodCONTEXTMATCH:
 		return true
-	case NEWISSUE:
+	case ClassificationMethodNEWISSUE:
 		return true
-	case REPLYQUOTE:
+	case ClassificationMethodREPLYQUOTE:
 		return true
 	default:
 		return false
@@ -862,6 +913,30 @@ func (e PublishRunOutcome) Valid() bool {
 	}
 }
 
+// Defines values for QuotaState.
+const (
+	HOLDING QuotaState = "HOLDING"
+	NEAR    QuotaState = "NEAR"
+	OK      QuotaState = "OK"
+	REFUSED QuotaState = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the QuotaState enum.
+func (e QuotaState) Valid() bool {
+	switch e {
+	case HOLDING:
+		return true
+	case NEAR:
+		return true
+	case OK:
+		return true
+	case REFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegretWindowOutcome.
 const (
 	RegretWindowOutcomeCANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
@@ -1072,6 +1147,71 @@ type AskOption struct {
 	Label      string       `json:"label"`
 }
 
+// Batch defines model for Batch.
+type Batch struct {
+	Code          string             `json:"code"`
+	Items         []BatchItem        `json:"items"`
+	SourceEntryId openapi_types.UUID `json:"sourceEntryId"`
+	Status        BatchStatus        `json:"status"`
+}
+
+// BatchItem defines model for BatchItem.
+type BatchItem struct {
+	Destination *BatchItemDestination `json:"destination,omitempty"`
+	Excerpt     string                `json:"excerpt"`
+	N           int                   `json:"n"`
+}
+
+// BatchItemDestination defines model for BatchItemDestination.
+type BatchItemDestination struct {
+	union json.RawMessage
+}
+
+// BatchItemDestination0 defines model for .
+type BatchItemDestination0 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// BatchItemDestination1 defines model for .
+type BatchItemDestination1 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// BatchItemDestination2 defines model for .
+type BatchItemDestination2 struct {
+	IssueId *openapi_types.UUID `json:"issueId,omitempty"`
+	Kind    string              `json:"kind"`
+	Note    string              `json:"note"`
+}
+
+// BatchItemDestination3 defines model for .
+type BatchItemDestination3 struct {
+	Kind   string `json:"kind"`
+	Reason string `json:"reason"`
+}
+
+// BatchItemDestination4 defines model for .
+type BatchItemDestination4 struct {
+	Kind   string     `json:"kind"`
+	Reason string     `json:"reason"`
+	Until  *time.Time `json:"until,omitempty"`
+}
+
+// BatchItemDestination5 defines model for .
+type BatchItemDestination5 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	StopId  openapi_types.UUID `json:"stopId"`
+}
+
+// BatchItemDestinationKind defines model for BatchItemDestinationKind.
+type BatchItemDestinationKind string
+
+// BatchStatus defines model for BatchStatus.
+type BatchStatus string
+
 // ClassificationMethod defines model for ClassificationMethod.
 type ClassificationMethod string
 
@@ -1111,8 +1251,24 @@ type PanelActionOutcome string
 // PanelActionStatus defines model for PanelActionStatus.
 type PanelActionStatus string
 
+// PanelHealth defines model for PanelHealth.
+type PanelHealth struct {
+	DaemonSeenAt time.Time `json:"daemonSeenAt"`
+	QueuePending int       `json:"queuePending"`
+	Slots        struct {
+		Effective int `json:"effective"`
+		InUse     int `json:"inUse"`
+	} `json:"slots"`
+	State         QuotaState `json:"state"`
+	WeekPercent   float32    `json:"weekPercent"`
+	WindowPercent float32    `json:"windowPercent"`
+}
+
 // PublishRunOutcome defines model for PublishRunOutcome.
 type PublishRunOutcome string
+
+// QuotaState defines model for QuotaState.
+type QuotaState string
 
 // RegretWindowOutcome defines model for RegretWindowOutcome.
 type RegretWindowOutcome string
@@ -1533,10 +1689,15 @@ type SyncPanelRoster200JSONResponseBody_Actions_Action struct {
 
 // SyncPanelJSONBody defines parameters for SyncPanel.
 type SyncPanelJSONBody struct {
+	Batches *[]struct {
+		Batch    Batch              `json:"batch"`
+		ThreadId openapi_types.UUID `json:"threadId"`
+	} `json:"batches,omitempty"`
 	Groups []struct {
 		Name     string             `json:"name"`
 		ThreadId openapi_types.UUID `json:"threadId"`
 	} `json:"groups"`
+	Health *PanelHealth `json:"health,omitempty"`
 	Issues []struct {
 		Archived                bool                                     `json:"archived"`
 		IssueId                 openapi_types.UUID                       `json:"issueId"`
@@ -1796,6 +1957,172 @@ func (t AskAnswer) MarshalJSON() ([]byte, error) {
 }
 
 func (t *AskAnswer) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsBatchItemDestination0 returns the union data inside the BatchItemDestination as a BatchItemDestination0
+func (t BatchItemDestination) AsBatchItemDestination0() (BatchItemDestination0, error) {
+	var body BatchItemDestination0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination0 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination0
+func (t *BatchItemDestination) FromBatchItemDestination0(v BatchItemDestination0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination0 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination0
+func (t *BatchItemDestination) MergeBatchItemDestination0(v BatchItemDestination0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination1 returns the union data inside the BatchItemDestination as a BatchItemDestination1
+func (t BatchItemDestination) AsBatchItemDestination1() (BatchItemDestination1, error) {
+	var body BatchItemDestination1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination1 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination1
+func (t *BatchItemDestination) FromBatchItemDestination1(v BatchItemDestination1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination1 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination1
+func (t *BatchItemDestination) MergeBatchItemDestination1(v BatchItemDestination1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination2 returns the union data inside the BatchItemDestination as a BatchItemDestination2
+func (t BatchItemDestination) AsBatchItemDestination2() (BatchItemDestination2, error) {
+	var body BatchItemDestination2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination2 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination2
+func (t *BatchItemDestination) FromBatchItemDestination2(v BatchItemDestination2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination2 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination2
+func (t *BatchItemDestination) MergeBatchItemDestination2(v BatchItemDestination2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination3 returns the union data inside the BatchItemDestination as a BatchItemDestination3
+func (t BatchItemDestination) AsBatchItemDestination3() (BatchItemDestination3, error) {
+	var body BatchItemDestination3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination3 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination3
+func (t *BatchItemDestination) FromBatchItemDestination3(v BatchItemDestination3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination3 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination3
+func (t *BatchItemDestination) MergeBatchItemDestination3(v BatchItemDestination3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination4 returns the union data inside the BatchItemDestination as a BatchItemDestination4
+func (t BatchItemDestination) AsBatchItemDestination4() (BatchItemDestination4, error) {
+	var body BatchItemDestination4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination4 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination4
+func (t *BatchItemDestination) FromBatchItemDestination4(v BatchItemDestination4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination4 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination4
+func (t *BatchItemDestination) MergeBatchItemDestination4(v BatchItemDestination4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination5 returns the union data inside the BatchItemDestination as a BatchItemDestination5
+func (t BatchItemDestination) AsBatchItemDestination5() (BatchItemDestination5, error) {
+	var body BatchItemDestination5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination5 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination5
+func (t *BatchItemDestination) FromBatchItemDestination5(v BatchItemDestination5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination5 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination5
+func (t *BatchItemDestination) MergeBatchItemDestination5(v BatchItemDestination5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t BatchItemDestination) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *BatchItemDestination) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -5435,10 +5762,12 @@ type GetPanelBoardResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
+		Batches          []Batch `json:"batches"`
 		DaemonLastSeenAt *string `json:"daemonLastSeenAt,omitempty"`
 		Group            struct {
 			Name string `json:"name"`
 		} `json:"group"`
+		Health *PanelHealth `json:"health,omitempty"`
 		Issues []struct {
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
@@ -6670,10 +6999,12 @@ func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
+			Batches          []Batch `json:"batches"`
 			DaemonLastSeenAt *string `json:"daemonLastSeenAt,omitempty"`
 			Group            struct {
 				Name string `json:"name"`
 			} `json:"group"`
+			Health *PanelHealth `json:"health,omitempty"`
 			Issues []struct {
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`

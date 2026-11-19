@@ -83,6 +83,7 @@ pub mod types {
     ///    "FORBIDDEN",
     ///    "GATEWAY_UNAVAILABLE",
     ///    "HANDLER_NOT_BOUND",
+    ///    "HEALTH_NOT_SAMPLED",
     ///    "INVALIDATED_AUTH_TOKEN",
     ///    "INVALID_AUTH_TOKEN",
     ///    "INVALID_CONTROLLER_EXAMPLES",
@@ -267,6 +268,8 @@ pub mod types {
         GatewayUnavailable,
         #[serde(rename = "HANDLER_NOT_BOUND")]
         HandlerNotBound,
+        #[serde(rename = "HEALTH_NOT_SAMPLED")]
+        HealthNotSampled,
         #[serde(rename = "INVALIDATED_AUTH_TOKEN")]
         InvalidatedAuthToken,
         #[serde(rename = "INVALID_AUTH_TOKEN")]
@@ -511,6 +514,7 @@ pub mod types {
                 Self::Forbidden => f.write_str("FORBIDDEN"),
                 Self::GatewayUnavailable => f.write_str("GATEWAY_UNAVAILABLE"),
                 Self::HandlerNotBound => f.write_str("HANDLER_NOT_BOUND"),
+                Self::HealthNotSampled => f.write_str("HEALTH_NOT_SAMPLED"),
                 Self::InvalidatedAuthToken => f.write_str("INVALIDATED_AUTH_TOKEN"),
                 Self::InvalidAuthToken => f.write_str("INVALID_AUTH_TOKEN"),
                 Self::InvalidControllerExamples => {
@@ -666,6 +670,7 @@ pub mod types {
                 "FORBIDDEN" => Ok(Self::Forbidden),
                 "GATEWAY_UNAVAILABLE" => Ok(Self::GatewayUnavailable),
                 "HANDLER_NOT_BOUND" => Ok(Self::HandlerNotBound),
+                "HEALTH_NOT_SAMPLED" => Ok(Self::HealthNotSampled),
                 "INVALIDATED_AUTH_TOKEN" => Ok(Self::InvalidatedAuthToken),
                 "INVALID_AUTH_TOKEN" => Ok(Self::InvalidAuthToken),
                 "INVALID_CONTROLLER_EXAMPLES" => Ok(Self::InvalidControllerExamples),
@@ -1221,6 +1226,607 @@ pub mod types {
                 })
         }
     }
+    ///`Batch`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "items",
+    ///    "sourceEntryId",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string",
+    ///      "maxLength": 20,
+    ///      "minLength": 1
+    ///    },
+    ///    "items": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/BatchItem"
+    ///      },
+    ///      "maxItems": 50
+    ///    },
+    ///    "sourceEntryId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/BatchStatus"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct Batch {
+        pub code: BatchCode,
+        pub items: ::std::vec::Vec<BatchItem>,
+        #[serde(rename = "sourceEntryId")]
+        pub source_entry_id: ::uuid::Uuid,
+        pub status: ::codm_contracts_rust::wire::enums::BatchStatus,
+    }
+    impl ::std::convert::From<&Batch> for Batch {
+        fn from(value: &Batch) -> Self {
+            value.clone()
+        }
+    }
+    ///`BatchCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 20,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchCode(::std::string::String);
+    impl ::std::ops::Deref for BatchCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchCode> for ::std::string::String {
+        fn from(value: BatchCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchCode> for BatchCode {
+        fn from(value: &BatchCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 20usize {
+                return Err("longer than 20 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`BatchItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "excerpt",
+    ///    "n"
+    ///  ],
+    ///  "properties": {
+    ///    "destination": {
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/BatchItemDestination"
+    ///        }
+    ///      ]
+    ///    },
+    ///    "excerpt": {
+    ///      "type": "string",
+    ///      "maxLength": 500
+    ///    },
+    ///    "n": {
+    ///      "type": "integer",
+    ///      "maximum": 50.0,
+    ///      "minimum": 1.0
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct BatchItem {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub destination: ::std::option::Option<BatchItemDestination>,
+        pub excerpt: BatchItemExcerpt,
+        pub n: ::std::num::NonZeroU64,
+    }
+    impl ::std::convert::From<&BatchItem> for BatchItem {
+        fn from(value: &BatchItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`BatchItemDestination`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NEW_ISSUE"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ATTACHED"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "note"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ALREADY_LIVE"
+    ///          ]
+    ///        },
+    ///        "note": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "reason"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DECLINED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "reason"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DEFERRED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        },
+    ///        "until": {
+    ///          "type": "string",
+    ///          "format": "date-time",
+    ///          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NEEDS_DECISION"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum BatchItemDestination {
+        #[serde(rename = "NEW_ISSUE")]
+        NewIssue { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "ATTACHED")]
+        Attached { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "ALREADY_LIVE")]
+        AlreadyLive {
+            #[serde(
+                rename = "issueId",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            issue_id: ::std::option::Option<::uuid::Uuid>,
+            note: BatchItemDestinationNote,
+        },
+        #[serde(rename = "DECLINED")]
+        Declined { reason: BatchItemDestinationReason },
+        #[serde(rename = "DEFERRED")]
+        Deferred {
+            reason: BatchItemDestinationReason,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            until: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+        },
+        #[serde(rename = "NEEDS_DECISION")]
+        NeedsDecision {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+    }
+    impl ::std::convert::From<&Self> for BatchItemDestination {
+        fn from(value: &BatchItemDestination) -> Self {
+            value.clone()
+        }
+    }
+    ///`BatchItemDestinationNote`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemDestinationNote(::std::string::String);
+    impl ::std::ops::Deref for BatchItemDestinationNote {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemDestinationNote> for ::std::string::String {
+        fn from(value: BatchItemDestinationNote) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemDestinationNote> for BatchItemDestinationNote {
+        fn from(value: &BatchItemDestinationNote) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemDestinationNote {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemDestinationNote {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`BatchItemDestinationReason`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemDestinationReason(::std::string::String);
+    impl ::std::ops::Deref for BatchItemDestinationReason {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemDestinationReason> for ::std::string::String {
+        fn from(value: BatchItemDestinationReason) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemDestinationReason>
+    for BatchItemDestinationReason {
+        fn from(value: &BatchItemDestinationReason) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemDestinationReason {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemDestinationReason {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`BatchItemExcerpt`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemExcerpt(::std::string::String);
+    impl ::std::ops::Deref for BatchItemExcerpt {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemExcerpt> for ::std::string::String {
+        fn from(value: BatchItemExcerpt) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemExcerpt> for BatchItemExcerpt {
+        fn from(value: &BatchItemExcerpt) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemExcerpt {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemExcerpt {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`ClaimSignInCodeResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -1737,10 +2343,17 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "batches",
     ///    "group",
     ///    "issues"
     ///  ],
     ///  "properties": {
+    ///    "batches": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/Batch"
+    ///      }
+    ///    },
     ///    "daemonLastSeenAt": {
     ///      "type": "string"
     ///    },
@@ -1755,6 +2368,13 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    "health": {
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/PanelHealth"
+    ///        }
+    ///      ]
     ///    },
     ///    "issues": {
     ///      "type": "array",
@@ -1804,6 +2424,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetPanelBoardResponse {
+        pub batches: ::std::vec::Vec<Batch>,
         #[serde(
             rename = "daemonLastSeenAt",
             default,
@@ -1811,6 +2432,8 @@ pub mod types {
         )]
         pub daemon_last_seen_at: ::std::option::Option<::std::string::String>,
         pub group: GetPanelBoardResponseGroup,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub health: ::std::option::Option<PanelHealth>,
         pub issues: ::std::vec::Vec<GetPanelBoardResponseIssuesItem>,
     }
     impl ::std::convert::From<&GetPanelBoardResponse> for GetPanelBoardResponse {
@@ -4763,6 +5386,123 @@ pub mod types {
                 })
         }
     }
+    ///`PanelHealth`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "daemonSeenAt",
+    ///    "queuePending",
+    ///    "slots",
+    ///    "state",
+    ///    "weekPercent",
+    ///    "windowPercent"
+    ///  ],
+    ///  "properties": {
+    ///    "daemonSeenAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
+    ///    "queuePending": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "slots": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "effective",
+    ///        "inUse"
+    ///      ],
+    ///      "properties": {
+    ///        "effective": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "inUse": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      }
+    ///    },
+    ///    "state": {
+    ///      "$ref": "#/components/schemas/QuotaState"
+    ///    },
+    ///    "weekPercent": {
+    ///      "type": "number",
+    ///      "maximum": 100.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "windowPercent": {
+    ///      "type": "number",
+    ///      "maximum": 100.0,
+    ///      "minimum": 0.0
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PanelHealth {
+        #[serde(rename = "daemonSeenAt")]
+        pub daemon_seen_at: ::chrono::DateTime<::chrono::offset::Utc>,
+        #[serde(rename = "queuePending")]
+        pub queue_pending: i64,
+        pub slots: PanelHealthSlots,
+        pub state: ::codm_contracts_rust::wire::enums::QuotaState,
+        #[serde(rename = "weekPercent")]
+        pub week_percent: f64,
+        #[serde(rename = "windowPercent")]
+        pub window_percent: f64,
+    }
+    impl ::std::convert::From<&PanelHealth> for PanelHealth {
+        fn from(value: &PanelHealth) -> Self {
+            value.clone()
+        }
+    }
+    ///`PanelHealthSlots`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "effective",
+    ///    "inUse"
+    ///  ],
+    ///  "properties": {
+    ///    "effective": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "inUse": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PanelHealthSlots {
+        pub effective: i64,
+        #[serde(rename = "inUse")]
+        pub in_use: i64,
+    }
+    impl ::std::convert::From<&PanelHealthSlots> for PanelHealthSlots {
+        fn from(value: &PanelHealthSlots) -> Self {
+            value.clone()
+        }
+    }
     ///`RequestPanelActionBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -5746,6 +6486,27 @@ pub mod types {
     ///    "issues"
     ///  ],
     ///  "properties": {
+    ///    "batches": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "batch",
+    ///          "threadId"
+    ///        ],
+    ///        "properties": {
+    ///          "batch": {
+    ///            "$ref": "#/components/schemas/Batch"
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 200
+    ///    },
     ///    "groups": {
     ///      "type": "array",
     ///      "items": {
@@ -5768,6 +6529,13 @@ pub mod types {
     ///        }
     ///      },
     ///      "maxItems": 200
+    ///    },
+    ///    "health": {
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/PanelHealth"
+    ///        }
+    ///      ]
     ///    },
     ///    "issues": {
     ///      "type": "array",
@@ -6321,11 +7089,50 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SyncPanelBody {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub batches: ::std::vec::Vec<SyncPanelBodyBatchesItem>,
         pub groups: ::std::vec::Vec<SyncPanelBodyGroupsItem>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub health: ::std::option::Option<PanelHealth>,
         pub issues: ::std::vec::Vec<SyncPanelBodyIssuesItem>,
     }
     impl ::std::convert::From<&SyncPanelBody> for SyncPanelBody {
         fn from(value: &SyncPanelBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyBatchesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "batch",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "batch": {
+    ///      "$ref": "#/components/schemas/Batch"
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBodyBatchesItem {
+        pub batch: Batch,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelBodyBatchesItem> for SyncPanelBodyBatchesItem {
+        fn from(value: &SyncPanelBodyBatchesItem) -> Self {
             value.clone()
         }
     }

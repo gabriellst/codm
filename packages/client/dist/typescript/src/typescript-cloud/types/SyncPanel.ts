@@ -6,6 +6,7 @@
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { AskAnswerKind } from "./AskAnswerKind.ts";
 import type { AskOption } from "./AskOption.ts";
+import type { Batch } from "./Batch.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { IrreversibleActionKind } from "./IrreversibleActionKind.ts";
 import type { IssueControlSource } from "./IssueControlSource.ts";
@@ -13,6 +14,7 @@ import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 import type { OutputRouting } from "./OutputRouting.ts";
+import type { PanelHealth } from "./PanelHealth.ts";
 import type { PublishRunOutcome } from "./PublishRunOutcome.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
@@ -534,6 +536,20 @@ export type SyncPanelMutationRequest = {
         */
         updatedAt: string;
     }[];
+    /**
+     * @type array | undefined
+    */
+    batches?: {
+        /**
+         * @type string, uuid
+        */
+        threadId: string;
+        /**
+         * @type object
+        */
+        batch: Batch;
+    }[];
+    health?: PanelHealth;
 };
 
 export type SyncPanelMutationResponse = SyncPanel200;

@@ -468,6 +468,7 @@ pub mod types {
     ///    "FORBIDDEN",
     ///    "GATEWAY_UNAVAILABLE",
     ///    "HANDLER_NOT_BOUND",
+    ///    "HEALTH_NOT_SAMPLED",
     ///    "INVALIDATED_AUTH_TOKEN",
     ///    "INVALID_AUTH_TOKEN",
     ///    "INVALID_CONTROLLER_EXAMPLES",
@@ -652,6 +653,8 @@ pub mod types {
         GatewayUnavailable,
         #[serde(rename = "HANDLER_NOT_BOUND")]
         HandlerNotBound,
+        #[serde(rename = "HEALTH_NOT_SAMPLED")]
+        HealthNotSampled,
         #[serde(rename = "INVALIDATED_AUTH_TOKEN")]
         InvalidatedAuthToken,
         #[serde(rename = "INVALID_AUTH_TOKEN")]
@@ -896,6 +899,7 @@ pub mod types {
                 Self::Forbidden => f.write_str("FORBIDDEN"),
                 Self::GatewayUnavailable => f.write_str("GATEWAY_UNAVAILABLE"),
                 Self::HandlerNotBound => f.write_str("HANDLER_NOT_BOUND"),
+                Self::HealthNotSampled => f.write_str("HEALTH_NOT_SAMPLED"),
                 Self::InvalidatedAuthToken => f.write_str("INVALIDATED_AUTH_TOKEN"),
                 Self::InvalidAuthToken => f.write_str("INVALID_AUTH_TOKEN"),
                 Self::InvalidControllerExamples => {
@@ -1051,6 +1055,7 @@ pub mod types {
                 "FORBIDDEN" => Ok(Self::Forbidden),
                 "GATEWAY_UNAVAILABLE" => Ok(Self::GatewayUnavailable),
                 "HANDLER_NOT_BOUND" => Ok(Self::HandlerNotBound),
+                "HEALTH_NOT_SAMPLED" => Ok(Self::HealthNotSampled),
                 "INVALIDATED_AUTH_TOKEN" => Ok(Self::InvalidatedAuthToken),
                 "INVALID_AUTH_TOKEN" => Ok(Self::InvalidAuthToken),
                 "INVALID_CONTROLLER_EXAMPLES" => Ok(Self::InvalidControllerExamples),
@@ -13210,6 +13215,7 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "budget",
     ///    "diskFreeBytes",
     ///    "queue",
     ///    "slots",
@@ -13218,6 +13224,25 @@ pub mod types {
     ///    "window"
     ///  ],
     ///  "properties": {
+    ///    "budget": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "admits",
+    ///        "enforced"
+    ///      ],
+    ///      "properties": {
+    ///        "admits": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "enforced": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "heldBy": {
+    ///          "$ref": "#/components/schemas/ProviderLimitWindow"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
     ///    "diskFreeBytes": {
     ///      "type": "integer",
     ///      "maximum": 9007199254740991.0,
@@ -13335,6 +13360,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct QuotaSnapshot {
+        pub budget: QuotaSnapshotBudget,
         #[serde(rename = "diskFreeBytes")]
         pub disk_free_bytes: i64,
         pub queue: QuotaSnapshotQueue,
@@ -13345,6 +13371,51 @@ pub mod types {
     }
     impl ::std::convert::From<&QuotaSnapshot> for QuotaSnapshot {
         fn from(value: &QuotaSnapshot) -> Self {
+            value.clone()
+        }
+    }
+    ///`QuotaSnapshotBudget`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "admits",
+    ///    "enforced"
+    ///  ],
+    ///  "properties": {
+    ///    "admits": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "enforced": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "heldBy": {
+    ///      "$ref": "#/components/schemas/ProviderLimitWindow"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshotBudget {
+        pub admits: bool,
+        pub enforced: bool,
+        #[serde(
+            rename = "heldBy",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub held_by: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::ProviderLimitWindow,
+        >,
+    }
+    impl ::std::convert::From<&QuotaSnapshotBudget> for QuotaSnapshotBudget {
+        fn from(value: &QuotaSnapshotBudget) -> Self {
             value.clone()
         }
     }

@@ -4,6 +4,7 @@ import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { IssueTimelineItemSchema } from '@shared/schemas'
+import { BatchSchema, PanelHealthSchema } from '@shared/objects'
 import { PanelStore } from '../services/PanelStore'
 
 export const PanelGroupInputSchema = z.object({ threadId: z.uuid(), name: z.string().trim().min(1).max(200) })
@@ -22,10 +23,17 @@ export const PanelIssueInputSchema = z.object({
 	updatedAt: z.iso.datetime(),
 })
 
+/** A conversation's batch (fase 4, item 5) — shown on its group's page at `#L-31`. */
+export const PanelBatchInputSchema = z.object({ threadId: z.uuid(), batch: BatchSchema })
+
 export const SyncPanelInputSchema = z.object({
 	ownerId: z.uuid(),
 	groups: z.array(PanelGroupInputSchema).max(200),
 	issues: z.array(PanelIssueInputSchema).max(500),
+	/** Optional: a daemon older than fase 4 sends none (the cloud deploys first). */
+	batches: z.array(PanelBatchInputSchema).max(200).optional(),
+	/** The owner's health badge — percentages and states only (fase 4, item 7). Absent: keep the last one. */
+	health: PanelHealthSchema.optional(),
 })
 export const SyncPanelOutputSchema = z.object({
 	/** The current link token of every group sent — new groups get one on their first sync. */
@@ -42,8 +50,8 @@ export function newPanelToken(): string {
  *
  * Everything is an upsert keyed by id, so a retry or a restart that resends the same snapshot changes
  * nothing. Rows are stamped with the CALLER's owner (from the session), never one from the body, and an
- * issue whose group is not in this same request is ignored — a daemon can only publish into groups it
- * just declared as its own.
+ * issue (or batch) whose group is not in this same request is ignored — a daemon can only publish into groups it
+ * just declared as its own. The health badge is the owner's, kept beside the daemon's last contact.
  */
 @injectable()
 export class SyncPanel extends Handler<typeof SyncPanelInputSchema, typeof SyncPanelOutputSchema> {
@@ -86,7 +94,19 @@ export class SyncPanel extends Handler<typeof SyncPanelInputSchema, typeof SyncP
 					})),
 				tx,
 			)
-			await this.store.touchDaemon(input.ownerId, new Date(), tx)
+			await this.store.upsertBatches(
+				(input.batches ?? [])
+					.filter(item => ours.has(item.threadId))
+					.map(item => ({
+						threadId: item.threadId,
+						ownerId: input.ownerId,
+						code: item.batch.code,
+						batch: item.batch,
+						updatedAt: new Date(),
+					})),
+				tx,
+			)
+			await this.store.touchDaemon(input.ownerId, new Date(), tx, input.health)
 			return { groups }
 		})
 	}

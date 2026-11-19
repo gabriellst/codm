@@ -63,6 +63,7 @@ describe('fase 4 wire objects', () => {
 				slots: { inUse: 1, max: 6, effective: 4, limitedBy: SlotLimit.MACHINE },
 				queue: { pending: 0, heldByBudget: 0 },
 				diskFreeBytes: 1024,
+				budget: { enforced: false, admits: true },
 			}).success,
 		).toBe(true)
 	})

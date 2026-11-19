@@ -10953,7 +10953,12 @@
                         "pending": 5,
                         "heldByBudget": 0
                       },
-                      "diskFreeBytes": 12884901888
+                      "diskFreeBytes": 12884901888,
+                      "budget": {
+                        "enforced": false,
+                        "admits": false,
+                        "heldBy": "FIVE_HOUR"
+                      }
                     }
                   ],
                   "allOf": [
@@ -10987,7 +10992,12 @@
                         "pending": 5,
                         "heldByBudget": 0
                       },
-                      "diskFreeBytes": 12884901888
+                      "diskFreeBytes": 12884901888,
+                      "budget": {
+                        "enforced": false,
+                        "admits": false,
+                        "heldBy": "FIVE_HOUR"
+                      }
                     },
                     "summary": "Example"
                   }
@@ -11230,6 +11240,7 @@
           "FORBIDDEN",
           "GATEWAY_UNAVAILABLE",
           "HANDLER_NOT_BOUND",
+          "HEALTH_NOT_SAMPLED",
           "INVALIDATED_AUTH_TOKEN",
           "INVALID_AUTH_TOKEN",
           "INVALID_CONTROLLER_EXAMPLES",
@@ -12091,6 +12102,14 @@
           "BUDGET"
         ]
       },
+      "ProviderLimitWindow": {
+        "type": "string",
+        "enum": [
+          "FIVE_HOUR",
+          "WEEKLY",
+          "UNKNOWN"
+        ]
+      },
       "QuotaSnapshot": {
         "type": "object",
         "properties": {
@@ -12202,6 +12221,25 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "budget": {
+            "type": "object",
+            "properties": {
+              "enforced": {
+                "type": "boolean"
+              },
+              "admits": {
+                "type": "boolean"
+              },
+              "heldBy": {
+                "$ref": "#/components/schemas/ProviderLimitWindow"
+              }
+            },
+            "required": [
+              "enforced",
+              "admits"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -12210,7 +12248,8 @@
           "week",
           "slots",
           "queue",
-          "diskFreeBytes"
+          "diskFreeBytes",
+          "budget"
         ],
         "additionalProperties": false
       },
@@ -12287,6 +12326,7 @@
     "FORBIDDEN",
     "GATEWAY_UNAVAILABLE",
     "HANDLER_NOT_BOUND",
+    "HEALTH_NOT_SAMPLED",
     "INVALIDATED_AUTH_TOKEN",
     "INVALID_AUTH_TOKEN",
     "INVALID_CONTROLLER_EXAMPLES",

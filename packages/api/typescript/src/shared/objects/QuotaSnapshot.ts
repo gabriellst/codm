@@ -5,7 +5,7 @@
 // learned ceiling, reserve — in the budget's cost unit); the cloud panel is opened by anyone holding a
 // group link, so it gets PERCENTAGES and states only — never an absolute figure of the account.
 import { z } from '@codm/core-typescript'
-import { QuotaState, SlotLimit } from '@codm/contracts-typescript/wire/enums'
+import { ProviderLimitWindow, QuotaState, SlotLimit } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 
 const amount = z.number().nonnegative()
@@ -24,6 +24,13 @@ export const QuotaSnapshotSchema = z.object({
 	/** Task items waiting, and how many of them only the budget is holding. */
 	queue: z.object({ pending: count, heldByBudget: count }),
 	diskFreeBytes: count,
+	/**
+	 * The budget's verdict on one more task turn NOW, and whether it holds for real. In observation
+	 * (`enforced: false`, the rollout's first week) a denial holds nothing — `state` is never `HOLDING` and
+	 * `queue.heldByBudget` is 0 — so this is the only place that says what the budget WOULD hold, and which window
+	 * would hold it.
+	 */
+	budget: z.object({ enforced: z.boolean(), admits: z.boolean(), heldBy: z.enum(ProviderLimitWindow).optional() }),
 })
 export type QuotaSnapshot = Z.output<typeof QuotaSnapshotSchema>
 

@@ -1,7 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { IssueLifeState, IssueStatus, IssueTimelineItemKind, PublishRunOutcome } from '@codm/contracts-typescript/wire/enums'
+import {
+	BatchItemDestinationKind,
+	BatchStatus,
+	IssueLifeState,
+	IssueStatus,
+	IssueTimelineItemKind,
+	PublishRunOutcome,
+	QuotaState,
+} from '@codm/contracts-typescript/wire/enums'
+import type { Batch, PanelHealth } from '@shared/objects'
 import type { IssueTimelineItem } from '@shared/schemas'
 import { SyncPanel } from './SyncPanel'
 import { GetPanelBoard } from './GetPanelBoard'
@@ -152,5 +161,43 @@ describe('panel — sync, public reads, rotation', () => {
 		expect(await notFound(testBed.resolve(RotatePanelLink).execute({ ownerId: OTHER_OWNER, threadId: GROUP }))).toEqual(
 			expect.objectContaining({ name: 'PANEL_NOT_FOUND' }),
 		)
+	})
+
+	it('fase 4 (pg 0008) — the health badge and the group’s batches ride the sync; another group’s batch stays out', async () => {
+		const health: PanelHealth = {
+			state: QuotaState.NEAR,
+			windowPercent: 42,
+			weekPercent: 71,
+			slots: { inUse: 3, effective: 4 },
+			queuePending: 2,
+			daemonSeenAt: '2026-11-19T10:00:00.000Z',
+		}
+		const batch = (code: string): Batch => ({
+			code,
+			status: BatchStatus.RECORDED,
+			sourceEntryId: '019e4d24-6524-7041-9e1c-8108180cde40',
+			items: [{ n: 1, excerpt: 'pedido 1', destination: { kind: BatchItemDestinationKind.DECLINED, reason: 'fora do escopo' } }],
+		})
+		await testBed.resolve(SyncPanel).execute({
+			ownerId: OWNER,
+			groups: [
+				{ threadId: GROUP, name: 'A' },
+				{ threadId: OTHER_GROUP, name: 'B' },
+			],
+			issues: [],
+			batches: [
+				{ threadId: GROUP, batch: batch('L-31') },
+				{ threadId: OTHER_GROUP, batch: batch('L-7') },
+			],
+			health,
+		})
+		const token = await tokenOf(OWNER, GROUP)
+		const board = await testBed.resolve(GetPanelBoard).execute({ token })
+		expect(board.health).toEqual(health)
+		expect(board.batches).toEqual([batch('L-31')])
+
+		// A daemon that sends no health (older, or before its first loop) keeps the last one.
+		await sync(OWNER, [{ threadId: GROUP, name: 'A' }], [])
+		expect((await testBed.resolve(GetPanelBoard).execute({ token })).health).toEqual(health)
 	})
 })

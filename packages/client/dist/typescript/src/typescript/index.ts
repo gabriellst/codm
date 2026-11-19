@@ -198,6 +198,7 @@ export type { PauseIssue200, PauseIssueMutation, PauseIssueMutationResponse, Pau
 export type { PauseThread200, PauseThreadMutation, PauseThreadMutationResponse, PauseThreadPathParams } from "./types/PauseThread.ts";
 export type { PriorityReason, PriorityReasonEnumKey } from "./types/PriorityReason.ts";
 export type { ProviderKind, ProviderKindEnumKey } from "./types/ProviderKind.ts";
+export type { ProviderLimitWindow, ProviderLimitWindowEnumKey } from "./types/ProviderLimitWindow.ts";
 export type { ProviderStatus, ProviderStatusEnumKey } from "./types/ProviderStatus.ts";
 export type { PublishCommand } from "./types/PublishCommand.ts";
 export type { PublishFollowUp, PublishFollowUpKindEnum2Key, PublishFollowUpKindEnum3Key } from "./types/PublishFollowUp.ts";
@@ -778,6 +779,7 @@ export { OnboardingStepEnum } from "./types/OnboardingStep.ts";
 export { OutputRoutingEnum } from "./types/OutputRouting.ts";
 export { PriorityReasonEnum } from "./types/PriorityReason.ts";
 export { ProviderKindEnum } from "./types/ProviderKind.ts";
+export { ProviderLimitWindowEnum } from "./types/ProviderLimitWindow.ts";
 export { ProviderStatusEnum } from "./types/ProviderStatus.ts";
 export { PublishFollowUpKindEnum2 } from "./types/PublishFollowUp.ts";
 export { PublishFollowUpKindEnum3 } from "./types/PublishFollowUp.ts";
@@ -889,6 +891,7 @@ export { pauseIssue200Schema, pauseIssueMutationResponseSchema, pauseIssuePathPa
 export { pauseThread200Schema, pauseThreadMutationResponseSchema, pauseThreadPathParamsSchema } from "./zod/pauseThreadSchema.ts";
 export { priorityReasonSchema } from "./zod/priorityReasonSchema.ts";
 export { providerKindSchema } from "./zod/providerKindSchema.ts";
+export { providerLimitWindowSchema } from "./zod/providerLimitWindowSchema.ts";
 export { providerStatusSchema } from "./zod/providerStatusSchema.ts";
 export { publishCommandSchema } from "./zod/publishCommandSchema.ts";
 export { publishFollowUpKindSchema } from "./zod/publishFollowUpKindSchema.ts";

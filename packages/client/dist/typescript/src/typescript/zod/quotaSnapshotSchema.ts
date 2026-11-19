@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { providerLimitWindowSchema } from "./providerLimitWindowSchema.ts";
 import { quotaStateSchema } from "./quotaStateSchema.ts";
 import { slotLimitSchema } from "./slotLimitSchema.ts";
 import { z } from "zod/v4";
@@ -34,5 +35,12 @@ get "limitedBy"(){
     "pending": z.int().min(0).max(9007199254740991),
 "heldByBudget": z.int().min(0).max(9007199254740991)
     }),
-"diskFreeBytes": z.int().min(0).max(9007199254740991)
+"diskFreeBytes": z.int().min(0).max(9007199254740991),
+"budget": z.object({
+    "enforced": z.boolean(),
+"admits": z.boolean(),
+get "heldBy"(){
+                return providerLimitWindowSchema.optional()
+              }
+    })
     })

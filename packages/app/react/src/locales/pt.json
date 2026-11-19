@@ -119,6 +119,12 @@
 			"resetTitle": "Definir nova senha"
 		}
 	},
+	"batchDetail": {
+		"noDestination": "Sem destino ainda",
+		"subtitle_one": "{{count}} item listado numa mensagem",
+		"subtitle_other": "{{count}} itens listados numa mensagem",
+		"title": "Lote {{code}}"
+	},
 	"calendar": {
 		"presets": {
 			"lastMonth": "Último mês",
@@ -264,6 +270,18 @@
 			"DEFAULT": "seguiu com o padrão",
 			"OPTION": "opção",
 			"TEXT": "texto"
+		},
+		"BatchItemDestinationKind": {
+			"ALREADY_LIVE": "Já no ar",
+			"ATTACHED": "Em tarefa existente",
+			"DECLINED": "Recusado",
+			"DEFERRED": "Adiado",
+			"NEEDS_DECISION": "Esperando decisão",
+			"NEW_ISSUE": "Tarefa nova"
+		},
+		"BatchStatus": {
+			"INCOMPLETE": "Sem destino registrado",
+			"RECORDED": "Todos os itens com destino"
 		},
 		"ChannelKind": {
 			"INTERNAL": "Interno",
@@ -444,6 +462,11 @@
 			"GROUP": "no grupo",
 			"PANEL": "só no painel"
 		},
+		"ProviderLimitWindow": {
+			"FIVE_HOUR": "janela de 5 h",
+			"UNKNOWN": "janela desconhecida",
+			"WEEKLY": "semana"
+		},
 		"ProviderStatus": {
 			"DETECTED": "Detectado",
 			"NOT_INSTALLED": "Não instalado"
@@ -455,10 +478,21 @@
 			"SUCCEEDED": "publicou",
 			"TIMED_OUT": "passou do prazo"
 		},
+		"QuotaState": {
+			"HOLDING": "Segurando tarefas novas",
+			"NEAR": "Semana perto do limite",
+			"OK": "Cota ok",
+			"REFUSED": "Provedor recusando"
+		},
 		"RegretWindowOutcome": {
 			"CANCELLED_BY_PAUSE": "cancelado pela pausa",
 			"CANCELLED_BY_STEER": "cancelado por recado",
 			"PROCEEDED": "seguiu"
+		},
+		"SlotLimit": {
+			"BUDGET": "limitadas pela cota",
+			"MACHINE": "limitadas pela máquina",
+			"MAX": "máximo configurado"
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Aprovação necessária",
@@ -515,8 +549,8 @@
 		"ASK_OPTIONS_DUPLICATED": "Cada opção de uma pergunta precisa de um id próprio.",
 		"ASK_OPTION_UNKNOWN": "Essa opção não está entre as escolhas desta pergunta.",
 		"BATCH_ISSUE_NOT_IN_THREAD": "Essa tarefa não é desta conversa.",
-		"BATCH_NOT_FOUND": "Esse lote não é desta conversa.",
 		"BATCH_ITEMS_MISMATCH": "Cada item do lote precisa de exatamente um destino.",
+		"BATCH_NOT_FOUND": "Esse lote não é desta conversa.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHANNEL_DEVICE_INVALIDATED": "A conexão deste canal foi invalidada pela plataforma de mensagens. Reconecte para gerar um novo código de pareamento.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "Este canal não pode entregar mensagens de mídia.",
@@ -537,6 +571,7 @@
 		"FORBIDDEN": "Você não tem permissão para executar esta ação.",
 		"GATEWAY_UNAVAILABLE": "Gateway de canais indisponível. Verifique se o serviço está rodando.",
 		"HANDLER_NOT_BOUND": "Erro interno ao despachar a operação. Tente novamente em instantes.",
+		"HEALTH_NOT_SAMPLED": "O agendador ainda não fez a primeira medição.",
 		"INVALIDATED_AUTH_TOKEN": "Sua sessão foi invalidada. Entre novamente.",
 		"INVALID_AUTH_TOKEN": "Token de autenticação inválido. Entre novamente.",
 		"INVALID_CONTROLLER_EXAMPLES": "Erro interno na documentação da API. Contate o suporte.",
@@ -651,6 +686,21 @@
 		"archived": "Arquivadas",
 		"emptyDescription": "As tarefas aparecem aqui quando seus agentes começam a trabalhar em mensagens encaminhadas.",
 		"emptyTitle": "Nenhuma tarefa ainda",
+		"health": {
+			"disk": "Disco livre: {{gib}} GB",
+			"heldByBudget_one": "{{count}} segurada pela cota",
+			"heldByBudget_other": "{{count}} seguradas pela cota",
+			"notSampled": "Aguardando a primeira medição do agendador…",
+			"queue_one": "{{count}} tarefa na fila",
+			"queue_other": "{{count}} tarefas na fila",
+			"resets": "volta {{at}}",
+			"slots": "Vagas: {{inUse}} em uso de {{effective}} (máx. {{max}})",
+			"someWindow": "uma janela",
+			"title": "Saúde do sistema",
+			"week": "Semana: {{percent}}",
+			"window": "Janela de 5 h: {{percent}}",
+			"wouldHold": "Orçamento em observação: seguraria tarefas novas agora ({{window}}) — nada está sendo segurado."
+		},
 		"hideArchived": "Ocultar arquivadas",
 		"showArchived": "Mostrar arquivadas",
 		"statsLine": "{{awaitingInput}} aguardando entrada · {{working}} em andamento · {{completed}} concluídas · {{archived}} arquivadas",
@@ -658,6 +708,7 @@
 	},
 	"nav": {
 		"account": "Minha Conta",
+		"batches": "Lotes",
 		"channels": "Canais",
 		"home": "Início",
 		"issues": "Tarefas",

@@ -70,10 +70,11 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 </style>
 </head>
 <body>
-<header><h1 id="name">Painel de tarefas</h1><div class="me"><span id="seen" class="muted"></span><span id="who" class="muted"></span><button class="btn" id="identify" type="button" hidden>Identificar-me</button><button class="btn" id="forget" type="button" hidden>Sair</button></div></header>
+<header><h1 id="name">Painel de tarefas</h1><div class="me"><span id="health" class="muted"></span><span id="seen" class="muted"></span><span id="who" class="muted"></span><button class="btn" id="identify" type="button" hidden>Identificar-me</button><button class="btn" id="forget" type="button" hidden>Sair</button></div></header>
 <main class="board" id="board"></main>
 <dialog id="detail"><div class="dh"><div><div id="dkey" class="key"></div><div id="dtitle"></div></div><button class="x" id="close" aria-label="Fechar">×</button></div><ol class="tl" id="tl"></ol>
 <div class="acts" id="acts" hidden><div id="asks"></div><div class="row" id="ctl"></div><div class="row" id="stopbtns" hidden></div><textarea id="steer" maxlength="2000" placeholder="Orientar esta tarefa…" aria-label="Orientação para a tarefa"></textarea><div class="row"><button class="btn" id="sendsteer" type="button">Orientar</button></div><div id="astatus" class="muted" role="status"></div></div></dialog>
+<dialog id="batch"><div class="dh"><div><div id="bcode" class="key"></div><div id="bstatus" class="muted"></div></div><button class="x" id="bclose" aria-label="Fechar">×</button></div><ol class="tl" id="bl"></ol></dialog>
 <dialog id="ident"><div class="dh"><strong>Identificar-me</strong><button class="x" id="iclose" aria-label="Fechar">×</button></div>
 <div class="ib" id="istep1"><label for="pick">Quem é você neste grupo?</label><select id="pick"></select><button class="btn" id="send" type="button">Enviar código no meu WhatsApp</button></div>
 <div class="ib" id="istep2" hidden><div id="isent" class="muted"></div><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" aria-label="Código"><button class="btn" id="confirm" type="button">Confirmar</button><button class="btn" id="again" type="button">Escolher outro nome</button></div>
@@ -100,12 +101,25 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  // Fase 4 (item 7): the owner's health badge — percentages and states only, never the account's numbers.
+  const HEALTH = {OK:'Cota ok',NEAR:'Cota da semana perto do limite',HOLDING:'Tarefas novas seguradas pela cota',REFUSED:'Provedor recusando — fila pausada'};
+  // Fase 4 (item 5): where each item of a batch went.
+  const DEST = {NEW_ISSUE:'tarefa nova',ATTACHED:'em tarefa existente',ALREADY_LIVE:'já no ar',DECLINED:'recusado',DEFERRED:'adiado',NEEDS_DECISION:'esperando decisão'};
+  const BATCH_STATUS = {INCOMPLETE:'sem destino registrado ainda',RECORDED:'todos os itens com destino'};
   let issuesSeen = [];
+  let batchesSeen = [];
   async function board() {
     const res = await fetch(base + '/board', {cache:'no-store'});
     if (!res.ok) { document.getElementById('name').textContent = 'Link inválido ou trocado'; document.getElementById('board').replaceChildren(); return; }
     const data = await res.json();
     issuesSeen = data.issues;
+    batchesSeen = data.batches || [];
+    const health = document.getElementById('health');
+    if (data.health) {
+      const h = data.health;
+      health.textContent = (HEALTH[h.state] || h.state) + ' · janela ' + Math.round(h.windowPercent) + '% · semana ' + Math.round(h.weekPercent) + '% · vagas ' + h.slots.inUse + '/' + h.slots.effective + (h.queuePending > 0 ? ' · ' + h.queuePending + ' na fila' : '');
+      health.className = h.state === 'HOLDING' || h.state === 'REFUSED' ? 'muted warn' : 'muted';
+    } else health.textContent = '';
     document.getElementById('name').textContent = data.group.name;
     document.title = data.group.name + ' · tarefas';
     const seen = document.getElementById('seen');
@@ -155,6 +169,25 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     renderActs(data);
     return true;
   }
+  // A batch (#L-31): each item, where it went, and the task it went to when the board has it.
+  function openBatch(batch) {
+    history.replaceState(null, '', '#' + encodeURIComponent(batch.code));
+    document.getElementById('bcode').textContent = 'Lote ' + batch.code;
+    document.getElementById('bstatus').textContent = BATCH_STATUS[batch.status] || batch.status;
+    document.getElementById('bl').replaceChildren(...batch.items.map(item => {
+      const li = el('li'); const d = item.destination;
+      li.append(el('div', 'k', item.n + ' · ' + (d ? (DEST[d.kind] || d.kind) : 'sem destino')));
+      li.append(el('div', 't', item.excerpt));
+      const why = d && (d.reason || d.note);
+      if (why) li.append(el('div', 't', why));
+      const task = d && d.issueId ? issuesSeen.find(i => i.issueId === d.issueId) : null;
+      if (task) { const b = el('button', 'btn', task.key + ' — ' + task.title); b.type = 'button'; b.addEventListener('click', () => { document.getElementById('batch').close(); open(task.issueId); }); li.append(b); }
+      return li;
+    }));
+    if (!document.getElementById('batch').open) document.getElementById('batch').showModal();
+  }
+  document.getElementById('bclose').addEventListener('click', () => document.getElementById('batch').close());
+  document.getElementById('batch').addEventListener('close', () => history.replaceState(null, '', location.pathname));
   document.getElementById('close').addEventListener('click', () => document.getElementById('detail').close());
   // Closing (button or Esc) drops the issue from the address, so a reload shows the board.
   document.getElementById('detail').addEventListener('close', () => history.replaceState(null, '', location.pathname));
@@ -290,10 +323,13 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     if (await act({kind:'STEER', issueId: current, text})) $('steer').value = '';
   });
 
-  // The issue link the group gets ends in #<key> (fase 3): open that issue once the board is known, and
-  // again whenever the hash changes. An unknown key opens nothing.
+  // The issue link the group gets ends in #<key> (fase 3), the batch receipt's in #L-<n> (fase 4): open it once the
+  // board is known, and again whenever the hash changes. A batch code is matched against the group's batches first —
+  // only a code the board lists as a batch opens one; anything else is an issue key. An unknown key opens nothing.
   function openByHash() {
     const key = decodeURIComponent(location.hash.slice(1));
+    const batch = key ? batchesSeen.find(b => b.code === key) : null;
+    if (batch) { if (!$('batch').open) openBatch(batch); return; }
     const issue = key ? issuesSeen.find(i => i.key === key) : null;
     if (issue && !(current === issue.issueId && $('detail').open)) open(issue.issueId);
   }

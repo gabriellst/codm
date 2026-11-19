@@ -119,6 +119,12 @@
 			"resetTitle": "Set a new password"
 		}
 	},
+	"batchDetail": {
+		"noDestination": "No destination yet",
+		"subtitle_one": "{{count}} item listed in one message",
+		"subtitle_other": "{{count}} items listed in one message",
+		"title": "Batch {{code}}"
+	},
 	"calendar": {
 		"presets": {
 			"lastMonth": "Last month",
@@ -264,6 +270,18 @@
 			"DEFAULT": "went on with the default",
 			"OPTION": "option",
 			"TEXT": "text"
+		},
+		"BatchItemDestinationKind": {
+			"ALREADY_LIVE": "Already live",
+			"ATTACHED": "In an existing task",
+			"DECLINED": "Declined",
+			"DEFERRED": "Deferred",
+			"NEEDS_DECISION": "Waiting on a decision",
+			"NEW_ISSUE": "New task"
+		},
+		"BatchStatus": {
+			"INCOMPLETE": "No destinations recorded",
+			"RECORDED": "Every item has a destination"
 		},
 		"ChannelKind": {
 			"INTERNAL": "Internal",
@@ -444,6 +462,11 @@
 			"GROUP": "in the group",
 			"PANEL": "panel only"
 		},
+		"ProviderLimitWindow": {
+			"FIVE_HOUR": "5-hour window",
+			"UNKNOWN": "unknown window",
+			"WEEKLY": "week"
+		},
 		"ProviderStatus": {
 			"DETECTED": "Detected",
 			"NOT_INSTALLED": "Not installed"
@@ -455,10 +478,21 @@
 			"SUCCEEDED": "published",
 			"TIMED_OUT": "timed out"
 		},
+		"QuotaState": {
+			"HOLDING": "Holding new tasks",
+			"NEAR": "Week near the limit",
+			"OK": "Quota ok",
+			"REFUSED": "Provider refusing"
+		},
 		"RegretWindowOutcome": {
 			"CANCELLED_BY_PAUSE": "cancelled by the pause",
 			"CANCELLED_BY_STEER": "cancelled by a message",
 			"PROCEEDED": "went ahead"
+		},
+		"SlotLimit": {
+			"BUDGET": "limited by the quota",
+			"MACHINE": "limited by the machine",
+			"MAX": "configured maximum"
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Approval needed",
@@ -515,8 +549,8 @@
 		"ASK_OPTIONS_DUPLICATED": "Each option of a question needs its own id.",
 		"ASK_OPTION_UNKNOWN": "That option is not one of the choices of this question.",
 		"BATCH_ISSUE_NOT_IN_THREAD": "That task is not from this conversation.",
-		"BATCH_NOT_FOUND": "That batch is not from this conversation.",
 		"BATCH_ITEMS_MISMATCH": "Every item of the batch needs exactly one destination.",
+		"BATCH_NOT_FOUND": "That batch is not from this conversation.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_DEVICE_INVALIDATED": "This channel's connection was invalidated by the messaging platform. Reconnect it to generate a new pairing code.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "This channel cannot deliver media messages.",
@@ -537,6 +571,7 @@
 		"FORBIDDEN": "You do not have permission to perform this action.",
 		"GATEWAY_UNAVAILABLE": "Channel gateway unavailable. Check that the service is running.",
 		"HANDLER_NOT_BOUND": "Internal error while dispatching the operation. Try again shortly.",
+		"HEALTH_NOT_SAMPLED": "The scheduler has not taken its first reading yet.",
 		"INVALIDATED_AUTH_TOKEN": "Your session was invalidated. Sign in again.",
 		"INVALID_AUTH_TOKEN": "Invalid authentication token. Sign in again.",
 		"INVALID_CONTROLLER_EXAMPLES": "Internal API documentation error. Contact support.",
@@ -651,6 +686,21 @@
 		"archived": "Archived",
 		"emptyDescription": "Issues appear here once your agents start working on routed messages.",
 		"emptyTitle": "No issues yet",
+		"health": {
+			"disk": "Free disk: {{gib}} GB",
+			"heldByBudget_one": "{{count}} held by the quota",
+			"heldByBudget_other": "{{count}} held by the quota",
+			"notSampled": "Waiting for the scheduler’s first reading…",
+			"queue_one": "{{count}} task queued",
+			"queue_other": "{{count}} tasks queued",
+			"resets": "resets {{at}}",
+			"slots": "Slots: {{inUse}} in use of {{effective}} (max {{max}})",
+			"someWindow": "a window",
+			"title": "System health",
+			"week": "Week: {{percent}}",
+			"window": "5-hour window: {{percent}}",
+			"wouldHold": "Budget in observation: it would hold new tasks now ({{window}}) — nothing is being held."
+		},
 		"hideArchived": "Hide archived",
 		"showArchived": "Show archived",
 		"statsLine": "{{awaitingInput}} awaiting input · {{working}} working · {{completed}} completed · {{archived}} archived",
@@ -658,6 +708,7 @@
 	},
 	"nav": {
 		"account": "My Account",
+		"batches": "Batches",
 		"channels": "Channels",
 		"home": "Home",
 		"issues": "Issues",

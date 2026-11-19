@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { MailboxTargetKind, ProviderLimitWindow, QuotaState, type SlotLimit } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '../../repositories/MailboxRepository'
-import type { Admission } from '../QuotaBudget'
+import type { PanelHealth, QuotaSnapshot } from '@shared/objects'
+import type { Admission, WindowAccount } from '../QuotaBudget'
 
 /** At or above this share of the learned weekly ceiling, the health shows `NEAR` (spec, "Semanal"). */
 export const QUOTA_NEAR_WEEK_SHARE = 0.7
@@ -50,6 +51,59 @@ export function quotaStateOf(status: QuotaStatus): QuotaState {
 	if (status.enforced && !status.admission.admitted) return QuotaState.HOLDING
 	const week = status.admission.accounts[ProviderLimitWindow.WEEKLY]
 	return week.spent >= QUOTA_NEAR_WEEK_SHARE * week.ceiling ? QuotaState.NEAR : QuotaState.OK
+}
+
+const isoOf = (epochMs: number | undefined): string | undefined => (epochMs === undefined ? undefined : new Date(epochMs).toISOString())
+
+/** A window's spend as a share of its learned ceiling, 0–100 — 0 for a ceiling not learned yet (never a division by 0). */
+export function windowPercentOf(account: WindowAccount): number {
+	if (account.ceiling <= 0) return 0
+	return Math.min(100, Math.max(0, (account.spent / account.ceiling) * 100))
+}
+
+/**
+ * The CONSOLE's health (fase 4, item 7) — the owner's machine, so the budget's own numbers. The badge is
+ * `quotaStateOf` (a hold only when enforced); `budget` says what the budget would do with one more task turn now —
+ * the observation week's "would hold", never presented as a hold.
+ */
+export function quotaSnapshotOf(status: QuotaStatus, queue: { pending: number; heldByBudget: number }): QuotaSnapshot {
+	const window = status.admission.accounts[ProviderLimitWindow.FIVE_HOUR]
+	const week = status.admission.accounts[ProviderLimitWindow.WEEKLY]
+	const windowResetsAt = isoOf(window.resetsAt)
+	const weekResetsAt = isoOf(week.resetsAt)
+	return {
+		state: quotaStateOf(status),
+		window: {
+			spent: window.spent,
+			ceiling: window.ceiling,
+			reserve: window.reserveFloor,
+			...(windowResetsAt && { resetsAt: windowResetsAt }),
+		},
+		week: { spent: week.spent, ceiling: week.ceiling, ...(weekResetsAt && { resetsAt: weekResetsAt }) },
+		slots: status.slots,
+		queue,
+		diskFreeBytes: status.diskFreeBytes,
+		budget: {
+			enforced: status.enforced,
+			admits: status.admission.admitted,
+			...(status.admission.heldBy !== undefined && { heldBy: status.admission.heldBy }),
+		},
+	}
+}
+
+/**
+ * The CLOUD PANEL's health badge (fase 4, item 7) — opened by anyone with a group link, so percentages and states
+ * only: never the account's spend, ceiling or reserve.
+ */
+export function panelHealthOf(status: QuotaStatus, queuePending: number, seenAt: Date): PanelHealth {
+	return {
+		state: quotaStateOf(status),
+		windowPercent: windowPercentOf(status.admission.accounts[ProviderLimitWindow.FIVE_HOUR]),
+		weekPercent: windowPercentOf(status.admission.accounts[ProviderLimitWindow.WEEKLY]),
+		slots: { inUse: status.slots.inUse, effective: status.slots.effective },
+		queuePending,
+		daemonSeenAt: seenAt.toISOString(),
+	}
 }
 
 /** The in-memory board the dispatcher writes and every reader reads. One instance per process. */

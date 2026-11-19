@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getRouteApi, Link } from '@tanstack/react-router'
 import { useGetIssueTimeline, ClassificationMethodEnum, TranscriptKindEnum } from '@codm/client-typescript/typescript'
 import type { GetIssueTimelineQueryResponse, IssueTimelineItemKind } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@codm/app-ui/skeleton'
@@ -7,6 +8,8 @@ import { useLocale } from '@/hooks'
 import { enumLabel } from '@/lib'
 import { formatDayAndTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+
+const threadRoute = getRouteApi('/(app)/threads/$threadId')
 
 type Item = GetIssueTimelineQueryResponse['items'][number]
 type ItemOf<K extends IssueTimelineItemKind> = Extract<Item, { kind: K }>
@@ -165,10 +168,19 @@ function RegretWindowDetail({ item }: { item: ItemOf<'REGRET_WINDOW'> }) {
 	)
 }
 
-/** "L-31 · item 4" — which item of which batch was sent to this issue (fase 4, item 5). */
-function BatchLinkedDetail({ item }: { item: ItemOf<'BATCH_LINKED'> }) {
+/** "L-31 · item 4" — which item of which batch was sent to this issue (fase 4, item 5), linking to the batch screen. */
+function BatchLinkedDetail({ item, className }: { item: ItemOf<'BATCH_LINKED'> } & Pick<ComponentProps<typeof Link>, 'className'>) {
 	const { t } = useTranslation()
-	return <>{t('session.timelineBatchLinked', { code: item.batchCode, n: item.n })}</>
+	const { threadId } = threadRoute.useParams()
+	return (
+		<Link
+			to="/threads/$threadId/batches/$batchCode"
+			params={{ threadId, batchCode: item.batchCode }}
+			className={cn('underline-offset-4 hover:underline', className)}
+		>
+			{t('session.timelineBatchLinked', { code: item.batchCode, n: item.n })}
+		</Link>
+	)
 }
 
 /** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command. */

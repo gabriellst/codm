@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ProviderLimitWindow } from "./ProviderLimitWindow.ts";
 import type { QuotaState } from "./QuotaState.ts";
 import type { SlotLimit } from "./SlotLimit.ts";
 
@@ -104,4 +105,21 @@ export type QuotaSnapshot = {
      * @type integer
     */
     diskFreeBytes: number;
+    /**
+     * @type object
+    */
+    budget: {
+        /**
+         * @type boolean
+        */
+        enforced: boolean;
+        /**
+         * @type boolean
+        */
+        admits: boolean;
+        /**
+         * @type string | undefined
+        */
+        heldBy?: ProviderLimitWindow;
+    };
 };

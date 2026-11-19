@@ -88,6 +88,7 @@ const (
 	FORBIDDEN                       ApiErrors = "FORBIDDEN"
 	GATEWAYUNAVAILABLE              ApiErrors = "GATEWAY_UNAVAILABLE"
 	HANDLERNOTBOUND                 ApiErrors = "HANDLER_NOT_BOUND"
+	HEALTHNOTSAMPLED                ApiErrors = "HEALTH_NOT_SAMPLED"
 	INVALIDATEDAUTHTOKEN            ApiErrors = "INVALIDATED_AUTH_TOKEN"
 	INVALIDAUTHTOKEN                ApiErrors = "INVALID_AUTH_TOKEN"
 	INVALIDCONTROLLEREXAMPLES       ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
@@ -259,6 +260,8 @@ func (e ApiErrors) Valid() bool {
 	case GATEWAYUNAVAILABLE:
 		return true
 	case HANDLERNOTBOUND:
+		return true
+	case HEALTHNOTSAMPLED:
 		return true
 	case INVALIDATEDAUTHTOKEN:
 		return true
@@ -1489,6 +1492,27 @@ func (e ProviderKind) Valid() bool {
 	}
 }
 
+// Defines values for ProviderLimitWindow.
+const (
+	FIVEHOUR ProviderLimitWindow = "FIVE_HOUR"
+	UNKNOWN  ProviderLimitWindow = "UNKNOWN"
+	WEEKLY   ProviderLimitWindow = "WEEKLY"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLimitWindow enum.
+func (e ProviderLimitWindow) Valid() bool {
+	switch e {
+	case FIVEHOUR:
+		return true
+	case UNKNOWN:
+		return true
+	case WEEKLY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderStatus.
 const (
 	DETECTED     ProviderStatus = "DETECTED"
@@ -2008,6 +2032,9 @@ type PriorityReason string
 // ProviderKind defines model for ProviderKind.
 type ProviderKind string
 
+// ProviderLimitWindow defines model for ProviderLimitWindow.
+type ProviderLimitWindow string
+
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
 
@@ -2040,6 +2067,11 @@ type PublishRunOutcome string
 
 // QuotaSnapshot defines model for QuotaSnapshot.
 type QuotaSnapshot struct {
+	Budget struct {
+		Admits   bool                 `json:"admits"`
+		Enforced bool                 `json:"enforced"`
+		HeldBy   *ProviderLimitWindow `json:"heldBy,omitempty"`
+	} `json:"budget"`
 	DiskFreeBytes int `json:"diskFreeBytes"`
 	Queue         struct {
 		HeldByBudget int `json:"heldByBudget"`
