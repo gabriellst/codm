@@ -21,24 +21,27 @@ const ISSUE_A = '019e4d24-6524-7041-9e1c-8108180cddaf'
 const ISSUE_B = '019e4d24-6524-7041-9e1c-8108180cddb1'
 
 /** The batch, plus the key of every issue its destinations name — what the screen links to. */
-export const GetBatchControllerOutputSchema = BatchSchema.extend({
-	issues: z.array(z.object({ issueId: z.uuid(), key: z.string(), title: z.string() })),
-}).example([
-	{
-		code: 'L-31',
-		status: BatchStatus.RECORDED,
-		sourceEntryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
-		items: [
-			{ n: 1, excerpt: 'trocar o texto do botão', destination: { kind: BatchItemDestinationKind.NEW_ISSUE, issueId: ISSUE_A } },
-			{ n: 2, excerpt: 'o rodapé da página de preços', destination: { kind: BatchItemDestinationKind.ATTACHED, issueId: ISSUE_B } },
-			{ n: 3, excerpt: 'refazer o logo', destination: { kind: BatchItemDestinationKind.DECLINED, reason: 'fora do escopo do projeto' } },
-		],
-		issues: [
-			{ issueId: ISSUE_A, key: 'APP-42', title: 'Texto do botão' },
-			{ issueId: ISSUE_B, key: 'APP-40', title: 'Página de preços' },
-		],
-	},
-])
+export const GetBatchControllerOutputSchema = z
+	.object({
+		...BatchSchema.shape,
+		issues: z.array(z.object({ issueId: z.uuid(), key: z.string(), title: z.string() })),
+	})
+	.example([
+		{
+			code: 'L-31',
+			status: BatchStatus.RECORDED,
+			sourceEntryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
+			items: [
+				{ n: 1, excerpt: 'trocar o texto do botão', destination: { kind: BatchItemDestinationKind.NEW_ISSUE, issueId: ISSUE_A } },
+				{ n: 2, excerpt: 'o rodapé da página de preços', destination: { kind: BatchItemDestinationKind.ATTACHED, issueId: ISSUE_B } },
+				{ n: 3, excerpt: 'refazer o logo', destination: { kind: BatchItemDestinationKind.DECLINED, reason: 'fora do escopo do projeto' } },
+			],
+			issues: [
+				{ issueId: ISSUE_A, key: 'APP-42', title: 'Texto do botão' },
+				{ issueId: ISSUE_B, key: 'APP-40', title: 'Página de preços' },
+			],
+		},
+	])
 
 /**
  * One BATCH of a conversation (fase 4, item 5): every item, where it went, and the issues it names.
