@@ -113,6 +113,7 @@ describe('a task runs on the model its kind of work was born with', () => {
 			payload: { issueId, threadId: thread.id.value, key, title: 'relatório vazio', text: 'olha também o de anteontem' },
 			dedupKey: `steer:${issueId}:model`,
 		})
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
 		await dispatcher.drain()
 
 		expect(runner.requests[1]?.model).toBe(AgentModelId.SONNET)

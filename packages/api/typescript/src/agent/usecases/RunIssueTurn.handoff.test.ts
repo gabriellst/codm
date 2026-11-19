@@ -272,9 +272,30 @@ describe('RunIssueTurn — session handoff with notes', () => {
 		expect(untouched?.agentSessionId).toBe('old-session')
 		expect(untouched?.handoffNotes).toBe(NOTES)
 
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
 		await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
 		expect(runner.userMessage(0)).toContain(NOTES)
 		expect(await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)).toHaveLength(1)
+	})
+
+	it('a pause that kills the handoff turn mid-run records nothing either: the next turn seeds again from the notes', async () => {
+		const { threadId, issueId } = await givenTaskSession(150_000, NOTES)
+		const aborter = testBed.resolve(IssueTurnAborter)
+		const turn = aborter.begin(issueId)
+		runner.scripts = [{ act: async () => void aborter.abort(issueId) }]
+		const out = await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
+		turn.end()
+
+		expect(out.held).toBe(true)
+		const row = await testBed.resolve(AgentSessionRepository).findByIssueId(issueId)
+		expect(row?.agentSessionId).toBe('old-session')
+		expect(row?.handoffNotes).toBe(NOTES)
+		expect(await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)).toHaveLength(0)
+
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
+		await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
+		expect(runner.requests[1]?.session?.resumeId).toBeUndefined()
+		expect(runner.userMessage(1)).toContain(NOTES)
 	})
 
 	it('an "agora" that cuts the handoff turn after the CLI reported its session completes the handoff — the steer resumes the new session', async () => {
@@ -292,6 +313,7 @@ describe('RunIssueTurn — session handoff with notes', () => {
 		expect(await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)).toHaveLength(1)
 
 		// The steer's turn continues the NEW session (small context): no second handoff.
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
 		await testBed.resolve(RunIssueTurn).execute({ ...steerInput(threadId, issueId, 2), priorMessageId: testId('handoff', 'entry-1') })
 		expect(runner.requests[1]?.session?.resumeId).toBe(runner.requests[0]?.session?.newId)
 	})
@@ -310,6 +332,7 @@ describe('RunIssueTurn — session handoff with notes', () => {
 		expect(row?.handoffNotes).toBe(NOTES)
 		expect(await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)).toHaveLength(0)
 
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
 		await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
 		expect(runner.userMessage(1)).toContain(NOTES)
 	})
@@ -325,6 +348,7 @@ describe('RunIssueTurn — session handoff with notes', () => {
 		expect(row?.handoffNotes).toBe(NOTES)
 		expect(await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)).toHaveLength(0)
 
+		await Bun.sleep(2) // two turns of one issue in one millisecond mint the same event id — see RunIssueTurn.test (CWD_CHANGED)
 		await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
 		expect(runner.requests[1]?.session?.resumeId).toBeUndefined()
 		expect(runner.userMessage(1)).toContain(NOTES)
