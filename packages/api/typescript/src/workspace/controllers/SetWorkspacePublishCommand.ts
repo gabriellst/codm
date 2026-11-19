@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { PublishCommandSchema } from '@shared/objects'
-import type { ApplicationErrors } from '../errors'
+import { SetWorkspacePublishCommand } from '../usecases/SetWorkspacePublishCommand'
 
 export const SetWorkspacePublishCommandControllerInputSchema = z
 	.object({
@@ -28,8 +28,7 @@ export const SetWorkspacePublishCommandControllerOutputSchema = z.void()
  * in an argument, so it is the console's to write and read — never a tool a model calls, and never a field of
  * an MCP-exposed DTO (`ListWorkspaces` does not carry it).
  *
- * DECLARED, NOT YET WIRED (slice S0b): the use case (`Workspace.setPublishCommand`) lands in S11. Until then it
- * refuses with `THROUGHPUT_NOT_READY` — never a 204 that would tell the console the command was saved.
+ * Removing it (`command: null`) puts the workspace back to the old behaviour: a "pode publicar" wakes the session.
  */
 @injectable()
 export class SetWorkspacePublishCommandController extends Controller<
@@ -42,7 +41,17 @@ export class SetWorkspacePublishCommandController extends Controller<
 	readonly inputSchema = SetWorkspacePublishCommandControllerInputSchema
 	readonly outputSchema = SetWorkspacePublishCommandControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('THROUGHPUT_NOT_READY', 'SetWorkspacePublishCommand lands in fase 4, slice S11')
+
+	constructor(private readonly setPublishCommand: SetWorkspacePublishCommand) {
+		super()
+	}
+
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.setPublishCommand.execute({
+			ownerId: request.ctx.ownerId,
+			workspaceId: request.params.workspaceId,
+			command: request.body.command,
+		})
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }

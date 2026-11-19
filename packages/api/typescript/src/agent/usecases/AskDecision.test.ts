@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenThread } from '@test/support'
 import { DomainEventRepository, type ExternalMediator } from '@codm/core-typescript'
-import { AskEffect, IssueStatus, OutputRouting, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { AskEffect, IssueStatus, OutputRouting, PublishFollowUpKind, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecution'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -79,6 +79,27 @@ describe('AskDecision — a decision reaches the group with its code', () => {
 		expect(message?.text).toContain('APP-12 · D1 — A prévia está pronta. Publico?')
 		expect(message?.text).toContain('1) Publica')
 		expect(message?.stopId).toBe(stopId)
+	})
+
+	it('fase 4 (6c) — the option that authorizes PUBLISH and the `onPublished` follow-up reach the stored stop', async () => {
+		const { threadId, issueId } = await givenIssueOnThread()
+		const { stopId } = await testBed.resolve(AskDecision).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			threadId,
+			issueId,
+			question: 'A prévia está pronta. Publico?',
+			options: [
+				{ id: 'yes', label: 'Publica', authorizes: [AskEffect.PUBLISH] },
+				{ id: 'no', label: 'Ainda não' },
+			],
+			effects: [AskEffect.PUBLISH],
+			onPublished: { kind: PublishFollowUpKind.COMPLETE, summary: 'Página no ar.' },
+		})
+		await deliverStopFacts()
+
+		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
+		expect(stop?.ask?.options[0]?.authorizes).toEqual([AskEffect.PUBLISH])
+		expect(stop?.ask?.onPublished).toEqual({ kind: PublishFollowUpKind.COMPLETE, summary: 'Página no ar.' })
 	})
 
 	it('FALSEADOR — a malformed ask is refused ON THE CALL by name, and no fact is saved', async () => {

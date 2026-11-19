@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { CommandQueue, LoggingService, type PollingService, z } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -19,6 +19,8 @@ import { issueTurnModel } from '../../utils/ModelByWorkKind'
 import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
+import { RunPublishCommand } from '../../usecases/RunPublishCommand'
+import { ResumeIssuePayloadSchema } from '@thread/objects'
 import { abortReasonOf, IssueTurnAborter } from '../IssueTurnAborter'
 import { TurnAbortReason } from '../../enums/TurnAbortReason'
 import { MailboxDispatcher } from './MailboxDispatcher'
@@ -110,15 +112,39 @@ const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
 const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safeParse(payload).success
 
 /** A STEER's text (`text` on its payload) — empty when absent, as the single-steer turn always read it. */
-const SteerTextPayloadSchema = z.object({ text: z.string() })
+/**
+ * `sessionOnly` (fase 4, item 6c): what the turn's PROMPT carries and the timeline never renders — a failed publish's
+ * output tail, which may print a credential (the timeline goes to the cloud panel; it reads `text` alone).
+ */
+const SteerTextPayloadSchema = z.object({ text: z.string(), sessionOnly: z.string().optional() })
 const steerTextOf = (members: readonly ClaimedMailboxItem[]): string =>
 	members
 		.map(member => {
 			const parsed = SteerTextPayloadSchema.safeParse(member.payload)
-			return parsed.success ? parsed.data.text.trim() : ''
+			return parsed.success
+				? [parsed.data.text, parsed.data.sessionOnly ?? '']
+						.map(part => part.trim())
+						.filter(Boolean)
+						.join('\n\n')
+				: ''
 		})
 		.filter(text => text.length > 0)
 		.join('\n\n')
+
+/**
+ * Which item classes may trigger the workspace's publish command (fase 4, item 6c) — total over `MailboxClaimClass`:
+ * only the answer to a decision the task was waiting on. Whether THAT answer authorizes publishing is the agent's
+ * `PUBLISH_AUTHORIZED_BY`, asked by `RunPublishCommand`.
+ */
+const PUBLISH_TRIGGER: Readonly<Record<MailboxClaimClass, boolean>> = {
+	[MailboxClaimClass.DECISION_ANSWER]: true,
+	[MailboxClaimClass.INTERRUPT]: false,
+	[MailboxClaimClass.STEER]: false,
+	[MailboxClaimClass.WORK]: false,
+	[MailboxClaimClass.REMINDER]: false,
+	[MailboxClaimClass.RESULT]: false,
+	[MailboxClaimClass.OPERATOR]: false,
+}
 
 /** Every item a turn carries — the head first, then the steers that rode with it, in arrival order (fase 4, 6b). */
 const membersOf = (bundle: ClaimedMailboxBundle): readonly ClaimedMailboxItem[] => [bundle.head, ...bundle.followers]
@@ -196,9 +222,10 @@ export type TurnReport =
 			dropped?: never
 			held?: never
 			interrupted?: never
+			published?: never
 	  }
-	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never; interrupted?: never }
-	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; interrupted?: never }
+	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never; interrupted?: never; published?: never }
+	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; interrupted?: never; published?: never }
 	| {
 			interrupted: { sessionKept: boolean }
 			spoke: false
@@ -206,7 +233,13 @@ export type TurnReport =
 			provider?: never
 			transportStop?: never
 			held?: never
+			published?: never
 	  }
+	/**
+	 * The workspace's publish command ran in place of the session turn (fase 4, item 6c) — the item is done. Not a
+	 * provider turn: it proves nothing about the account (no credit to a pause) and spends no quota.
+	 */
+	| { published: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; held?: never; interrupted?: never }
 
 /** The thread as the repository hands it over — derived from the seam, as `RunOrchestratorTurn` does. */
 type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
@@ -715,8 +748,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// re-send "atingi o limite" to every group once a minute. A turn the provider ran to its end is
 			// the evidence it is answering again — so a dropped report (no CLI ran) and any transport stop
 			// (one that spoke and THEN hit the limit included) prove nothing and credit nothing.
-			if (!report.dropped && !report.interrupted && report.transportStop === undefined)
-				await this.creditAcceptedTurn(report.provider, startedAt)
+			if (report.provider !== undefined && report.transportStop === undefined) await this.creditAcceptedTurn(report.provider, startedAt)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -1093,6 +1125,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const paused = () => turn.signal.aborted && abortReasonOf(turn.signal) === TurnAbortReason.PAUSE
 		try {
 			if (await this.hold.isHeld(item.targetId)) return { held: true, spoke: false }
+			// "PODE PUBLICAR" (fase 4, item 6c): an answer that authorizes publishing runs the workspace's command in place
+			// of the session turn. Once it ran, the item is DONE whatever a pause says now — held, it would be claimed
+			// again and the command would run twice.
+			if (await this.publishInsteadOfTurn(item, followers)) return { published: true, spoke: false }
 			const report = await this.runIssueTurn(item, followers)
 			return paused() ? { held: true, spoke: false } : report
 		} catch (error) {
@@ -1101,6 +1137,40 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			throw error
 		} finally {
 			turn.end()
+		}
+	}
+
+	/**
+	 * Whether the workspace's publish command ran for this item (fase 4, item 6c) — only an item whose class is the
+	 * publish trigger (`PUBLISH_TRIGGER`), alone in its turn, whose payload declares the stop and the resolution. Every
+	 * "no" (not authorized, no command, no worktree, the window cancelled it, a read failed before the run) is the
+	 * session waking as before.
+	 */
+	private async publishInsteadOfTurn(item: ClaimedMailboxItem, followers: readonly ClaimedMailboxItem[]): Promise<boolean> {
+		if (!PUBLISH_TRIGGER[item.claimClass] || followers.length > 0) return false
+		const payload = ResumeIssuePayloadSchema.safeParse(item.payload)
+		if (!payload.success) return false
+		try {
+			const { ran } = await this.handlerFor(RunPublishCommand).execute({
+				ownerId: item.ownerId,
+				issueId: item.targetId,
+				threadId: payload.data.threadId,
+				key: payload.data.key,
+				title: payload.data.title,
+				stopId: payload.data.stopId,
+				resolution: payload.data.resolution,
+			})
+			return ran
+		} catch (error) {
+			// Before the command ran (`RunPublishCommand` never throws after it): the session wakes instead.
+			this.logging.warn({
+				content: {
+					message: 'publish command not run — the session wakes instead',
+					itemId: item.id,
+					error: error instanceof Error ? error.name : 'unknown',
+				},
+			})
+			return false
 		}
 	}
 

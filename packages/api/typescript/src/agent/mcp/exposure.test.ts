@@ -221,6 +221,16 @@ describe('fase 4 — no MCP-exposed operation carries the publish command', () =
 		expect(exposed.length).toBeGreaterThan(0)
 		expect(exposed.filter(operation => LEAK.test(closureText(operation))).map(operation => operation.operationId)).toEqual([])
 	})
+	/**
+	 * S11 — the console's doors of the command AND of what a run printed (the output may print a credential) are
+	 * operations no model can call; the MCP-exposed issue detail skips those lines (`RunPublishCommand.test.ts`).
+	 */
+	test("the publish doors — the command and a run's output — are console-only", () => {
+		const doors = ['GetWorkspacePublishCommand', 'SetWorkspacePublishCommand', 'GetPublishRunOutput']
+		const found = all.filter(operation => doors.includes(operation.operationId ?? ''))
+		expect(found.map(operation => operation.operationId).sort()).toEqual([...doors].sort())
+		for (const door of found) expect(door['x-mcp-scope'] ?? []).toEqual([])
+	})
 })
 
 describe('D-E — the run-token header has one spelling on both sides of the wire', () => {

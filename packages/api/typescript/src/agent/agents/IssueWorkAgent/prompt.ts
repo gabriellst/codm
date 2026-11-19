@@ -203,6 +203,12 @@ export class IssueWorkPromptBuilder {
 				'see), IRREVERSIBLE (an action that cannot be undone, like deleting data), CLIENT_DATA (reading or changing a ' +
 				"client's data). Any effect makes it a decision only someone who may release can answer. Leave it empty only " +
 				'when the answer authorizes none of them.',
+			`PUBLISHING — when you ask to publish with ${operationIdOf(AskDecisionController)}, mark the option that means "yes, ` +
+				'publish" with `authorizes: ["PUBLISH"]` (and `effects` with PUBLISH). If the workspace has a publish command, ' +
+				'codm runs it itself when that option is chosen — you are not woken to publish. Say in `onPublished` what ' +
+				'follows a successful publish: `{ kind: "COMPLETE", summary }` closes this task with that summary, ' +
+				'`{ kind: "CONTINUE" }` (or nothing) tells you the outcome so you go on. A failed publish comes back to you ' +
+				'with the end of its output.',
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,

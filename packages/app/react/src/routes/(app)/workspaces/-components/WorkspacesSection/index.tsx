@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconFolder, IconFolderPlus, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconFolder, IconFolderPlus, IconPlus, IconTerminal2, IconTrash } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listWorkspacesQueryKey, useListWorkspaces, useRemoveWorkspace } from '@codm/client-typescript/typescript'
 import type { ListWorkspacesQueryResponse } from '@codm/client-typescript/typescript'
@@ -14,6 +14,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '
 import { row, sectionLabelBare } from '@codm/app-ui/surfaces'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
+import { PublishCommandDialog } from '../PublishCommandDialog'
 
 type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
 
@@ -137,6 +138,7 @@ function WorkspaceCard({ workspace, className, ...props }: ComponentProps<'div'>
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const confirm = useDialogStore(s => s.confirm)
+	const show = useDialogStore(s => s.show)
 	// Callback no HOOK, não no `mutate()`: `confirm()` ocupa o mesmo slot de conteúdo do dialog e a
 	// convenção do repo é manter o efeito na mutação, não no observer do componente. O ERRO não
 	// precisa de tratamento aqui — o `MutationCache` global do router.tsx já vira toast, e
@@ -163,19 +165,32 @@ function WorkspaceCard({ workspace, className, ...props }: ComponentProps<'div'>
 				<span className="flex size-11 shrink-0 items-center justify-center rounded-asymmetric-sm bg-secondary text-secondary-foreground">
 					<IconFolder className="size-5" />
 				</span>
-				{/* Ação destrutiva só aparece no hover do card — `group-hover:`, a convenção que os
-				    tokens documentam para descendentes ecoarem a afordância da row. */}
-				<Button
-					variant="ghost"
-					size="icon"
-					type="button"
-					aria-label={t('workspaces.remove')}
-					disabled={removeWorkspace.isPending}
-					onClick={onRemove}
-					className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-				>
-					<IconTrash className="size-4" />
-				</Button>
+				{/* Ações só aparecem no hover do card — `group-hover:`, a convenção que os tokens documentam
+				    para descendentes ecoarem a afordância da row. O comando de publicação NUNCA é lido nem
+				    mostrado aqui (pode carregar uma credencial): só o dialog o busca. */}
+				<div className="flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="icon"
+						type="button"
+						aria-label={t('workspaces.publishCommand.open')}
+						onClick={() => show(<PublishCommandDialog workspaceId={workspace.workspaceId} />)}
+						className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+					>
+						<IconTerminal2 className="size-4" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						type="button"
+						aria-label={t('workspaces.remove')}
+						disabled={removeWorkspace.isPending}
+						onClick={onRemove}
+						className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+					>
+						<IconTrash className="size-4" />
+					</Button>
+				</div>
 			</div>
 			{/* D3 (R19) — the name/count sizes were the only mismatch here: fs17/fw700 and fs13,
 			    not the generic text-sm/text-xs steps. */}

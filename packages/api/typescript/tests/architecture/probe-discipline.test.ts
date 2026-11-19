@@ -26,6 +26,14 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve LibSqlDatabaseDriver — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
+		path: 'src/agent/usecases/RunPublishCommand.test.ts',
+		why: "MAILBOX PAYLOAD (fase 4, S11): the follow-up recado's JSON payload is the subject — that the failed run's output tail rides `sessionOnly` and never `text` (the field the timeline and the cloud panel render) — and no probe exposes a payload. Every other state is read through the use cases and repositories",
+	},
+	{
+		path: 'src/agent/services/MailboxDispatcher/LibSqlMailboxDispatcher.publish.test.ts',
+		why: 'CLAIM COLUMNS (fase 4, S11): that the publish trigger was consumed with ONE attempt (`consumed_at`, `attempts`, `claim_class` of the row) is the subject — columns the probe deliberately does not expose. Same class as the coalesce suite next door',
+	},
+	{
 		path: 'src/thread/usecases/RecordBatch.test.ts',
 		why: "MAILBOX PAYLOAD + WRITE-ONLY SEED (fase 4, S8): the batch rides the orchestrator item's JSON payload, which no probe exposes, and the follow-up sweep needs the batch's turn and the reminder marked consumed (what the dispatcher writes) without running an orchestrator turn. Every batch state is read back through the repository or the use cases",
 	},

@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { PublishCommandSchema } from '@shared/objects'
-import type { ApplicationErrors } from '../errors'
+import { GetWorkspacePublishCommand } from '../usecases/GetWorkspacePublishCommand'
 
 export const GetWorkspacePublishCommandControllerInputSchema = z
 	.object({
@@ -21,24 +21,25 @@ export const GetWorkspacePublishCommandControllerOutputSchema = z
  *
  * NO `mcpScopes`, on purpose (spec, revisão 2): the command can carry a credential in an argument, so no model
  * ever reads it — the dispatcher reads the column directly when it runs it (S11).
- *
- * DECLARED, NOT YET WIRED (slice S0b, CTRL-C05 mock mode): the route answers the declared example so the form
- * builds against a real shape; the read lands in S11.
  */
 @injectable()
 export class GetWorkspacePublishCommandController extends Controller<
 	typeof GetWorkspacePublishCommandControllerInputSchema,
 	typeof GetWorkspacePublishCommandControllerOutputSchema
 > {
-	override readonly mockController = true
 	readonly path = '/workspaces/:workspaceId/publish-command'
 	readonly method = 'get' as const
 	readonly description = "The workspace's declared publish command, or null"
 	readonly inputSchema = GetWorkspacePublishCommandControllerInputSchema
 	readonly outputSchema = GetWorkspacePublishCommandControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		// Unreachable over HTTP while `mockController` is on; a direct `execute` must not invent a command.
-		throw new BaseError<ApplicationErrors>('THROUGHPUT_NOT_READY', 'GetWorkspacePublishCommand lands in fase 4, slice S11')
+
+	constructor(private readonly getPublishCommand: GetWorkspacePublishCommand) {
+		super()
+	}
+
+	async handle(request: this['input']): Promise<this['output']> {
+		const data = await this.getPublishCommand.execute({ ownerId: request.ctx.ownerId, workspaceId: request.params.workspaceId })
+		return { status: HttpStatusCode.OK, data }
 	}
 }

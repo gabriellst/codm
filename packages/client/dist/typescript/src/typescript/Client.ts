@@ -37,6 +37,7 @@ import {
 	getNeedsYouPanel,
 	getOnboarding,
 	getOperatorIdentity,
+	getPublishRunOutput,
 	getSessionChat,
 	getSessionIssues,
 	getSettings,
@@ -240,6 +241,10 @@ export class TypescriptClient {
 
 	getOperatorIdentity(...args: Parameters<typeof getOperatorIdentity>): ReturnType<typeof getOperatorIdentity> {
 		return (getOperatorIdentity as (...a: any[]) => ReturnType<typeof getOperatorIdentity>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getPublishRunOutput(...args: Parameters<typeof getPublishRunOutput>): ReturnType<typeof getPublishRunOutput> {
+		return (getPublishRunOutput as (...a: any[]) => ReturnType<typeof getPublishRunOutput>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getSessionChat(...args: Parameters<typeof getSessionChat>): ReturnType<typeof getSessionChat> {

@@ -5,6 +5,7 @@
 
 import { askEffectSchema } from "./askEffectSchema.ts";
 import { askOptionSchema } from "./askOptionSchema.ts";
+import { publishFollowUpSchema } from "./publishFollowUpSchema.ts";
 import { z } from "zod/v4";
 
 export const askDecisionPathParamsSchema = z.object({
@@ -25,6 +26,9 @@ get "effects"(){
                 return z.array(askEffectSchema)
               },
 "addresseeId": z.optional(z.string().min(1)),
+get "onPublished"(){
+                return publishFollowUpSchema.optional()
+              },
 get "options"(){
                 return z.array(askOptionSchema).min(2).max(6)
               }

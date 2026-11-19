@@ -1,4 +1,5 @@
 import {
+	PublishRunOutcome,
 	BatchItemDestinationKind,
 	BlockCause,
 	IssueLifeState,
@@ -373,6 +374,26 @@ function batchReceipt(p: BatchReceiptParams, heading: string, part: Record<Batch
 	return lines(`${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`, p.link)
 }
 
+/**
+ * The group's line after the workspace's publish command ran for a task (fase 4, item 6c) — total over
+ * `PublishRunOutcome`. A cancelled run says nothing in the group (the session wakes and speaks), so its line is the
+ * empty string and the caller never sends it. Never the command, never its output: those are the console's.
+ */
+const PUBLISH_RAN_PT: Record<PublishRunOutcome, (key: string) => string> = {
+	[PublishRunOutcome.SUCCEEDED]: key => `${key}: publicado.`,
+	[PublishRunOutcome.FAILED]: key => `${key}: a publicação falhou — a tarefa vai ver o erro e corrigir.`,
+	[PublishRunOutcome.TIMED_OUT]: key => `${key}: a publicação passou do tempo e foi interrompida — a tarefa vai ver o que aconteceu.`,
+	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
+	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+}
+const PUBLISH_RAN_EN: Record<PublishRunOutcome, (key: string) => string> = {
+	[PublishRunOutcome.SUCCEEDED]: key => `${key}: published.`,
+	[PublishRunOutcome.FAILED]: key => `${key}: publishing failed — the task will look at the error and fix it.`,
+	[PublishRunOutcome.TIMED_OUT]: key => `${key}: publishing ran past its time and was stopped — the task will look at what happened.`,
+	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
+	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -461,6 +482,8 @@ const PT_MESSAGES = {
 	batchStalled: (p: { code: string; total: number }) =>
 		`O lote ${p.code} (${p.total} itens) seguiu sem destino registrado depois do lembrete.`,
 	batchReminder: (p: { code: string; total: number }) => `O lote ${p.code} (${p.total} itens) ainda não tem destino registrado.`,
+	/** A linha no grupo depois do comando de publicação do workspace (fase 4, item 6c), por desfecho. */
+	publishRan: (p: { outcome: PublishRunOutcome; key: string }) => PUBLISH_RAN_PT[p.outcome](p.key),
 	boardBulletin: (p: BoardBulletinParams) =>
 		bulletin(
 			p,
@@ -494,6 +517,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		batchReceipt: p => batchReceipt(p, 'Batch', BATCH_PART_EN),
 		batchStalled: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded after the reminder.`,
 		batchReminder: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded.`,
+		publishRan: p => PUBLISH_RAN_EN[p.outcome](p.key),
 		boardBulletin: p =>
 			bulletin(
 				p,

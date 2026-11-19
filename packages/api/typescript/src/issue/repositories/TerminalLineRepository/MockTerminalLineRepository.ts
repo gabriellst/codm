@@ -14,6 +14,10 @@ export class MockTerminalLineRepository extends TerminalLineRepository {
 		return row
 	}
 
+	async appendOfTimelineItem(issueId: string, ownerId: string, _timelineItemId: string, lines: readonly string[]): Promise<void> {
+		for (const line of lines) await this.append(issueId, ownerId, line)
+	}
+
 	async listByIssue(issueId: string): Promise<TerminalLineRow[]> {
 		return this.byIssue.get(issueId) ?? []
 	}

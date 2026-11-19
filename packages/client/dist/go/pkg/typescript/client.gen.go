@@ -2417,10 +2417,11 @@ type ForkIssueJSONBody struct {
 
 // AskDecisionJSONBody defines parameters for AskDecision.
 type AskDecisionJSONBody struct {
-	AddresseeId *string     `json:"addresseeId,omitempty"`
-	Effects     []AskEffect `json:"effects"`
-	Options     []AskOption `json:"options"`
-	Question    string      `json:"question"`
+	AddresseeId *string          `json:"addresseeId,omitempty"`
+	Effects     []AskEffect      `json:"effects"`
+	OnPublished *PublishFollowUp `json:"onPublished,omitempty"`
+	Options     []AskOption      `json:"options"`
+	Question    string           `json:"question"`
 }
 
 // RequestFeedbackJSONBody defines parameters for RequestFeedback.
@@ -4215,6 +4216,9 @@ type ClientInterface interface {
 	// PauseIssue request
 	PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPublishRunOutput request
+	GetPublishRunOutput(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RestoreIssue request
 	RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4569,6 +4573,18 @@ func (c *Client) ArchiveIssue(ctx context.Context, issueId string, reqEditors ..
 
 func (c *Client) PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPublishRunOutput(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPublishRunOutputRequest(c.Server, issueId, timelineItemId)
 	if err != nil {
 		return nil, err
 	}
@@ -6123,6 +6139,47 @@ func NewPauseIssueRequest(server string, issueId string) (*http.Request, error) 
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPublishRunOutputRequest generates requests for GetPublishRunOutput
+func NewGetPublishRunOutputRequest(server string, issueId string, timelineItemId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "timelineItemId", timelineItemId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/issues/%s/publish-runs/%s/output", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -9334,6 +9391,9 @@ type ClientWithResponsesInterface interface {
 	// PauseIssueWithResponse request
 	PauseIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*PauseIssueResponse, error)
 
+	// GetPublishRunOutputWithResponse request
+	GetPublishRunOutputWithResponse(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*GetPublishRunOutputResponse, error)
+
 	// RestoreIssueWithResponse request
 	RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error)
 
@@ -9863,6 +9923,41 @@ func (r PauseIssueResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PauseIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPublishRunOutputResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Lines []struct {
+			At   string `json:"at"`
+			Line string `json:"line"`
+		} `json:"lines"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPublishRunOutputResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPublishRunOutputResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPublishRunOutputResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -12555,6 +12650,15 @@ func (c *ClientWithResponses) PauseIssueWithResponse(ctx context.Context, issueI
 	return ParsePauseIssueResponse(rsp)
 }
 
+// GetPublishRunOutputWithResponse request returning *GetPublishRunOutputResponse
+func (c *ClientWithResponses) GetPublishRunOutputWithResponse(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*GetPublishRunOutputResponse, error) {
+	rsp, err := c.GetPublishRunOutput(ctx, issueId, timelineItemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPublishRunOutputResponse(rsp)
+}
+
 // RestoreIssueWithResponse request returning *RestoreIssueResponse
 func (c *ClientWithResponses) RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error) {
 	rsp, err := c.RestoreIssue(ctx, issueId, reqEditors...)
@@ -13743,6 +13847,37 @@ func ParsePauseIssueResponse(rsp *http.Response) (*PauseIssueResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPublishRunOutputResponse parses an HTTP response from a GetPublishRunOutputWithResponse call
+func ParseGetPublishRunOutputResponse(rsp *http.Response) (*GetPublishRunOutputResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPublishRunOutputResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Lines []struct {
+				At   string `json:"at"`
+				Line string `json:"line"`
+			} `json:"lines"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

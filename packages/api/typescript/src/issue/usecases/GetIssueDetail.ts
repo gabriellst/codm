@@ -95,7 +95,9 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 		const lines = await this.driver.db
 			.select()
 			.from(terminalLines)
-			.where(eq(terminalLines.issueId, input.issueId))
+			// A publish command's captured output (fase 4, item 6c) is the console's alone (`GetPublishRunOutput`): this
+			// read is an MCP tool, and a command's output may print a credential.
+			.where(and(eq(terminalLines.issueId, input.issueId), isNull(terminalLines.timelineItemId)))
 			.orderBy(asc(terminalLines.seq))
 		const routed = await this.driver.db
 			.select()

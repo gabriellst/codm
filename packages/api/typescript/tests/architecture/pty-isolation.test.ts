@@ -29,6 +29,10 @@
  * reason the other two are: the capability is confined to the one module whose job it is, and bound only in `real`
  * (`mock`/`integration` script it).
  *
+ * Fase 4 (item 6c) adds a FOURTH, and it spawns no provider CLI either: `PublishCommandRunner` runs the publish command
+ * the OWNER declared on the workspace (an argv, no shell, a deadline that kills the process group), bound only in
+ * `real`. Same reasoning: one directory owns the capability.
+ *
  * Walks all non-test `.ts` files under `packages/api/typescript/src/`, skipping `node_modules`.
  *
  * Lives in `tests/architecture/` — the shared home for repo-wide mechanical detectors (the rail is
@@ -63,6 +67,7 @@ const ALLOWED_SPAWN_PREFIXES = [
 	join(SRC, 'agent/services/AgentRunner') + sep, // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
 	join(SRC, 'agent/services/ProviderDetector') + sep, // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
 	join(SRC, 'agent/services/GitWorktreeProbe') + sep, // Fase 4 (item 1): git worktree queries, no provider CLI
+	join(SRC, 'agent/services/PublishCommandRunner') + sep, // Fase 4 (item 6c): the workspace's declared publish command
 ]
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -98,7 +103,7 @@ describe('Import-graph isolation — PTY, transcript paths and process spawn are
 	}
 
 	for (const forbidden of FORBIDDEN_SPAWN_REFS) {
-		it(`only AgentRunner/, ProviderDetector/ and GitWorktreeProbe/ reference "${forbidden}"`, () => {
+		it(`only AgentRunner/, ProviderDetector/, GitWorktreeProbe/ and PublishCommandRunner/ reference "${forbidden}"`, () => {
 			expect(violators(files, forbidden, ALLOWED_SPAWN_PREFIXES)).toEqual([])
 		})
 	}

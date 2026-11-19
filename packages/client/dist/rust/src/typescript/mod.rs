@@ -1200,6 +1200,13 @@ pub mod types {
     ///        "$ref": "#/components/schemas/AskEffect"
     ///      }
     ///    },
+    ///    "onPublished": {
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/PublishFollowUp"
+    ///        }
+    ///      ]
+    ///    },
     ///    "options": {
     ///      "type": "array",
     ///      "items": {
@@ -1226,6 +1233,12 @@ pub mod types {
         )]
         pub addressee_id: ::std::option::Option<AskDecisionBodyAddresseeId>,
         pub effects: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
+        #[serde(
+            rename = "onPublished",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub on_published: ::std::option::Option<PublishFollowUp>,
         pub options: ::std::vec::Vec<AskOption>,
         pub question: AskDecisionBodyQuestion,
     }
@@ -9917,6 +9930,87 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetPublishRunOutputResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "lines"
+    ///  ],
+    ///  "properties": {
+    ///    "lines": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "at",
+    ///          "line"
+    ///        ],
+    ///        "properties": {
+    ///          "at": {
+    ///            "type": "string"
+    ///          },
+    ///          "line": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPublishRunOutputResponse {
+        pub lines: ::std::vec::Vec<GetPublishRunOutputResponseLinesItem>,
+    }
+    impl ::std::convert::From<&GetPublishRunOutputResponse>
+    for GetPublishRunOutputResponse {
+        fn from(value: &GetPublishRunOutputResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPublishRunOutputResponseLinesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "at",
+    ///    "line"
+    ///  ],
+    ///  "properties": {
+    ///    "at": {
+    ///      "type": "string"
+    ///    },
+    ///    "line": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPublishRunOutputResponseLinesItem {
+        pub at: ::std::string::String,
+        pub line: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetPublishRunOutputResponseLinesItem>
+    for GetPublishRunOutputResponseLinesItem {
+        fn from(value: &GetPublishRunOutputResponseLinesItem) -> Self {
+            value.clone()
+        }
+    }
     ///`GetSessionChatResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -17194,6 +17288,43 @@ Sends a `POST` request to `/issues/{issueId}/pause`
         let mut request = self
             .client
             .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**What one publish run of the issue printed (console only)
+
+Sends a `GET` request to `/issues/{issueId}/publish-runs/{timelineItemId}/output`
+
+*/
+    pub async fn get_publish_run_output<'a>(
+        &'a self,
+        issue_id: &'a str,
+        timeline_item_id: &'a str,
+    ) -> Result<ResponseValue<types::GetPublishRunOutputResponse>, Error<()>> {
+        let url = format!(
+            "{}/issues/{}/publish-runs/{}/output", self.baseurl, encode_path(& issue_id
+            .to_string()), encode_path(& timeline_item_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),

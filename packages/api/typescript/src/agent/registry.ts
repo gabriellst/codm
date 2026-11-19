@@ -25,6 +25,7 @@ import {
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
+import { ProcessPublishCommandRunner, PublishCommandRunner, ScriptedPublishCommandRunner } from './services/PublishCommandRunner'
 import { HandoffNotes, LibSqlHandoffNotes, MockHandoffNotes } from './services/HandoffNotes'
 import { WorktreeSightings } from './services/WorktreeSightings'
 import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
@@ -139,6 +140,15 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// What git says about a workspace's worktrees (fase 4, item 1). Scripted in `mock` AND `integration`: no test
 	// spawns git through the container; only `real` asks the real one.
 	{ token: GitWorktreeProbe, mock: MockGitWorktreeProbe, integration: MockGitWorktreeProbe, real: SystemGitWorktreeProbe },
+	// The workspace's publish command (fase 4, item 6c): spawned only in `real`; scripted everywhere a test or the e2e
+	// stand-in runs — no suite ever runs somebody's deploy.
+	{
+		token: PublishCommandRunner,
+		mock: ScriptedPublishCommandRunner,
+		integration: ScriptedPublishCommandRunner,
+		real: ProcessPublishCommandRunner,
+		e2e: ScriptedPublishCommandRunner,
+	},
 	// The derived handoff notes (fase 4, item 6a): the task's durable state, read from the store wherever there is a
 	// database (git through the probe above, so `integration` stays scripted); the title alone in `mock`.
 	{ token: HandoffNotes, mock: MockHandoffNotes, integration: LibSqlHandoffNotes, real: LibSqlHandoffNotes },

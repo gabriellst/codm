@@ -1,8 +1,14 @@
-import type { ComponentProps, ReactNode } from 'react'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getRouteApi, Link } from '@tanstack/react-router'
-import { useGetIssueTimeline, ClassificationMethodEnum, TranscriptKindEnum } from '@codm/client-typescript/typescript'
+import {
+	useGetIssueTimeline,
+	useGetPublishRunOutput,
+	ClassificationMethodEnum,
+	TranscriptKindEnum,
+} from '@codm/client-typescript/typescript'
 import type { GetIssueTimelineQueryResponse, IssueTimelineItemKind } from '@codm/client-typescript/typescript'
+import { Button } from '@codm/app-ui/button'
 import { Skeleton } from '@codm/app-ui/skeleton'
 import { useLocale } from '@/hooks'
 import { enumLabel } from '@/lib'
@@ -14,8 +20,15 @@ const threadRoute = getRouteApi('/(app)/threads/$threadId')
 type Item = GetIssueTimelineQueryResponse['items'][number]
 type ItemOf<K extends IssueTimelineItemKind> = Extract<Item, { kind: K }>
 
+/** What every detail renderer receives: its own member of the union, and the issue it belongs to (a publish
+ *  run's output is addressed by issue + timeline item). */
+interface DetailProps<K extends IssueTimelineItemKind> {
+	item: ItemOf<K>
+	issueId: string
+}
+
 /** The detail line of each kind. One renderer per member of the union — never a chain on `kind` (CMP-P18). */
-const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => ReactNode } = {
+const DETAIL: { [K in IssueTimelineItemKind]: (props: DetailProps<K>) => ReactNode } = {
 	CREATED: ({ item }) => item.title,
 	TURN_STARTED: () => null,
 	MESSAGE: ({ item }) => <MessageDetail item={item} />,
@@ -29,7 +42,7 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	RESUMED: ({ item }) => <ControlDetail item={item} />,
 	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
 	BATCH_LINKED: ({ item }) => <BatchLinkedDetail item={item} />,
-	PUBLISH_RAN: ({ item }) => <PublishRanDetail item={item} />,
+	PUBLISH_RAN: ({ item, issueId }) => <PublishRanDetail item={item} issueId={issueId} />,
 }
 
 /**
@@ -49,7 +62,7 @@ export function IssueTimeline({ issueId, className, ...props }: ComponentProps<'
 			) : (
 				<ol className="flex flex-col gap-2">
 					{data.items.map(item => (
-						<TimelineRow key={item.id} item={item} />
+						<TimelineRow key={item.id} item={item} issueId={issueId} />
 					))}
 				</ol>
 			)}
@@ -57,18 +70,18 @@ export function IssueTimeline({ issueId, className, ...props }: ComponentProps<'
 	)
 }
 
-function TimelineRow({ item, className, ...props }: ComponentProps<'li'> & { item: Item }) {
+function TimelineRow({ item, issueId, className, ...props }: ComponentProps<'li'> & { item: Item; issueId: string }) {
 	const locale = useLocale()
 	// The renderer for THIS member. TS cannot correlate `DETAIL[item.kind]` with `item` across a union,
 	// so the lookup is widened once here; `DETAIL`'s own type is what keeps each renderer honest.
-	const Detail = DETAIL[item.kind] as (props: { item: Item }) => ReactNode
+	const Detail = DETAIL[item.kind] as (props: { item: Item; issueId: string }) => ReactNode
 	return (
 		<li className={cn('flex items-start gap-3 rounded-asymmetric-sm bg-background p-3', className)} {...props}>
 			<span className="w-24 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{formatDayAndTime(item.at, locale)}</span>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<span className="text-xs font-semibold text-foreground">{enumLabel('IssueTimelineItemKind', item.kind)}</span>
 				<div className="min-w-0 whitespace-pre-wrap break-words text-sm text-muted-foreground">
-					<Detail item={item} />
+					<Detail item={item} issueId={issueId} />
 				</div>
 			</div>
 		</li>
@@ -183,9 +196,12 @@ function BatchLinkedDetail({ item, className }: { item: ItemOf<'BATCH_LINKED'> }
 	)
 }
 
-/** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command. */
-function PublishRanDetail({ item }: { item: ItemOf<'PUBLISH_RAN'> }) {
+/** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command.
+ *  "ver saída" opens what the run printed — fetched only once opened. */
+function PublishRanDetail({ item, issueId }: DetailProps<'PUBLISH_RAN'>) {
 	const { t } = useTranslation()
+	// Private disclosure of this row — truly local transient UI (state placement, case 5).
+	const [open, setOpen] = useState(false)
 	const outcome = enumLabel('PublishRunOutcome', item.outcome)
 	const seconds = Math.round(item.durationMs / 1000)
 	return (
@@ -193,6 +209,41 @@ function PublishRanDetail({ item }: { item: ItemOf<'PUBLISH_RAN'> }) {
 			{item.exitCode === undefined
 				? t('session.timelinePublishRan', { outcome, seconds })
 				: t('session.timelinePublishRanExit', { outcome, seconds, exitCode: item.exitCode })}
+			<Button
+				type="button"
+				variant="link"
+				size="xs"
+				className="ml-1.5 h-auto p-0"
+				aria-expanded={open}
+				onClick={() => setOpen(value => !value)}
+			>
+				{open ? t('session.timelinePublishOutputHide') : t('session.timelinePublishOutputShow')}
+			</Button>
+			{open && <PublishRunOutput issueId={issueId} timelineItemId={item.id} className="mt-2" />}
 		</>
+	)
+}
+
+/** The run's output lines (the terminal-log rows addressed by this timeline item), in a monospace block. */
+function PublishRunOutput({
+	issueId,
+	timelineItemId,
+	className,
+	...props
+}: ComponentProps<'pre'> & { issueId: string; timelineItemId: string }) {
+	const { t } = useTranslation()
+	const { data, isLoading } = useGetPublishRunOutput(issueId, timelineItemId)
+	if (isLoading || !data) return <Skeleton className={cn('h-16 rounded-asymmetric-sm', className)} />
+	if (data.lines.length === 0) return <span className={cn('block text-xs', className)}>{t('session.timelinePublishOutputEmpty')}</span>
+	return (
+		<pre
+			className={cn(
+				'max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-asymmetric-sm bg-muted p-3 font-mono text-xs text-foreground',
+				className,
+			)}
+			{...props}
+		>
+			{data.lines.map(line => line.line).join('\n')}
+		</pre>
 	)
 }
