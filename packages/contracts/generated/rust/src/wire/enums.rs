@@ -1413,7 +1413,7 @@ pub enum PublishFollowUpKind {
 	CONTINUE,
 }
 
-/// How a workspace's declared publish command ended (fase 4, item 6c). SUCCEEDED: it exited 0. FAILED: it exited non-zero or could not start. TIMED_OUT: it ran past its deadline and was killed. CANCELLED_BY_STEER: new guidance arrived during the regret window — it never ran. CANCELLED_BY_PAUSE: the task (or its conversation) was paused during the regret window — it never ran.
+/// How a workspace's declared publish command ended (fase 4, item 6c). SUCCEEDED: it exited 0. FAILED: it exited non-zero or could not start. TIMED_OUT: it ran past its deadline and was killed. CANCELLED_BY_STEER: new guidance arrived during the regret window — it never ran. CANCELLED_BY_PAUSE: the task (or its conversation) was paused during the regret window — it never ran. UNKNOWN: the daemon stopped (crash, restart) after the command was started and before its outcome was recorded — it may or may not have run to the end; it is never run again for that authorization, and the task is told to check.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -1436,6 +1436,9 @@ pub enum PublishRunOutcome {
 	#[serde(rename = "CANCELLED_BY_PAUSE")]
 	#[strum(serialize = "CANCELLED_BY_PAUSE")]
 	CANCELLED_BY_PAUSE,
+	#[serde(rename = "UNKNOWN")]
+	#[strum(serialize = "UNKNOWN")]
+	UNKNOWN,
 }
 
 /// The badge of the system's quota health (fase 4, item 7). OK: room in both windows. NEAR: at or above 70% of the learned weekly ceiling. HOLDING: new task turns are being held by the budget. REFUSED: the provider is refusing turns (usage limit).

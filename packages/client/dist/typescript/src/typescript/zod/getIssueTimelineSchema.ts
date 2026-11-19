@@ -150,7 +150,7 @@ get "outcome"(){
                 return publishRunOutcomeSchema
               },
 "exitCode": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
-"durationMs": z.int().min(0).max(9007199254740991)
+"durationMs": z.optional(z.int().min(0).max(9007199254740991))
     })]))
     })
 

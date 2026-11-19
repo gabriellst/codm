@@ -9,7 +9,8 @@ export const PublishRunOutcomeEnum = {
     FAILED: "FAILED",
     TIMED_OUT: "TIMED_OUT",
     CANCELLED_BY_STEER: "CANCELLED_BY_STEER",
-    CANCELLED_BY_PAUSE: "CANCELLED_BY_PAUSE"
+    CANCELLED_BY_PAUSE: "CANCELLED_BY_PAUSE",
+    UNKNOWN: "UNKNOWN"
 } as const;
 
 export type PublishRunOutcomeEnumKey = (typeof PublishRunOutcomeEnum)[keyof typeof PublishRunOutcomeEnum];

@@ -385,6 +385,8 @@ const PUBLISH_RAN_PT: Record<PublishRunOutcome, (key: string) => string> = {
 	[PublishRunOutcome.TIMED_OUT]: key => `${key}: a publicação passou do tempo e foi interrompida — a tarefa vai ver o que aconteceu.`,
 	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
 	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+	[PublishRunOutcome.UNKNOWN]: key =>
+		`${key}: a publicação foi interrompida (o codm parou no meio) e o resultado é desconhecido — ela não foi repetida. É preciso conferir se foi ao ar; a tarefa vai verificar.`,
 }
 const PUBLISH_RAN_EN: Record<PublishRunOutcome, (key: string) => string> = {
 	[PublishRunOutcome.SUCCEEDED]: key => `${key}: published.`,
@@ -392,6 +394,8 @@ const PUBLISH_RAN_EN: Record<PublishRunOutcome, (key: string) => string> = {
 	[PublishRunOutcome.TIMED_OUT]: key => `${key}: publishing ran past its time and was stopped — the task will look at what happened.`,
 	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
 	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+	[PublishRunOutcome.UNKNOWN]: key =>
+		`${key}: publishing was interrupted (codm stopped midway) and its result is unknown — it was not run again. It must be checked whether it went live; the task will verify.`,
 }
 
 interface ProviderPausedParams {

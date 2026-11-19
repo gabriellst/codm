@@ -21,6 +21,7 @@ import { TerminalLineRepository } from '@issue/repositories/TerminalLineReposito
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { PUBLISH_AUTHORIZED_BY } from '../objects'
 import { PublishRanEvent } from '../events/PublishRanEvent'
+import { PublishStartedEvent } from '../events/PublishStartedEvent'
 import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
@@ -49,7 +50,8 @@ export const RunPublishCommandInputSchema = z.object({
 	resolution: z.enum(StopResolution),
 })
 /**
- * `ran: true` — the command ran (now or before, for this same authorization): the item is done, no session turn.
+ * `ran: true` — the command ran, or MAY have run (`UNKNOWN`), now or before, for this same authorization: the item is
+ * done, no session turn.
  * `ran: false` — the session wakes as before: not authorized, no command declared, no registered worktree, or the
  * regret window cancelled it.
  */
@@ -72,16 +74,23 @@ const RAN: Readonly<Record<PublishRunOutcome, boolean>> = {
 	[PublishRunOutcome.TIMED_OUT]: true,
 	[PublishRunOutcome.CANCELLED_BY_STEER]: false,
 	[PublishRunOutcome.CANCELLED_BY_PAUSE]: false,
+	// Maybe it ran: never again for this answer (at most once) — the session is told to check instead.
+	[PublishRunOutcome.UNKNOWN]: true,
 }
 
+/** The outcomes that END a run that was started — what the runner reports, or `UNKNOWN` when nobody saw it end. */
+type SettledOutcome = RanOutcome | PublishRunOutcome.UNKNOWN
+
 /** What the session is told after a run — the outcome; the failure's output tail rides apart (`sessionOnly`). */
-const RECADO_OF: Readonly<Record<RanOutcome, (key: string) => string>> = {
+const RECADO_OF: Readonly<Record<SettledOutcome, (key: string) => string>> = {
 	[PublishRunOutcome.SUCCEEDED]: key =>
 		`codm ran the workspace's publish command for ${key} and it succeeded (exit 0). Confirm what went live and continue this issue.`,
 	[PublishRunOutcome.FAILED]: key =>
 		`codm ran the workspace's publish command for ${key} and it FAILED. Fix the cause, then ask again before publishing.`,
 	[PublishRunOutcome.TIMED_OUT]: key =>
 		`codm ran the workspace's publish command for ${key} and it ran past its deadline — it was stopped. Find out why before asking to publish again.`,
+	[PublishRunOutcome.UNKNOWN]: key =>
+		`codm started the workspace's publish command for ${key}, but codm itself stopped (a crash or a restart) before it could record how the command ended — the outcome is UNKNOWN, and it was NOT run again. Before anything else, check whether it went live (the deploy, the PR, the release, whatever the command publishes) and say what you found; if it did not, ask again before publishing.`,
 }
 
 /**
@@ -102,6 +111,14 @@ const RECADO_OF: Readonly<Record<RanOutcome, (key: string) => string>> = {
  *
  * ONE RUN PER AUTHORIZATION: a fact for this stop already recorded (a claim after a crash, a retry of the session
  * turn that followed a cancel) is answered from that fact — the command never runs twice for one answer.
+ *
+ * AT MOST ONCE, EVEN ACROSS A CRASH: a publish is irreversible, and running it twice is worse than not knowing. So
+ * the authorization is CONSUMED before the spawn — `agent.publish.started` (keyed by the stop), committed in its own
+ * transaction that first re-checks nothing started it — and only then the command runs. A start with no outcome
+ * (the daemon stopped between the spawn and the record) is never run again: the next attempt — checked FIRST, before
+ * the stop, the command, the worktree or the window could send it anywhere else — records `UNKNOWN`, says in the
+ * group (FEEDBACK) that the publish was interrupted and its result must be checked, and wakes the session with a
+ * recado to verify it.
  */
 @injectable()
 export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSchema, typeof RunPublishCommandOutputSchema> {
@@ -128,6 +145,9 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const before = await this.recorded(input)
 		if (before) return { ran: RAN[before], outcome: before }
+		// Started and never recorded: the daemon stopped mid-run. Before anything else — a pause or a removed command
+		// now must not turn a run that may have happened into a session holding a bare "pode publicar".
+		if (await this.startedFor(input.stopId)) return this.interrupted(input)
 
 		const stop = await this.threads.findStop(input.stopId)
 		if (!stop || !PUBLISH_AUTHORIZED_BY[input.resolution](stop)) return { ran: false }
@@ -150,11 +170,30 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 			return { ran: false, outcome: cancelled }
 		}
 
-		const result = await this.runner.run({ argv: command.argv, cwd, timeoutMs: PUBLISH_COMMAND_TIMEOUT_MS })
+		// CONSUMES the authorization, committed BEFORE the spawn: from here on this answer never spawns again.
+		if (!(await this.withTransaction(undefined, tx => this.start(input, tx)))) {
+			this.logging.warn({ content: { message: 'publish already started for this authorization — not run again', issueId: input.issueId } })
+			return { ran: true }
+		}
+		let result: PublishCommandResult
+		try {
+			result = await this.runner.run({ argv: command.argv, cwd, timeoutMs: PUBLISH_COMMAND_TIMEOUT_MS })
+		} catch {
+			// The runner never throws by contract; if it does anyway, the command may have started — nobody saw it end.
+			return this.interrupted(input)
+		}
 		// The command RAN: from here nothing may send the item back to the queue (that would run it again). A write that
 		// fails is logged — its message never carries the argv nor the output — and the item is still done.
 		try {
-			await this.withTransaction(undefined, tx => this.afterRun(input, result, stop.ask?.onPublished, tx))
+			await this.withTransaction(undefined, tx =>
+				this.settle(
+					input,
+					{ outcome: result.outcome, exitCode: result.exitCode, durationMs: result.durationMs },
+					result.output,
+					stop.ask?.onPublished,
+					tx,
+				),
+			)
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -175,6 +214,47 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 		return parsed.success && parsed.data.stopId === input.stopId ? parsed.data.outcome : undefined
 	}
 
+	/** Whether the command was already started for this authorization — the start fact is keyed by the stop. */
+	private async startedFor(stopId: string, tx?: Transaction): Promise<boolean> {
+		return (await this.domainEventRepository.findLatestByEntityIdAndName(stopId, PublishStartedEvent.name, tx)) !== undefined
+	}
+
+	/** Consumes the authorization: `false` when something already started it (re-checked inside the transaction). */
+	private async start(input: this['input'], tx: Transaction): Promise<boolean> {
+		if (await this.startedFor(input.stopId, tx)) return false
+		await this.domainEventRepository.save(
+			new PublishStartedEvent({
+				entityId: input.stopId,
+				ownerId: input.ownerId,
+				payload: { issueId: input.issueId, threadId: input.threadId, stopId: input.stopId },
+			}),
+			tx,
+		)
+		return true
+	}
+
+	/**
+	 * Started, never recorded: the outcome is `UNKNOWN` — recorded, said in the group, and the session told to check.
+	 * Never re-run, and never thrown: a throw would wake the session with the authorizing answer as if nothing had run.
+	 */
+	private async interrupted(input: this['input']): Promise<this['output']> {
+		this.logging.warn({
+			content: { message: 'publish command was started and never recorded — not run again, outcome UNKNOWN', issueId: input.issueId },
+		})
+		try {
+			await this.withTransaction(undefined, tx => this.settle(input, { outcome: PublishRunOutcome.UNKNOWN }, undefined, undefined, tx))
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'interrupted publish could not be recorded — the item is done anyway',
+					issueId: input.issueId,
+					error: error instanceof Error ? error.name : 'unknown',
+				},
+			})
+		}
+		return { ran: true, outcome: PublishRunOutcome.UNKNOWN }
+	}
+
 	/** The task's registered worktree, if git still lists it for the workspace — never the main worktree. */
 	private async worktreeOf(issueId: string, workspacePath: string): Promise<string | undefined> {
 		const recorded = (await this.attributes.findByIssueId(issueId))?.worktreePath
@@ -185,7 +265,7 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 
 	private async record(
 		input: this['input'],
-		run: { outcome: PublishRunOutcome; exitCode?: number; durationMs: number },
+		run: { outcome: PublishRunOutcome; exitCode?: number; durationMs?: number },
 		tx: Transaction,
 	): Promise<PublishRanEvent> {
 		const fact = new PublishRanEvent({
@@ -197,15 +277,22 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 		return fact
 	}
 
-	private async afterRun(
+	/**
+	 * How a started run ended, in one transaction: the fact, the output (when there is one) in the task's terminal log
+	 * linked to it, the FEEDBACK line for the group, and the follow-up. `output` is absent for `UNKNOWN` — nobody saw it.
+	 */
+	private async settle(
 		input: this['input'],
-		result: PublishCommandResult,
+		run: { outcome: SettledOutcome; exitCode?: number; durationMs?: number },
+		output: string | undefined,
 		onPublished: PublishFollowUp | undefined,
 		tx: Transaction,
 	): Promise<void> {
-		const fact = await this.record(input, { outcome: result.outcome, exitCode: result.exitCode, durationMs: result.durationMs }, tx)
-		const lines = result.output.split('\n').filter(line => line.length > 0)
-		await this.terminalLines.appendOfTimelineItem(input.issueId, input.ownerId, fact.id, lines, tx)
+		const fact = await this.record(input, run, tx)
+		if (output !== undefined) {
+			const lines = output.split('\n').filter(line => line.length > 0)
+			await this.terminalLines.appendOfTimelineItem(input.issueId, input.ownerId, fact.id, lines, tx)
+		}
 
 		const language = await conversationLanguage(this.threads, this.session, input.threadId)
 		await this.domainEventRepository.save(
@@ -216,14 +303,14 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 					issueId: input.issueId,
 					threadId: input.threadId,
 					level: IssueSignalLevel.FEEDBACK,
-					text: THREAD_MESSAGES.publishRan(language, { outcome: result.outcome, key: input.key }),
+					text: THREAD_MESSAGES.publishRan(language, { outcome: run.outcome, key: input.key }),
 					artifactIds: [],
 				},
 			}),
 			tx,
 		)
 
-		if (result.outcome === PublishRunOutcome.SUCCEEDED && onPublished?.kind === PublishFollowUpKind.COMPLETE) {
+		if (run.outcome === PublishRunOutcome.SUCCEEDED && onPublished?.kind === PublishFollowUpKind.COMPLETE) {
 			await this.declareComplete.execute(
 				{
 					ownerId: input.ownerId,
@@ -251,10 +338,10 @@ export class RunPublishCommand extends Handler<typeof RunPublishCommandInputSche
 					threadId: input.threadId,
 					key: input.key,
 					title: input.title,
-					text: RECADO_OF[result.outcome](input.key),
+					text: RECADO_OF[run.outcome](input.key),
 					// The output's tail is the SESSION's (it has to fix the failure) — never the timeline's: `text` is what
 					// the timeline and the cloud panel render, this field only the turn's prompt.
-					...(result.outcome !== PublishRunOutcome.SUCCEEDED && { sessionOnly: tailOf(result.output) }),
+					...(output !== undefined && run.outcome !== PublishRunOutcome.SUCCEEDED && { sessionOnly: tailOf(output) }),
 				},
 				dedupKey: `publish:${fact.id}`,
 			},

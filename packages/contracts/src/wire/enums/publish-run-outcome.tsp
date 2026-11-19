@@ -1,10 +1,11 @@
 namespace TemplateContracts;
 
-@doc("How a workspace's declared publish command ended (fase 4, item 6c). SUCCEEDED: it exited 0. FAILED: it exited non-zero or could not start. TIMED_OUT: it ran past its deadline and was killed. CANCELLED_BY_STEER: new guidance arrived during the regret window — it never ran. CANCELLED_BY_PAUSE: the task (or its conversation) was paused during the regret window — it never ran.")
+@doc("How a workspace's declared publish command ended (fase 4, item 6c). SUCCEEDED: it exited 0. FAILED: it exited non-zero or could not start. TIMED_OUT: it ran past its deadline and was killed. CANCELLED_BY_STEER: new guidance arrived during the regret window — it never ran. CANCELLED_BY_PAUSE: the task (or its conversation) was paused during the regret window — it never ran. UNKNOWN: the daemon stopped (crash, restart) after the command was started and before its outcome was recorded — it may or may not have run to the end; it is never run again for that authorization, and the task is told to check.")
 enum PublishRunOutcome {
   SUCCEEDED: "SUCCEEDED",
   FAILED: "FAILED",
   TIMED_OUT: "TIMED_OUT",
   CANCELLED_BY_STEER: "CANCELLED_BY_STEER",
   CANCELLED_BY_PAUSE: "CANCELLED_BY_PAUSE",
+  UNKNOWN: "UNKNOWN",
 }

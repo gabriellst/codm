@@ -1048,11 +1048,12 @@ const (
 	PublishRunOutcomeTIMED_OUT PublishRunOutcome = "TIMED_OUT"
 	PublishRunOutcomeCANCELLED_BY_STEER PublishRunOutcome = "CANCELLED_BY_STEER"
 	PublishRunOutcomeCANCELLED_BY_PAUSE PublishRunOutcome = "CANCELLED_BY_PAUSE"
+	PublishRunOutcomeUNKNOWN PublishRunOutcome = "UNKNOWN"
 )
 
 func ParsePublishRunOutcome(s string) (PublishRunOutcome, error) {
 	switch PublishRunOutcome(s) {
-	case PublishRunOutcomeSUCCEEDED, PublishRunOutcomeFAILED, PublishRunOutcomeTIMED_OUT, PublishRunOutcomeCANCELLED_BY_STEER, PublishRunOutcomeCANCELLED_BY_PAUSE:
+	case PublishRunOutcomeSUCCEEDED, PublishRunOutcomeFAILED, PublishRunOutcomeTIMED_OUT, PublishRunOutcomeCANCELLED_BY_STEER, PublishRunOutcomeCANCELLED_BY_PAUSE, PublishRunOutcomeUNKNOWN:
 		return PublishRunOutcome(s), nil
 	default:
 		return "", fmt.Errorf("invalid PublishRunOutcome: %q", s)

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { LibSqlDatabaseDriver } from '@codm/core-typescript'
+import { DomainEventRepository, LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import {
 	AskEffect,
@@ -10,6 +10,7 @@ import {
 	MailboxTargetKind,
 	PermissionPosture,
 	ProviderKind,
+	PublishRunOutcome,
 	StopKind,
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
@@ -18,6 +19,8 @@ import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSess
 import { ResumeIssuePayloadSchema } from '@thread/objects'
 import { SetWorkspacePublishCommand } from '@workspace/usecases/SetWorkspacePublishCommand'
 import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../../entities/IssueAttributes'
+import { PublishRanEvent } from '../../events/PublishRanEvent'
+import { PublishStartedEvent } from '../../events/PublishStartedEvent'
 import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 import { MailboxRepository } from '../../repositories/MailboxRepository'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
@@ -112,7 +115,7 @@ describe('the dispatcher runs the publish command in place of the session turn',
 			}),
 			dedupKey: `resume:${stop.stopId}`,
 		})
-		return { thread, issue, worktreePath }
+		return { thread, issue, stop, worktreePath }
 	}
 
 	/** Drain with the session turn scripted to record that it ran. */
@@ -165,5 +168,48 @@ describe('the dispatcher runs the publish command in place of the session turn',
 		expect(runner.runs).toHaveLength(0)
 		expect(sessionTurns[0]).toContain('APPROVE')
 		expect(sessionTurns).toHaveLength(2)
+	})
+
+	describe('a daemon that died between the spawn and the record (at most once)', () => {
+		/** What the dead boot left: the authorization consumed (a start keyed by the stop), no outcome. */
+		const crashedAfterStart = (issueId: string, threadId: string, stopId: string) =>
+			testBed
+				.resolve(DomainEventRepository)
+				.save(new PublishStartedEvent({ entityId: stopId, ownerId: MOCK_CLOUD_OWNER_ID, payload: { issueId, threadId, stopId } }))
+
+		it('the answer claimed again never spawns nor wakes the session with it — UNKNOWN, and the session is told to check', async () => {
+			const { thread, issue, stop } = await scene()
+			await crashedAfterStart(issue.id.value, thread.id.value, stop.stopId)
+
+			const sessionTurns = await drain()
+
+			expect(runner.runs).toHaveLength(0)
+			const [fact] = await testBed.resolve(DomainEventRepository).findByType(PublishRanEvent)
+			expect(fact?.payload.outcome).toBe(PublishRunOutcome.UNKNOWN)
+			expect(sessionTurns).toEqual([expect.stringContaining('UNKNOWN')])
+			expect(sessionTurns.join('\n')).not.toContain('APPROVE')
+		})
+
+		it('with a steer queued before the restart: still no spawn, and no turn carries the authorizing answer', async () => {
+			const { thread, issue, stop } = await scene()
+			await crashedAfterStart(issue.id.value, thread.id.value, stop.stopId)
+			await testBed.resolve(MailboxRepository).enqueue({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issue.id.value,
+				kind: MailboxItemKind.STEER,
+				claimClass: MailboxClaimClass.STEER,
+				posture: PermissionPosture.AUTO,
+				payload: { issueId: issue.id.value, threadId: thread.id.value, key: 'APP-7', title: 'Prévia', text: 'Pessoa: publicou?' },
+				dedupKey: 'steer:after-crash',
+			})
+
+			const sessionTurns = await drain()
+
+			expect(runner.runs).toHaveLength(0)
+			expect(sessionTurns.join('\n')).not.toContain('APPROVE')
+			expect(sessionTurns.join('\n')).toContain('UNKNOWN')
+			expect(sessionTurns.join('\n')).toContain('publicou?')
+		})
 	})
 })

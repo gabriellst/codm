@@ -196,6 +196,20 @@ function BatchLinkedDetail({ item, className }: { item: ItemOf<'BATCH_LINKED'> }
 	)
 }
 
+/** The run's line: with no duration nobody saw it end (`UNKNOWN`, the daemon stopped mid-run) — it asks for a check. */
+function publishRanLine(
+	t: ReturnType<typeof useTranslation>['t'],
+	outcome: string,
+	durationMs: number | undefined,
+	exitCode: number | undefined,
+): string {
+	if (durationMs === undefined) return t('session.timelinePublishRanUnseen', { outcome })
+	const seconds = Math.round(durationMs / 1000)
+	return exitCode === undefined
+		? t('session.timelinePublishRan', { outcome, seconds })
+		: t('session.timelinePublishRanExit', { outcome, seconds, exitCode })
+}
+
 /** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command.
  *  "ver saída" opens what the run printed — fetched only once opened. */
 function PublishRanDetail({ item, issueId }: DetailProps<'PUBLISH_RAN'>) {
@@ -203,12 +217,9 @@ function PublishRanDetail({ item, issueId }: DetailProps<'PUBLISH_RAN'>) {
 	// Private disclosure of this row — truly local transient UI (state placement, case 5).
 	const [open, setOpen] = useState(false)
 	const outcome = enumLabel('PublishRunOutcome', item.outcome)
-	const seconds = Math.round(item.durationMs / 1000)
 	return (
 		<>
-			{item.exitCode === undefined
-				? t('session.timelinePublishRan', { outcome, seconds })
-				: t('session.timelinePublishRanExit', { outcome, seconds, exitCode: item.exitCode })}
+			{publishRanLine(t, outcome, item.durationMs, item.exitCode)}
 			<Button
 				type="button"
 				variant="link"

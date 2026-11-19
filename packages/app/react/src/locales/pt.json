@@ -476,7 +476,8 @@
 			"CANCELLED_BY_STEER": "cancelada por recado",
 			"FAILED": "falhou",
 			"SUCCEEDED": "publicou",
-			"TIMED_OUT": "passou do prazo"
+			"TIMED_OUT": "passou do prazo",
+			"UNKNOWN": "interrompida, resultado desconhecido"
 		},
 		"QuotaState": {
 			"HOLDING": "Segurando tarefas novas",
@@ -899,6 +900,7 @@
 		"timelinePublishOutputShow": "ver saída",
 		"timelinePublishRan": "{{outcome}} em {{seconds}} s",
 		"timelinePublishRanExit": "{{outcome}} em {{seconds}} s (saída {{exitCode}})",
+		"timelinePublishRanUnseen": "{{outcome}} — confira se foi ao ar",
 		"timelineRegretWindow": "esperou {{seconds}} s antes de {{action}} — {{outcome}}",
 		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} sem esperar",
 		"timelineReplyQuote": "respondeu citando",

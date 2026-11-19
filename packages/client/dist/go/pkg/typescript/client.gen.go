@@ -1494,19 +1494,19 @@ func (e ProviderKind) Valid() bool {
 
 // Defines values for ProviderLimitWindow.
 const (
-	FIVEHOUR ProviderLimitWindow = "FIVE_HOUR"
-	UNKNOWN  ProviderLimitWindow = "UNKNOWN"
-	WEEKLY   ProviderLimitWindow = "WEEKLY"
+	ProviderLimitWindowFIVEHOUR ProviderLimitWindow = "FIVE_HOUR"
+	ProviderLimitWindowUNKNOWN  ProviderLimitWindow = "UNKNOWN"
+	ProviderLimitWindowWEEKLY   ProviderLimitWindow = "WEEKLY"
 )
 
 // Valid indicates whether the value is a known member of the ProviderLimitWindow enum.
 func (e ProviderLimitWindow) Valid() bool {
 	switch e {
-	case FIVEHOUR:
+	case ProviderLimitWindowFIVEHOUR:
 		return true
-	case UNKNOWN:
+	case ProviderLimitWindowUNKNOWN:
 		return true
-	case WEEKLY:
+	case ProviderLimitWindowWEEKLY:
 		return true
 	default:
 		return false
@@ -1556,6 +1556,7 @@ const (
 	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
 	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
 	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+	PublishRunOutcomeUNKNOWN          PublishRunOutcome = "UNKNOWN"
 )
 
 // Valid indicates whether the value is a known member of the PublishRunOutcome enum.
@@ -1570,6 +1571,8 @@ func (e PublishRunOutcome) Valid() bool {
 	case PublishRunOutcomeSUCCEEDED:
 		return true
 	case PublishRunOutcomeTIMEDOUT:
+		return true
+	case PublishRunOutcomeUNKNOWN:
 		return true
 	default:
 		return false
@@ -1602,19 +1605,19 @@ func (e QuotaState) Valid() bool {
 
 // Defines values for RegretWindowOutcome.
 const (
-	RegretWindowOutcomeCANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
-	RegretWindowOutcomeCANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
-	RegretWindowOutcomePROCEEDED        RegretWindowOutcome = "PROCEEDED"
+	CANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+	CANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	PROCEEDED        RegretWindowOutcome = "PROCEEDED"
 )
 
 // Valid indicates whether the value is a known member of the RegretWindowOutcome enum.
 func (e RegretWindowOutcome) Valid() bool {
 	switch e {
-	case RegretWindowOutcomeCANCELLEDBYPAUSE:
+	case CANCELLEDBYPAUSE:
 		return true
-	case RegretWindowOutcomeCANCELLEDBYSTEER:
+	case CANCELLEDBYSTEER:
 		return true
-	case RegretWindowOutcomePROCEEDED:
+	case PROCEEDED:
 		return true
 	default:
 		return false
@@ -2278,7 +2281,7 @@ type GetIssueTimeline200JSONResponseBodyItems12 struct {
 // GetIssueTimeline200JSONResponseBodyItems13 defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBodyItems13 struct {
 	At         string            `json:"at"`
-	DurationMs int               `json:"durationMs"`
+	DurationMs *int              `json:"durationMs,omitempty"`
 	ExitCode   *int              `json:"exitCode,omitempty"`
 	Id         string            `json:"id"`
 	Kind       string            `json:"kind"`

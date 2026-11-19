@@ -31,6 +31,7 @@ import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttr
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { PublishRanEvent } from '../events/PublishRanEvent'
+import { PublishStartedEvent } from '../events/PublishStartedEvent'
 import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { GitWorktreeProbe, MockGitWorktreeProbe } from '../services/GitWorktreeProbe'
@@ -137,17 +138,30 @@ describe('RunPublishCommand', () => {
 			...(worktree === 'registered' ? [{ path: worktreePath, main: false, locked: false }] : []),
 		])
 		const stop = await givenStop(testBed, { threadId: thread.id.value, issueId: issue.id.value, ask: publishAsk(onPublished) })
-		const run = (resolution = StopResolution.APPROVE) =>
+		/** Each call resolves a FRESH handler — what a restarted daemon would build. */
+		const runFor = (stopId: string, resolution = StopResolution.APPROVE) =>
 			testBed.resolve(RunPublishCommand).execute({
 				ownerId: MOCK_CLOUD_OWNER_ID,
 				issueId: issue.id.value,
 				threadId: thread.id.value,
 				key: 'APP-12',
 				title: 'Página nova',
-				stopId: stop.stopId,
+				stopId,
 				resolution,
 			})
-		return { workspace, thread, issue, stop, worktreePath, run }
+		const run = (resolution = StopResolution.APPROVE) => runFor(stop.stopId, resolution)
+		/** Another "pode publicar" of the same task, later — a new authorization. */
+		const anotherStop = () => givenStop(testBed, { threadId: thread.id.value, issueId: issue.id.value, ask: publishAsk(onPublished) })
+		/** What a daemon that died between the spawn and the record leaves behind: a start, no outcome. */
+		const crashedAfterStart = (stopId: string) =>
+			testBed.resolve(DomainEventRepository).save(
+				new PublishStartedEvent({
+					entityId: stopId,
+					ownerId: MOCK_CLOUD_OWNER_ID,
+					payload: { issueId: issue.id.value, threadId: thread.id.value, stopId },
+				}),
+			)
+		return { workspace, thread, issue, stop, worktreePath, run, runFor, anotherStop, crashedAfterStart }
 	}
 
 	const facts = () => testBed.resolve(DomainEventRepository).findByType(PublishRanEvent)
@@ -313,5 +327,101 @@ describe('RunPublishCommand', () => {
 		})
 		expect(await holding.run(StopResolution.ANSWER)).toEqual({ ran: false })
 		expect(runner.runs).toHaveLength(1)
+	})
+
+	describe('at most once across a crash', () => {
+		const started = () => testBed.resolve(DomainEventRepository).findByType(PublishStartedEvent)
+
+		it('the authorization is consumed (a start keyed by the stop) and committed BEFORE the spawn', async () => {
+			const { stop, run } = await scene()
+			const seenAtSpawn: number[] = []
+			const spawn = runner.run.bind(runner)
+			runner.run = async request => {
+				seenAtSpawn.push((await started()).filter(fact => fact.entityId === stop.stopId).length)
+				return spawn(request)
+			}
+			expect(await run()).toEqual({ ran: true, outcome: PublishRunOutcome.SUCCEEDED })
+			expect(seenAtSpawn).toEqual([1])
+		})
+
+		it('started, never recorded (a restart): no second spawn — UNKNOWN, a FEEDBACK line in the group, a recado to check', async () => {
+			const { issue, stop, run, crashedAfterStart } = await scene({
+				onPublished: { kind: PublishFollowUpKind.COMPLETE, summary: 'No ar.' },
+			})
+			await crashedAfterStart(stop.stopId)
+
+			expect(await run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+
+			expect(runner.runs).toHaveLength(0)
+			const [fact] = await facts()
+			expect(fact?.payload).toMatchObject({ stopId: stop.stopId, outcome: PublishRunOutcome.UNKNOWN })
+			expect(fact?.payload.exitCode).toBeUndefined()
+			expect(fact?.payload.durationMs).toBeUndefined()
+			const [spoke] = await testBed.resolve(DomainEventRepository).findByType(IssueSpokeEvent)
+			expect(spoke?.payload).toMatchObject({ level: IssueSignalLevel.FEEDBACK, issueId: issue.id.value })
+			expect(spoke?.payload.text).toContain('APP-12')
+			expect(spoke?.payload.text).not.toBe('')
+			const [recado] = await recados()
+			const payload = recado?.payload as { text: string; sessionOnly?: string }
+			expect(recado).toMatchObject({ kind: MailboxItemKind.STEER, claimClass: MailboxClaimClass.REMINDER })
+			expect(payload.text).toContain('UNKNOWN')
+			expect(payload.text).toContain('NOT run again')
+			expect(payload.sessionOnly).toBeUndefined()
+			// Maybe it went live — never concluded on a guess, whatever the ask declared.
+			expect(await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)).toHaveLength(0)
+			const timeline = await assembleIssueTimeline(testBed.resolve(LibSqlDatabaseDriver), issue.id.value, 'Página nova')
+			expect(timeline.find(item => item.kind === IssueTimelineItemKind.PUBLISH_RAN)).toMatchObject({ outcome: PublishRunOutcome.UNKNOWN })
+
+			// Claimed once more: answered from the recorded fact — still nothing spawned, nothing said twice.
+			expect(await run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+			expect(runner.runs).toHaveLength(0)
+			expect(await facts()).toHaveLength(1)
+			expect(await recados()).toHaveLength(1)
+		})
+
+		it('a runner that throws mid-run is UNKNOWN — never an error that would wake the session — and never spawns again', async () => {
+			const { run } = await scene()
+			const spawn = runner.run.bind(runner)
+			runner.run = async request => {
+				await spawn(request)
+				throw new Error('runner died')
+			}
+			expect(await run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+			runner.run = spawn
+			expect(await run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+			expect(runner.runs).toHaveLength(1)
+			expect(await facts()).toHaveLength(1)
+		})
+
+		it('the interruption is checked first: a pause or a removed command since never turn it into a session turn', async () => {
+			const paused = await scene()
+			await paused.crashedAfterStart(paused.stop.stopId)
+			hold.held = true
+			expect(await paused.run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+
+			const unset = await scene({ command: null })
+			await unset.crashedAfterStart(unset.stop.stopId)
+			expect(await unset.run()).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+			expect(runner.runs).toHaveLength(0)
+		})
+
+		it('a later authorization runs normally — and never hides the earlier interrupted one', async () => {
+			const { stop, runFor, anotherStop, crashedAfterStart } = await scene()
+			await crashedAfterStart(stop.stopId)
+			const later = await anotherStop()
+
+			expect(await runFor(later.stopId)).toEqual({ ran: true, outcome: PublishRunOutcome.SUCCEEDED })
+			expect(runner.runs).toHaveLength(1)
+			// The earlier answer's item, claimed after the later one ran: still UNKNOWN, still not spawned.
+			expect(await runFor(stop.stopId)).toEqual({ ran: true, outcome: PublishRunOutcome.UNKNOWN })
+			expect(runner.runs).toHaveLength(1)
+
+			// After the interruption was settled (and the session read its recados — an unread one would cancel the window),
+			// a third authorization runs normally too.
+			await testBed.resolve(LibSqlDatabaseDriver).db.delete(agentMailbox).where(like(agentMailbox.dedupKey, 'publish:%'))
+			const third = await anotherStop()
+			expect(await runFor(third.stopId)).toEqual({ ran: true, outcome: PublishRunOutcome.SUCCEEDED })
+			expect(runner.runs).toHaveLength(2)
+		})
 	})
 })

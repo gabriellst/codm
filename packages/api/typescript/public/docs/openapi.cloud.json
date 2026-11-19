@@ -1347,8 +1347,7 @@
                                   "kind",
                                   "id",
                                   "at",
-                                  "outcome",
-                                  "durationMs"
+                                  "outcome"
                                 ]
                               }
                             ]
@@ -2638,8 +2637,7 @@
                               "kind",
                               "id",
                               "at",
-                              "outcome",
-                              "durationMs"
+                              "outcome"
                             ],
                             "additionalProperties": false
                           }
@@ -4049,7 +4047,8 @@
           "FAILED",
           "TIMED_OUT",
           "CANCELLED_BY_STEER",
-          "CANCELLED_BY_PAUSE"
+          "CANCELLED_BY_PAUSE",
+          "UNKNOWN"
         ]
       },
       "PanelActionOutcome": {

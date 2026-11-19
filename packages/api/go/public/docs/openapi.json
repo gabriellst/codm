@@ -7954,7 +7954,8 @@
           "FAILED",
           "TIMED_OUT",
           "CANCELLED_BY_STEER",
-          "CANCELLED_BY_PAUSE"
+          "CANCELLED_BY_PAUSE",
+          "UNKNOWN"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7962,7 +7963,8 @@
           "PublishRunOutcomeFAILED",
           "PublishRunOutcomeTIMED_OUT",
           "PublishRunOutcomeCANCELLED_BY_STEER",
-          "PublishRunOutcomeCANCELLED_BY_PAUSE"
+          "PublishRunOutcomeCANCELLED_BY_PAUSE",
+          "PublishRunOutcomeUNKNOWN"
         ]
       },
       "QuotaState": {

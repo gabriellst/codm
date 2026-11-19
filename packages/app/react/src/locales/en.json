@@ -476,7 +476,8 @@
 			"CANCELLED_BY_STEER": "cancelled by a message",
 			"FAILED": "failed",
 			"SUCCEEDED": "published",
-			"TIMED_OUT": "timed out"
+			"TIMED_OUT": "timed out",
+			"UNKNOWN": "interrupted, result unknown"
 		},
 		"QuotaState": {
 			"HOLDING": "Holding new tasks",
@@ -899,6 +900,7 @@
 		"timelinePublishOutputShow": "show output",
 		"timelinePublishRan": "{{outcome}} in {{seconds}} s",
 		"timelinePublishRanExit": "{{outcome}} in {{seconds}} s (exit {{exitCode}})",
+		"timelinePublishRanUnseen": "{{outcome}} — check whether it went live",
 		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
 		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting",
 		"timelineReplyQuote": "replied quoting",

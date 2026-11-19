@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const publishRunOutcomeSchema = z.enum(["SUCCEEDED", "FAILED", "TIMED_OUT", "CANCELLED_BY_STEER", "CANCELLED_BY_PAUSE"])
+export const publishRunOutcomeSchema = z.enum(["SUCCEEDED", "FAILED", "TIMED_OUT", "CANCELLED_BY_STEER", "CANCELLED_BY_PAUSE", "UNKNOWN"])

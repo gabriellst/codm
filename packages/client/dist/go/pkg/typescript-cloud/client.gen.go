@@ -893,6 +893,7 @@ const (
 	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
 	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
 	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+	PublishRunOutcomeUNKNOWN          PublishRunOutcome = "UNKNOWN"
 )
 
 // Valid indicates whether the value is a known member of the PublishRunOutcome enum.
@@ -907,6 +908,8 @@ func (e PublishRunOutcome) Valid() bool {
 	case PublishRunOutcomeSUCCEEDED:
 		return true
 	case PublishRunOutcomeTIMEDOUT:
+		return true
+	case PublishRunOutcomeUNKNOWN:
 		return true
 	default:
 		return false
@@ -1549,7 +1552,7 @@ type GetPanelIssue200JSONResponseBodyTimeline12 struct {
 // GetPanelIssue200JSONResponseBodyTimeline13 defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBodyTimeline13 struct {
 	At         string            `json:"at"`
-	DurationMs int               `json:"durationMs"`
+	DurationMs *int              `json:"durationMs,omitempty"`
 	ExitCode   *int              `json:"exitCode,omitempty"`
 	Id         string            `json:"id"`
 	Kind       string            `json:"kind"`
@@ -1844,7 +1847,7 @@ type SyncPanelJSONBodyIssuesTimeline12 struct {
 // SyncPanelJSONBodyIssuesTimeline13 defines parameters for SyncPanel.
 type SyncPanelJSONBodyIssuesTimeline13 struct {
 	At         string            `json:"at"`
-	DurationMs int               `json:"durationMs"`
+	DurationMs *int              `json:"durationMs,omitempty"`
 	ExitCode   *int              `json:"exitCode,omitempty"`
 	Id         string            `json:"id"`
 	Kind       string            `json:"kind"`

@@ -527,9 +527,9 @@ export type SyncPanelMutationRequest = {
             /**
              * @minLength 0
              * @maxLength 9007199254740991
-             * @type integer
+             * @type integer | undefined
             */
-            durationMs: number;
+            durationMs?: number;
         })[];
         /**
          * @type string, date-time

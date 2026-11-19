@@ -1833,6 +1833,7 @@ const (
 	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
 	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
 	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+	PublishRunOutcomeUNKNOWN          PublishRunOutcome = "UNKNOWN"
 )
 
 // Valid indicates whether the value is a known member of the PublishRunOutcome enum.
@@ -1847,6 +1848,8 @@ func (e PublishRunOutcome) Valid() bool {
 	case PublishRunOutcomeSUCCEEDED:
 		return true
 	case PublishRunOutcomeTIMEDOUT:
+		return true
+	case PublishRunOutcomeUNKNOWN:
 		return true
 	default:
 		return false

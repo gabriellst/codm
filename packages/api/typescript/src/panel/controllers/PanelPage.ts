@@ -88,7 +88,7 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   const ACTION = {GIT_PUSH:'git push',GIT_FORCE_PUSH:'git push forçado',PR_MERGE:'merge de PR',RELEASE:'criar release',PACKAGE_PUBLISH:'publicar pacote',DEPLOY:'deploy'};
   const OUTCOME = {PROCEEDED:'seguiu',CANCELLED_BY_STEER:'cancelado por recado',CANCELLED_BY_PAUSE:'cancelado pela pausa'};
   // Fase 4: how a declared publish command ended — the outcome only, never the command line nor its output.
-  const PUBLISH = {SUCCEEDED:'publicou',FAILED:'falhou',TIMED_OUT:'passou do prazo',CANCELLED_BY_STEER:'cancelada por recado',CANCELLED_BY_PAUSE:'cancelada pela pausa'};
+  const PUBLISH = {SUCCEEDED:'publicou',FAILED:'falhou',TIMED_OUT:'passou do prazo',CANCELLED_BY_STEER:'cancelada por recado',CANCELLED_BY_PAUSE:'cancelada pela pausa',UNKNOWN:'interrompida, resultado desconhecido'};
   // Fase 3: an ask shows its code and question, its answer what was answered, and what an issue said says where it went.
   const ROUTED = {PANEL:'só no painel',DIGEST:'no resumo',GROUP:'no grupo'};
   const DETAIL = {
@@ -97,7 +97,7 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     MESSAGE: i => (i.routing ? '[' + (ROUTED[i.routing] || i.routing) + '] ' : '') + i.text,
     REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome),
     BATCH_LINKED: i => i.batchCode + ' · item ' + i.n,
-    PUBLISH_RAN: i => (PUBLISH[i.outcome] || i.outcome) + (i.exitCode != null ? ' (saída ' + i.exitCode + ')' : '') + ' — ' + Math.round(i.durationMs / 1000) + ' s'};
+    PUBLISH_RAN: i => (PUBLISH[i.outcome] || i.outcome) + (i.exitCode != null ? ' (saída ' + i.exitCode + ')' : '') + (i.durationMs != null ? ' — ' + Math.round(i.durationMs / 1000) + ' s' : '')};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };

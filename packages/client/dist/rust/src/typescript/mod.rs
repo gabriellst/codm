@@ -6963,7 +6963,6 @@ pub mod types {
     ///            "type": "object",
     ///            "required": [
     ///              "at",
-    ///              "durationMs",
     ///              "id",
     ///              "kind",
     ///              "outcome"
@@ -7484,7 +7483,6 @@ pub mod types {
     ///      "type": "object",
     ///      "required": [
     ///        "at",
-    ///        "durationMs",
     ///        "id",
     ///        "kind",
     ///        "outcome"
@@ -7647,8 +7645,12 @@ pub mod types {
         #[serde(rename = "PUBLISH_RAN")]
         PublishRan {
             at: ::std::string::String,
-            #[serde(rename = "durationMs")]
-            duration_ms: i64,
+            #[serde(
+                rename = "durationMs",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            duration_ms: ::std::option::Option<i64>,
             #[serde(
                 rename = "exitCode",
                 default,

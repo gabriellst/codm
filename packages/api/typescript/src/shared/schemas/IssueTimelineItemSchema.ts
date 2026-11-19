@@ -39,7 +39,8 @@ export const RegretWindowSchema = z.object({
 export const PublishRunSchema = z.object({
 	outcome: z.enum(PublishRunOutcome),
 	exitCode: z.number().int().optional(),
-	durationMs: z.number().int().nonnegative(),
+	/** Absent only when nobody saw the run end (`UNKNOWN`: the daemon stopped between the spawn and the record). */
+	durationMs: z.number().int().nonnegative().optional(),
 })
 
 const at = z.string()
