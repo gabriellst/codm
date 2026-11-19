@@ -1113,7 +1113,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const item = bundle.head
 		this.logging.info({ content: { message: 'issue turn cut before its session existed — item released', itemId: item.id } })
 		try {
-			await this.mailbox.defer(idsOf(bundle), new Date())
+			// Given back with NO lease — claimable by the very next claim, never "after the clock ticks" (`giveBack`).
+			await this.mailbox.giveBack(idsOf(bundle))
 		} catch (error) {
 			this.logging.error({
 				content: {

@@ -8,6 +8,7 @@ import {
 	MailboxTargetKind,
 	OutputRouting,
 	PermissionPosture,
+	StopResolution,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
@@ -16,7 +17,7 @@ import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
-import { BATCH_ITEMS_MAX, BatchItemDestinationSchema, BatchItemSchema, BatchSchema, type BatchItemDestination } from '@shared/objects'
+import { BATCH_ITEMS_MAX, BatchItemDestinationSchema, BatchItemSchema, BatchSchema } from '@shared/objects'
 import { type Batch, linkedIssueOf } from '../entities/Batch'
 import type { Thread, TranscriptEntry } from '../entities/Thread'
 import { THREAD_MESSAGES } from '../i18n/messages'
@@ -46,6 +47,13 @@ export const RecordBatchOutputSchema = z.object({
 })
 
 /**
+ * How the batch's own `STALLED` notice closes when the batch is recorded after it (`FollowUpIncompleteBatches` raised
+ * it under the batch's id). `RETRY` is the STALLED resolution that means "the work went on" (`RESOLUTIONS_BY_KIND`);
+ * the stop has no issue, so `ResumeIssueOnStopResolved` queues nothing for it. Resolved by codm, never elevating.
+ */
+export const BATCH_STALL_CLOSED_BY = StopResolution.RETRY
+
+/**
  * What an ATTACHED item does besides being recorded — it is guidance to that task, queued as its steer. Total over
  * the destination kinds: every other destination is a record and nothing more (a new issue was forked by the turn
  * itself, a decision is already asked, the rest go nowhere).
@@ -59,16 +67,6 @@ const STEERS_ISSUE: Readonly<Record<BatchItemDestinationKind, boolean>> = {
 	[BatchItemDestinationKind.DEFERRED]: false,
 }
 
-/** The destinations whose receipt part carries the item's own words — the reason it went nowhere (or later). */
-const REASON_OF: Readonly<Record<BatchItemDestinationKind, (destination: BatchItemDestination) => string | undefined>> = {
-	[BatchItemDestinationKind.DECLINED]: destination => ('reason' in destination ? destination.reason : undefined),
-	[BatchItemDestinationKind.DEFERRED]: destination => ('reason' in destination ? destination.reason : undefined),
-	[BatchItemDestinationKind.NEW_ISSUE]: () => undefined,
-	[BatchItemDestinationKind.ATTACHED]: () => undefined,
-	[BatchItemDestinationKind.ALREADY_LIVE]: () => undefined,
-	[BatchItemDestinationKind.NEEDS_DECISION]: () => undefined,
-}
-
 /**
  * THE ORCHESTRATOR RECORDS WHERE EACH ITEM OF A BATCH WENT (fase 4, item 5), and the group gets ONE receipt.
  *
@@ -80,7 +78,8 @@ const REASON_OF: Readonly<Record<BatchItemDestinationKind, (destination: BatchIt
  *     missing, and nothing is written;
  *  3. an ATTACHED item becomes that task's steer, signed by whoever listed it;
  *  4. the receipt is composed (no model) and goes through the OUTPUT POLICY at `BATCH_RECEIPT_LEVEL` — the group's
- *     mode decides between its own message and the panel's line — and the batch turns `RECORDED` with it.
+ *     mode decides between its own message and the panel's line — and the batch turns `RECORDED` with it;
+ *  5. the batch's `STALLED` notice, when the sweep already raised one, is resolved (`BATCH_STALL_CLOSED_BY`).
  *
  * A batch already `RECORDED` answers with its receipt and does nothing else: the receipt is said once.
  */
@@ -135,7 +134,11 @@ export class RecordBatch extends Handler<typeof RecordBatchInputSchema, typeof R
 			}
 
 			const receipt = this.receipt(thread, batch, source, language)
+			// The batch's STALLED notice, if the sweep raised one, is answered by this record — never left open.
+			const stalled = await this.threads.findStop(batch.id.value, tx)
+			if (stalled && !stalled.resolvedAt) thread.resolveStop(stalled, BATCH_STALL_CLOSED_BY, PermissionPosture.AUTO)
 			await this.threads.save(thread, tx)
+			await this.domainEventRepository.saveMany(thread.pullDomainEvents(), tx)
 			batch.recordReceipt(receipt.entry.entryId)
 			await this.batches.save(batch, tx)
 			const quotedMessageId = receipt.entry.quotedEntryId ? await this.consumed.findPlatformId(receipt.entry.quotedEntryId, tx) : undefined
@@ -153,13 +156,8 @@ export class RecordBatch extends Handler<typeof RecordBatchInputSchema, typeof R
 	): { entry: TranscriptEntry; routing: OutputRouting } {
 		const kinds = Object.values(BatchItemDestinationKind)
 		const counts = Object.fromEntries(kinds.map(kind => [kind, 0])) as Record<BatchItemDestinationKind, number>
-		const reasons = Object.fromEntries(kinds.map(kind => [kind, [] as string[]])) as Record<BatchItemDestinationKind, string[]>
-		for (const { destination } of batch.items) {
-			if (!destination) continue
-			counts[destination.kind] += 1
-			const reason = REASON_OF[destination.kind](destination)
-			if (reason !== undefined) reasons[destination.kind].push(reason)
-		}
+		for (const { destination } of batch.items) if (destination) counts[destination.kind] += 1
+		const reasons = batch.receiptReasons()
 		const routing = routeSignal(thread.outputMode, BATCH_RECEIPT_LEVEL)
 		const quotes = QUOTES_ORIGIN[BATCH_RECEIPT_LEVEL] && source?.threadId === thread.id.value
 		const entry = thread.recordEntry({

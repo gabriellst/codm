@@ -158,7 +158,7 @@ describe('steers pending together for one task ride ONE turn', () => {
 			.orderBy(agentMailbox.createdAt)
 
 	/** Drain with the issue turn scripted: each run records its input, may act mid-turn, and reports the next outcome. */
-	const drainWith = async (outcomes: Outcome[], during?: (input: TurnInput) => void) => {
+	const drainWith = async (outcomes: Outcome[], during?: (input: TurnInput) => void | Promise<void>) => {
 		const inputs: TurnInput[] = []
 		const scripted = {
 			bindContainer() {
@@ -166,7 +166,7 @@ describe('steers pending together for one task ride ONE turn', () => {
 			},
 			async execute(input: TurnInput) {
 				inputs.push(input)
-				during?.(input)
+				await during?.(input)
 				return outcomes[Math.min(inputs.length - 1, outcomes.length - 1)]
 			},
 		}
@@ -258,17 +258,18 @@ describe('steers pending together for one task ride ONE turn', () => {
 		await steer(scope, 'um')
 		await steer(scope, 'dois')
 
-		const cut = await drainWith([{ interrupted: { sessionKept: false } }])
+		// Released AT ONCE means the same drain claims the group again — not "after the clock ticks a millisecond".
+		const seen: (readonly [Date | null, number])[][] = []
+		const runs = await drainWith([{ interrupted: { sessionKept: false } }, { spoke: true }], async () => {
+			seen.push((await rows(issue.id.value)).map(row => [row.consumedAt, row.attempts] as const))
+		})
 
-		expect(cut.map(input => input.prompt)).toEqual(['Pessoa: um\n\nPessoa: dois'])
-		// Released NOW — claimable from the next instant, attempts refunded, nothing consumed.
-		expect((await rows(issue.id.value)).map(row => [row.consumedAt, row.attempts])).toEqual([
-			[null, 0],
-			[null, 0],
+		expect(runs.map(input => input.prompt)).toEqual(['Pessoa: um\n\nPessoa: dois', 'Pessoa: um\n\nPessoa: dois'])
+		// The second claim charges ONE attempt per row: the cut one was refunded, nothing was consumed in between.
+		expect(seen[1]).toEqual([
+			[null, 1],
+			[null, 1],
 		])
-		await Bun.sleep(2)
-		const again = await drainWith([{ spoke: true }])
-		expect(again.map(input => input.prompt)).toEqual(['Pessoa: um\n\nPessoa: dois'])
 		expect((await rows(issue.id.value)).map(row => [row.consumedAt !== null, row.attempts])).toEqual([
 			[true, 1],
 			[true, 1],

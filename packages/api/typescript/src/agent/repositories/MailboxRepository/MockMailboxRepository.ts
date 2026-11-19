@@ -193,6 +193,13 @@ export class MockMailboxRepository extends MailboxRepository {
 		}
 	}
 
+	async giveBack(ids: readonly string[]): Promise<void> {
+		for (const row of this.rows.filter(r => ids.includes(r.id) && !r.consumed && !r.dead)) {
+			this.release(row)
+			row.attempts = Math.max(row.attempts - 1, 0)
+		}
+	}
+
 	private release(row: Row): void {
 		row.leaseUntil = undefined
 		row.claimedBy = null

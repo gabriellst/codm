@@ -28,7 +28,7 @@ import { ThreadRepository } from '../repositories/ThreadRepository'
 import { BATCH_RECEIPT_LEVEL, ROUTING_BY_MODE } from '../utils/OutputPolicy'
 import { BATCH_REMIND_AFTER_MS, BATCH_STALL_AFTER_MS, FollowUpIncompleteBatches } from './FollowUpIncompleteBatches'
 import { IngestChannelMessage } from './IngestChannelMessage'
-import { RecordBatch } from './RecordBatch'
+import { BATCH_STALL_CLOSED_BY, RecordBatch } from './RecordBatch'
 
 /**
  * THE BATCH RECEIPT (fase 4, item 5 — aceite "10 itens, 10 destinos"): a listed message opens a batch by rule (never
@@ -123,7 +123,7 @@ describe('RecordBatch — one destination per item, one receipt per batch', () =
 		expect(batch?.status).toBe(BatchStatus.RECORDED)
 		expect(batch?.items.filter(item => item.destination !== undefined)).toHaveLength(10)
 		const receipt = await testBed.resolve(ThreadRepository).findEntry(out.receiptEntryId)
-		expect(receipt?.text).toContain('Lote L-1: 10 → 1 tarefa nova, 9 recusados (motivo 2;')
+		expect(receipt?.text).toContain('Lote L-1: 10 → 1 tarefa nova, 9 recusados (motivo 2; motivo 3; motivo 4; +6).')
 		expect(receipt?.text).toContain(`/panel/g/rotated-${threadId}#L-1`)
 		expect(receipt).toMatchObject({ level: BATCH_RECEIPT_LEVEL, routing: OutputRouting.GROUP })
 		expect(await deliveries()).toBe(before + 1)
@@ -223,5 +223,27 @@ describe('RecordBatch — one destination per item, one receipt per batch', () =
 		const stop = await testBed.resolve(ThreadRepository).findStop(batch?.id.value ?? '')
 		expect(stop?.kind).toBe(StopKind.STALLED)
 		expect(await sweep.execute({ now: at(BATCH_STALL_AFTER_MS + 2000) })).toEqual({ reminded: 0, stalled: 0 })
+	})
+
+	it('recorded after the STALLED notice: the notice closes with the record — it never stays open over a recorded batch', async () => {
+		const { threadId, ingested } = await scene(3)
+		const sweep = testBed.resolve(FollowUpIncompleteBatches)
+		const batch = await batchOf(threadId)
+		const at = (ms: number) => new Date((batch?.createdAt.getTime() ?? 0) + ms)
+		const consume = (dedupKey: string) =>
+			mailboxDb().update(agentMailbox).set({ consumedAt: new Date() }).where(eq(agentMailbox.dedupKey, dedupKey))
+		await consume(ingested.entryId)
+		expect(await sweep.execute({ now: at(BATCH_REMIND_AFTER_MS + 1000) })).toEqual({ reminded: 1, stalled: 0 })
+		await consume(`batch-reminder:${batch?.id.value}`)
+		expect(await sweep.execute({ now: at(BATCH_STALL_AFTER_MS + 1000) })).toEqual({ reminded: 0, stalled: 1 })
+		const threads = testBed.resolve(ThreadRepository)
+		expect((await threads.findStop(batch?.id.value ?? ''))?.resolvedAt).toBeUndefined()
+
+		await record(threadId, [1, 2, 3].map(declined))
+
+		const stop = await threads.findStop(batch?.id.value ?? '')
+		expect(stop?.resolvedAt).toBeInstanceOf(Date)
+		expect(stop?.resolution).toBe(BATCH_STALL_CLOSED_BY)
+		expect((await threads.openStops(threadId)).some(open => open.stopId === batch?.id.value)).toBe(false)
 	})
 })

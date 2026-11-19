@@ -331,8 +331,8 @@ export interface BatchReceiptParams {
 	code: string
 	total: number
 	counts: Readonly<Record<BatchItemDestinationKind, number>>
-	/** The reasons of the items whose destination carries one (declined, deferred) — said in the receipt. */
-	reasons: Readonly<Record<BatchItemDestinationKind, readonly string[]>>
+	/** The reasons of the items whose destination carries one (declined, deferred) — already bounded by the batch. */
+	reasons: Readonly<Record<BatchItemDestinationKind, { readonly shown: readonly string[]; readonly more: number }>>
 	link?: string
 }
 
@@ -366,8 +366,9 @@ const BATCH_PART_EN: Record<BatchItemDestinationKind, (n: number) => string> = {
 
 function batchReceipt(p: BatchReceiptParams, heading: string, part: Record<BatchItemDestinationKind, (n: number) => string>): string {
 	const parts = BATCH_RECEIPT_ORDER.filter(kind => p.counts[kind] > 0).map(kind => {
-		const reasons = p.reasons[kind]
-		return `${part[kind](p.counts[kind])}${reasons.length > 0 ? ` (${reasons.join('; ')})` : ''}`
+		const { shown, more } = p.reasons[kind]
+		const said = [...shown, ...(more > 0 ? [`+${more}`] : [])]
+		return `${part[kind](p.counts[kind])}${said.length > 0 ? ` (${said.join('; ')})` : ''}`
 	})
 	return lines(`${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`, p.link)
 }

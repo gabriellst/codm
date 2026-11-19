@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BatchItemDestinationKind, BatchStatus } from '@codm/contracts-typescript/wire/enums'
-import { Batch } from './Batch'
+import { BATCH_RECEIPT_REASON_MAX, BATCH_RECEIPT_REASONS_PER_KIND, Batch } from './Batch'
 
 const OWNER = '00000000-0000-4000-8000-000000000001'
 const THREAD = '019e4d24-6524-7041-9e1c-8108180cddae'
@@ -73,5 +73,32 @@ describe('Batch — every item 1..N, exactly once', () => {
 		batch.recordReceipt(ENTRY)
 		expect(batch.status).toBe(BatchStatus.RECORDED)
 		expect(batch.receiptEntryId).toBe(ENTRY)
+	})
+
+	it('the receipt says a bounded part of the reasons — each clipped, at most a few per destination, the rest counted', () => {
+		const batch = opened(10)
+		const long = (n: number) => `${n} ${'x'.repeat(490)}`
+		batch.recordDestinations(
+			Array.from({ length: 10 }, (_, index) => ({
+				n: index + 1,
+				destination: { kind: BatchItemDestinationKind.DECLINED, reason: long(index + 1) } as const,
+			})),
+			AT,
+		)
+		const { shown, more } = batch.receiptReasons()[BatchItemDestinationKind.DECLINED]
+		expect(shown).toHaveLength(BATCH_RECEIPT_REASONS_PER_KIND)
+		expect(more).toBe(10 - BATCH_RECEIPT_REASONS_PER_KIND)
+		for (const reason of shown) expect(reason.length).toBeLessThanOrEqual(BATCH_RECEIPT_REASON_MAX)
+		expect(shown[0]?.endsWith('…')).toBe(true)
+		expect(batch.receiptReasons()[BatchItemDestinationKind.NEW_ISSUE]).toEqual({ shown: [], more: 0 })
+	})
+
+	it('a short reason goes into the receipt whole', () => {
+		const batch = opened(3)
+		batch.recordDestinations([1, 2, 3].map(declined), AT)
+		expect(batch.receiptReasons()[BatchItemDestinationKind.DECLINED]).toEqual({
+			shown: ['fora do escopo', 'fora do escopo', 'fora do escopo'],
+			more: 0,
+		})
 	})
 })

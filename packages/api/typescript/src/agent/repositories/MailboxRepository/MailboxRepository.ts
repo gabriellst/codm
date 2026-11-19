@@ -192,6 +192,16 @@ export abstract class MailboxRepository {
 	abstract defer(ids: readonly string[], until: Date, tx?: Transaction): Promise<void>
 
 	/**
+	 * Give a claim back NOW: no holder, NO lease, the attempt the claim charged refunded — claimable by the very next
+	 * `claimNext`, the same drain included. For a turn cut before it ran anything (an "agora" before the session).
+	 *
+	 * Not `defer(ids, new Date())`: that writes an ownerless lease AT the current millisecond, which `claimNext`
+	 * (`lease_until < now`) refuses until the clock ticks and `deferred` reads as a pause meanwhile — whether the
+	 * group came back in the same drain depended on the millisecond (the flaky coalesce case, 2026-11-19).
+	 */
+	abstract giveBack(ids: readonly string[], tx?: Transaction): Promise<void>
+
+	/**
 	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
 	 *
 	 * The SQL half of the release, and the split mirrors `releaseOrphanedClaims`: SQL picks the

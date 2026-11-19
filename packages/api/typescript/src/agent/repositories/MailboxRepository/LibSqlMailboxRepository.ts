@@ -415,6 +415,22 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		)
 	}
 
+	async giveBack(ids: readonly string[], tx?: LibSqlTransaction): Promise<void> {
+		if (ids.length === 0) return
+		await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({
+					claimedBy: null,
+					claimedBoot: null,
+					claimedPid: null,
+					leaseUntil: null,
+					attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)`,
+				})
+				.where(and(inArray(agentMailbox.id, [...ids]), runnable())),
+		)
+	}
+
 	async deferred(tx?: LibSqlTransaction): Promise<DeferredMailboxItem[]> {
 		const dbc = tx ?? this.driver.db
 		const rows = await dbc

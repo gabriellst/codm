@@ -30,6 +30,38 @@ export function linkedIssueOf(destination: BatchItemDestination): string | undef
 	return LINKED_ISSUE_OF[destination.kind](destination)
 }
 
+/**
+ * Which destinations carry a reason the receipt says — total over `BatchItemDestinationKind` (the declined and the
+ * deferred items: why they went nowhere, or later; `ALREADY_LIVE`'s note stays on the panel).
+ */
+export const RECEIPT_REASON_OF: Readonly<Record<BatchItemDestinationKind, (destination: BatchItemDestination) => string | undefined>> = {
+	[BatchItemDestinationKind.DECLINED]: destination => ('reason' in destination ? destination.reason : undefined),
+	[BatchItemDestinationKind.DEFERRED]: destination => ('reason' in destination ? destination.reason : undefined),
+	[BatchItemDestinationKind.NEW_ISSUE]: () => undefined,
+	[BatchItemDestinationKind.ATTACHED]: () => undefined,
+	[BatchItemDestinationKind.ALREADY_LIVE]: () => undefined,
+	[BatchItemDestinationKind.NEEDS_DECISION]: () => undefined,
+}
+
+/**
+ * The longest a reason is said in the RECEIPT — one group message for the whole batch. The wire keeps up to
+ * `BATCH_REASON_MAX` per destination (the panel shows it whole); the receipt clips with `…`.
+ */
+export const BATCH_RECEIPT_REASON_MAX = 80
+/** How many reasons of one destination the receipt says; the rest are counted (`+N`), and the panel lists them all. */
+export const BATCH_RECEIPT_REASONS_PER_KIND = 3
+
+/** The reasons of one destination as the receipt says them. */
+export interface ReceiptReasons {
+	shown: string[]
+	/** How many more reasons of this destination the receipt does not say. */
+	more: number
+}
+
+function clip(reason: string): string {
+	return reason.length <= BATCH_RECEIPT_REASON_MAX ? reason : `${reason.slice(0, BATCH_RECEIPT_REASON_MAX - 1).trimEnd()}…`
+}
+
 export const BatchEntitySchema = z.object({
 	ownerId: z.uuid(),
 	threadId: z.uuid(),
@@ -125,6 +157,30 @@ export class Batch extends AggregateRoot<typeof BatchEntitySchema> {
 		const byNumber = new Map(destinations.map(entry => [entry.n, entry.destination]))
 		this.items = this.items.map(item => ({ ...item, destination: byNumber.get(item.n), recordedAt: at }))
 		this.validate()
+	}
+
+	/**
+	 * The reasons the receipt says, by destination — bounded however many items or however long their reasons:
+	 * at most `BATCH_RECEIPT_REASONS_PER_KIND` per destination, each clipped to `BATCH_RECEIPT_REASON_MAX`.
+	 */
+	receiptReasons(): Record<BatchItemDestinationKind, ReceiptReasons> {
+		const all = Object.fromEntries(Object.values(BatchItemDestinationKind).map(kind => [kind, [] as string[]])) as Record<
+			BatchItemDestinationKind,
+			string[]
+		>
+		for (const { destination } of this.items) {
+			const reason = destination ? RECEIPT_REASON_OF[destination.kind](destination) : undefined
+			if (destination && reason !== undefined) all[destination.kind].push(reason)
+		}
+		return Object.fromEntries(
+			Object.entries(all).map(([kind, reasons]) => [
+				kind,
+				{
+					shown: reasons.slice(0, BATCH_RECEIPT_REASONS_PER_KIND).map(clip),
+					more: Math.max(0, reasons.length - BATCH_RECEIPT_REASONS_PER_KIND),
+				},
+			]),
+		) as Record<BatchItemDestinationKind, ReceiptReasons>
 	}
 
 	/** Every item has its destination and the group was told — the batch is `RECORDED`, with the receipt's entry. */
