@@ -84,10 +84,16 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 		})
 	}
 
-	complete(meta?: string): void {
+	/**
+	 * @param at the instant the completion was DECLARED (the fact's `completedAt`), not the instant it was
+	 * materialized here. It is the identity of this completion cycle — the closing in the group is keyed by it
+	 * (`thread/handlers/CloseIssueOnChannel`), so a second declaration of the same cycle (a no-op here) finds the
+	 * first one's instant and closes nothing more. `reopen()` clears it; the next completion stamps a new one.
+	 */
+	complete(meta?: string, at: Date = new Date()): void {
 		if (this.status === IssueStatus.COMPLETED) throw new BaseError<DomainErrors>('ISSUE_ALREADY_COMPLETED')
 		this.status = IssueStatus.COMPLETED
-		this.completedAt = new Date()
+		this.completedAt = at
 		if (meta !== undefined) this.meta = meta
 	}
 

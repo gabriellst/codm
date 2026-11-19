@@ -1,11 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IssueHold } from '@issue/services/IssueHold'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
-import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
-import { FactSource } from '../enums'
+import { askQuestionOf, askStopFact } from '../utils/issueAsk'
 
 export const AskOperatorInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -25,6 +23,14 @@ export const AskOperatorOutputSchema = z.object({ delivered: z.literal(true), st
 /**
  * The agent asks a human a question (GOAL-agent-abstraction §4.4; the tool is `AskOperator`).
  *
+ * ### Since fase 3 it is an ALIAS of a decision
+ * Sessions already running still call it, so it stays — and raises what `AskDecision` raises: a
+ * `DECISION_REQUESTED` stop whose ask is the question with NO options (the answer is free text) and no
+ * declared effect. The output policy then puts it in the group with its code, where a quoted reply
+ * answers it; the legacy `HUMAN_REQUESTED` it used to raise said nothing in the group by itself. The ask
+ * is built on this call (`askStopFact`), and a question longer than an ask's is cut there — the full
+ * words stay in the stop's `detail`.
+ *
  * ### FIRE-AND-FORGET, and this is a correctness decision rather than an ergonomic one
  * The call returns AS SOON AS the question is durable. It does NOT wait for an answer. On a night
  * with nobody awake a blocking "wait for the human" tool would hang the run until the watchdog killed
@@ -40,11 +46,8 @@ export const AskOperatorOutputSchema = z.object({ delivered: z.literal(true), st
  * a miscount and there are four.
  *
  * ### It mints no new vocabulary
- * The same `AgentRunStopRaisedEvent`, the same bridge, the same frozen
- * `integration.thread.stop_raised`. The question travels as `detail`, and `MaterializeIssueFromExecution`
- * promotes it to the Needs-you card's TITLE because `kind === HUMAN_REQUESTED` — so the operator reads
- * the question itself rather than a generic "A participant asked for a human". Without the additive
- * `detail` field this phase adds to the frozen event, that whole paragraph would be an empty promise.
+ * The same `AgentRunStopRaisedEvent`, the same bridge, the same frozen `integration.thread.stop_raised`
+ * — with the `ask` fase 3 added to both.
  */
 @injectable()
 export class AskOperator extends Handler<typeof AskOperatorInputSchema, typeof AskOperatorOutputSchema> {
@@ -59,23 +62,16 @@ export class AskOperator extends Handler<typeof AskOperatorInputSchema, typeof A
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		// A HELD issue's run does not get to raise anything visible (fase 2, item 2 — pausa como comando).
 		await this.hold.assertNotHeld(input.actingIssueId)
-		const stopId = uuidv7()
+		const { event, stopId } = askStopFact({
+			ownerId: input.ownerId,
+			issueId: input.issueId,
+			threadId: input.threadId,
+			requested: StopKind.DECISION_REQUESTED,
+			ask: { question: askQuestionOf(input.question), options: [], effects: [] },
+			detail: input.question,
+		})
 		await this.withTransaction(tx, async tx => {
-			await this.domainEventRepository.save(
-				new AgentRunStopRaisedEvent({
-					entityId: input.issueId,
-					ownerId: input.ownerId,
-					payload: {
-						stopId,
-						issueId: input.issueId,
-						threadId: input.threadId,
-						kind: StopKind.HUMAN_REQUESTED,
-						detail: input.question,
-						source: FactSource.DECLARED,
-					},
-				}),
-				tx,
-			)
+			await this.domainEventRepository.save(event, tx)
 		})
 		return { delivered: true, stopId }
 	}

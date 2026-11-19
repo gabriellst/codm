@@ -51,6 +51,8 @@
 // `packages/app/tauri/config/*.ts`, which imports `type WorkspaceId` from it the same way.
 import type { TestBootWorkspaceId } from '../../../template.config'
 import type {
+	AskAnswerKind,
+	AskEffect,
 	OwnerKind,
 	WorkspaceBadge,
 	ContactKind,
@@ -303,6 +305,17 @@ export function givenStop(
 		kind: StopKind
 		title: string
 		detail: string
+		/**
+		 * Raise an issue's ASK (fase 3) instead of a plain kind — a decision or a question; the kind is
+		 * derived from it (any effect makes a decision). Mirrors `StopAskProps` of the `thread` context.
+		 */
+		ask: {
+			question: string
+			options: { id: string; label: string }[]
+			default?: { kind: AskAnswerKind.OPTION; optionId: string } | { kind: AskAnswerKind.TEXT; text: string }
+			effects: AskEffect[]
+			requested: StopKind.DECISION_REQUESTED | StopKind.QUESTION_ASKED
+		}
 	}>,
 ): Promise<SeedStop>
 

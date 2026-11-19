@@ -5,6 +5,7 @@
 
 import { agentModelIdSchema } from "./agentModelIdSchema.ts";
 import { bufferSizeSchema } from "./bufferSizeSchema.ts";
+import { groupOutputModeSchema } from "./groupOutputModeSchema.ts";
 import { languageSchema } from "./languageSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { z } from "zod/v4";
@@ -32,6 +33,9 @@ export const getThreadSettings200Schema = z.object({
 "streaming": z.object({
     "enabled": z.boolean()
     }),
+get "outputMode"(){
+                return groupOutputModeSchema
+              },
 "language": z.object({
     get "declared"(){
                 return languageSchema.optional()

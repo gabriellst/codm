@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { PgDatabaseDriver } from '@codm/core-typescript'
 import { panelActions } from '@codm/contracts/db/pg'
 import {
+	AskAnswerKind,
 	IssueLifeState,
 	IssueStatus,
 	PanelActionKind,
@@ -12,6 +13,7 @@ import {
 	StopKind,
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
+import type { PanelOpenStop } from '@shared/schemas'
 import { TestBed } from '@test/support'
 import { SyncPanel } from './SyncPanel'
 import { SyncPanelRoster } from './SyncPanelRoster'
@@ -37,6 +39,42 @@ const OPEN_STOP = {
 	issueId: ISSUE,
 	kind: StopKind.APPROVAL_NEEDED,
 	resolutions: [StopResolution.APPROVE, StopResolution.DENY],
+}
+
+const DECISION = '019e4d24-6524-7041-9e1c-8108180cde51'
+const QUESTION = '019e4d24-6524-7041-9e1c-8108180cde52'
+/** Fase 3 — the asks as the daemon reports them (`askViewOf`): a decision that publishes, a free-text question. */
+const DECISION_ASK: PanelOpenStop = {
+	stopId: DECISION,
+	issueId: ISSUE,
+	kind: StopKind.DECISION_REQUESTED,
+	resolutions: [],
+	ask: {
+		kind: StopKind.DECISION_REQUESTED,
+		code: 'APP-1 · D1',
+		question: 'Publico a prévia?',
+		reply: {
+			kind: AskAnswerKind.OPTION,
+			options: [
+				{ id: 'yes', label: 'Sim' },
+				{ id: 'no', label: 'Não' },
+			],
+		},
+		releaseRequired: true,
+	},
+}
+const QUESTION_ASK: PanelOpenStop = {
+	stopId: QUESTION,
+	issueId: ISSUE,
+	kind: StopKind.QUESTION_ASKED,
+	resolutions: [],
+	ask: {
+		kind: StopKind.QUESTION_ASKED,
+		code: 'APP-1 · D2',
+		question: 'Qual título?',
+		reply: { kind: AskAnswerKind.TEXT },
+		defaultLabel: 'Novidades',
+	},
 }
 
 const issue = (issueId: string, threadId: string) => ({
@@ -161,11 +199,44 @@ describe('panel — acting as an identified member', () => {
 		expect((await pull()).actions.map(action => action.actionId)).toEqual([actionId])
 
 		// The page learns the stop and its answers from the issue read.
-		expect((await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })).openStop).toEqual({
-			stopId: STOP,
-			kind: StopKind.APPROVAL_NEEDED,
-			resolutions: [StopResolution.APPROVE, StopResolution.DENY],
+		expect((await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })).openStops).toEqual([
+			{
+				stopId: STOP,
+				kind: StopKind.APPROVAL_NEEDED,
+				resolutions: [StopResolution.APPROVE, StopResolution.DENY],
+			},
+		])
+	})
+
+	it('fase 3 — answering an ask: an open ask of that issue, a releaser for a decision with an effect, an offered answer', async () => {
+		const { token, ana, beto } = await identifiedGroup()
+		await testBed.resolve(SyncPanelRoster).execute({
+			ownerId: OWNER,
+			groups: [{ threadId: GROUP, members: [ANA, BETO], openStops: [OPEN_STOP, DECISION_ASK, QUESTION_ASK] }],
 		})
+		const answer = (stopId: string, a: { kind: AskAnswerKind.OPTION; optionId: string } | { kind: AskAnswerKind.TEXT; text: string }) =>
+			({ kind: PanelActionKind.ANSWER_ASK, issueId: ISSUE, stopId, answer: a }) as const
+		const no = { kind: AskAnswerKind.OPTION, optionId: 'no' } as const
+
+		// A decision whose answer publishes: only someone who may release.
+		expect(await refused(act(token, beto, answer(DECISION, no)))).toBe('PANEL_CANNOT_RELEASE')
+		// An option the ask does not list, and an option on a free-text question: not offered.
+		expect(await refused(act(token, ana, answer(DECISION, { kind: AskAnswerKind.OPTION, optionId: 'maybe' })))).toBe(
+			'PANEL_RESOLUTION_NOT_OFFERED',
+		)
+		expect(await refused(act(token, beto, answer(QUESTION, no)))).toBe('PANEL_RESOLUTION_NOT_OFFERED')
+		// A stop that is not an ask, and an ask of another issue: not here.
+		expect(await refused(act(token, ana, answer(STOP, no)))).toBe('PANEL_NOT_FOUND')
+		expect(await refused(act(token, ana, { ...answer(DECISION, no), issueId: OTHER_ISSUE }))).toBe('PANEL_NOT_FOUND')
+
+		// A question without effect: anyone identified; a releaser on the decision.
+		const text = await act(token, beto, answer(QUESTION, { kind: AskAnswerKind.TEXT, text: 'Novidades de novembro' }))
+		const option = await act(token, ana, answer(DECISION, no))
+		expect((await pull()).actions.map(action => action.actionId).sort()).toEqual([text.actionId, option.actionId].sort())
+
+		// The page reads every open ask of the issue, as the daemon reported it.
+		const { openStops } = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
+		expect(openStops.map(stop => stop.ask?.code)).toEqual([undefined, 'APP-1 · D1', 'APP-1 · D2'])
 	})
 
 	it('the outcome round-trips: the daemon reports, the page reads DONE / REFUSED with the code — first report wins', async () => {

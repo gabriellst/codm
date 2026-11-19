@@ -244,6 +244,13 @@ pub enum IntegrationEvent {
 		time: chrono::DateTime<chrono::Utc>,
 		payload: super::events::ThreadAttachedPayload,
 	},
+	#[serde(rename = "integration.thread.issue_signal", rename_all = "camelCase")]
+	ThreadIssueSignal {
+		id: uuid::Uuid,
+		owner_id: String,
+		time: chrono::DateTime<chrono::Utc>,
+		payload: super::events::ThreadIssueSignalPayload,
+	},
 	#[serde(rename = "integration.thread.message_ingested", rename_all = "camelCase")]
 	ThreadMessageIngested {
 		id: uuid::Uuid,
@@ -310,6 +317,7 @@ impl IntegrationEvent {
 			Self::OrchestratorReplied { .. } => super::events::ORCHESTRATOR_REPLIED_EVENT_NAME,
 			Self::SubscriptionChanged { .. } => super::events::SUBSCRIPTION_CHANGED_EVENT_NAME,
 			Self::ThreadAttached { .. } => super::events::THREAD_ATTACHED_EVENT_NAME,
+			Self::ThreadIssueSignal { .. } => super::events::THREAD_ISSUE_SIGNAL_EVENT_NAME,
 			Self::ThreadMessageIngested { .. } => super::events::THREAD_MESSAGE_INGESTED_EVENT_NAME,
 			Self::ThreadStopRaised { .. } => super::events::THREAD_STOP_RAISED_EVENT_NAME,
 			Self::ThreadStopResolved { .. } => super::events::THREAD_STOP_RESOLVED_EVENT_NAME,
@@ -352,6 +360,7 @@ impl IntegrationEvent {
 			Self::OrchestratorReplied { owner_id, .. } => owner_id,
 			Self::SubscriptionChanged { owner_id, .. } => owner_id,
 			Self::ThreadAttached { owner_id, .. } => owner_id,
+			Self::ThreadIssueSignal { owner_id, .. } => owner_id,
 			Self::ThreadMessageIngested { owner_id, .. } => owner_id,
 			Self::ThreadStopRaised { owner_id, .. } => owner_id,
 			Self::ThreadStopResolved { owner_id, .. } => owner_id,

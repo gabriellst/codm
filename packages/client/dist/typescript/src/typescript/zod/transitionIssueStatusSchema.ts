@@ -26,7 +26,8 @@ export const transitionIssueStatusMutationRequestSchema = z.object({
                 return issueStatusSchema
               },
 "summary": z.optional(z.string().max(4000).default("")),
-"key": z.optional(z.string().default(""))
+"key": z.optional(z.string().default("")),
+"finalArtifactId": z.optional(z.uuid())
     })
 
 export const transitionIssueStatusMutationResponseSchema = z.lazy(() => transitionIssueStatus200Schema)

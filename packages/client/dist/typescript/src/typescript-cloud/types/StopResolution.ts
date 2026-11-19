@@ -9,7 +9,9 @@ export const StopResolutionEnum = {
     REVIEW_AND_SEND: "REVIEW_AND_SEND",
     TAKE_OVER: "TAKE_OVER",
     APPROVE: "APPROVE",
-    DENY: "DENY"
+    DENY: "DENY",
+    ANSWER: "ANSWER",
+    DEFAULT_APPLIED: "DEFAULT_APPLIED"
 } as const;
 
 export type StopResolutionEnumKey = (typeof StopResolutionEnum)[keyof typeof StopResolutionEnum];

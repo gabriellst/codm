@@ -1,0 +1,2 @@
+ALTER TABLE "panel"."panel_actions" DROP CONSTRAINT "panel_actions_kind_check";--> statement-breakpoint
+ALTER TABLE "panel"."panel_actions" ADD CONSTRAINT "panel_actions_kind_check" CHECK ("panel"."panel_actions"."kind" IN ('PAUSE', 'RESUME', 'STEER', 'ANSWER_STOP', 'ANSWER_ASK'));

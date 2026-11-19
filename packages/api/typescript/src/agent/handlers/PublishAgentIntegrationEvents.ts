@@ -6,12 +6,14 @@ import {
 	OrchestratorRepliedEvent as OrchestratorRepliedIntegrationEvent,
 	IssueCompletedEvent,
 	ThreadStopRaisedEvent,
+	ThreadIssueSignalEvent,
 } from '@codm/contracts-typescript/wire/events'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 
 /**
  * The write-side bridge: the terminal runtime raises context-PRIVATE `terminal.*` domain facts (so
@@ -24,6 +26,7 @@ import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
  *   agent.run.started    → integration.issue.opened          (BC5 → BC4, triggers transcript/status)
  *   agent.run.completed  → integration.issue.completed       (BC5 → BC4, starts the 24h clock)
  *   agent.run.stop_raised → integration.thread.stop_raised   (BC6 → BC4, NEEDS_ATTENTION)
+ *   agent.issue_spoke     → integration.thread.issue_signal  (fase 3: feedback / progress → output policy)
  */
 @injectable()
 export class PublishAgentIntegrationEvents extends EventHandler<
@@ -33,6 +36,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 		typeof OrchestratorRepliedEvent,
 		typeof AgentRunCompletedEvent,
 		typeof AgentRunStopRaisedEvent,
+		typeof IssueSpokeEvent,
 	]
 > {
 	readonly event = [
@@ -41,6 +45,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 		OrchestratorRepliedEvent,
 		AgentRunCompletedEvent,
 		AgentRunStopRaisedEvent,
+		IssueSpokeEvent,
 	] as const
 
 	constructor(private readonly mediator: ExternalMediator) {
@@ -117,6 +122,31 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						key: event.payload.key,
 						completedAt: event.payload.completedAt,
 						summary: event.payload.summary,
+						finalArtifactId: event.payload.finalArtifactId,
+						answersEntryId: event.payload.answersEntryId,
+					},
+				}),
+			)
+			return
+		}
+
+		// WHAT AN ISSUE SAID (fase 3, item 1) — a preview or progress. The runtime knows what was said; where it
+		// goes (the group, a per-person digest, the panel) is the group's rule, which is why it crosses.
+		if (event instanceof IssueSpokeEvent) {
+			await this.mediator.publish(
+				new ThreadIssueSignalEvent({
+					ownerId,
+					payload: {
+						issueId: event.payload.issueId,
+						threadId: event.payload.threadId,
+						level: event.payload.level,
+						text: event.payload.text,
+						artifactIds: event.payload.artifactIds,
+						mainArtifactId: event.payload.mainArtifactId,
+						addresseeId: event.payload.addresseeId,
+						// THE FACT'S OWN ID, the one the outbox persisted — a redelivery of this domain event mints a new
+						// integration event (new id) but carries the same `signalId`, so the thread records it once.
+						signalId: event.id,
 					},
 				}),
 			)
@@ -137,6 +167,9 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						// HOW we learned the fact, which is a context-private observation, and forwarding it
 						// would turn a zero-cost domain field into a contract change (§4.3 rule 6).
 						detail: event.payload.detail,
+						// The ask (fase 3), already validated by the tool that raised it — it rides the frozen event
+						// as `unknown` (the codegen carries no nested shape) and the thread parses it back.
+						ask: event.payload.ask,
 					},
 				}),
 			)

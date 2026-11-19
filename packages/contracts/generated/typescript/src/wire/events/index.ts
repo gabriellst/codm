@@ -34,6 +34,7 @@ import {
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadIssueSignalEventSchema,
 	ThreadMessageIngestedEventSchema,
 	ThreadStopRaisedEventSchema,
 	ThreadStopResolvedEventSchema,
@@ -74,6 +75,7 @@ export * from './materialized'
 export * from './orchestrator-replied'
 export * from './subscription-changed'
 export * from './thread-attached'
+export * from './thread-issue-signal'
 export * from './thread-message-ingested'
 export * from './thread-stop-raised'
 export * from './thread-stop-resolved'
@@ -112,6 +114,7 @@ export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadIssueSignalEventSchema,
 	ThreadMessageIngestedEventSchema,
 	ThreadStopRaisedEventSchema,
 	ThreadStopResolvedEventSchema,

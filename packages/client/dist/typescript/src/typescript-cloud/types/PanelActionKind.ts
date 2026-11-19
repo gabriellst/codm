@@ -5,6 +5,7 @@
 
 
 export const PanelActionKindEnum = {
+    ANSWER_ASK: "ANSWER_ASK",
     ANSWER_STOP: "ANSWER_STOP",
     PAUSE: "PAUSE",
     RESUME: "RESUME",

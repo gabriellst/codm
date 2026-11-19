@@ -4,7 +4,12 @@ import type { Transaction } from '@codm/core-typescript'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { IssueRepository } from '../repositories/IssueRepository'
 
-export const CompleteIssueInputSchema = z.object({ issueId: z.uuid(), meta: z.string().optional() })
+export const CompleteIssueInputSchema = z.object({
+	issueId: z.uuid(),
+	meta: z.string().optional(),
+	/** When the completion was declared (the fact's instant) — the cycle's identity, see `Issue.complete`. */
+	completedAt: z.date().optional(),
+})
 export const CompleteIssueOutputSchema = z.void()
 
 /**
@@ -26,7 +31,7 @@ export class CompleteIssue extends Handler<typeof CompleteIssueInputSchema, type
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const issue = await this.issues.findById(input.issueId)
 		if (!issue || issue.status === IssueStatus.COMPLETED) return // idempotent
-		issue.complete(input.meta)
+		issue.complete(input.meta, input.completedAt)
 		await this.withTransaction(tx, async tx => {
 			await this.issues.save(issue, tx)
 		})

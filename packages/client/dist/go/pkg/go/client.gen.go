@@ -110,6 +110,48 @@ func (e ArtifactKind) Valid() bool {
 	}
 }
 
+// Defines values for AskAnswerKind.
+const (
+	AskAnswerKindDEFAULT AskAnswerKind = "DEFAULT"
+	AskAnswerKindOPTION  AskAnswerKind = "OPTION"
+	AskAnswerKindTEXT    AskAnswerKind = "TEXT"
+)
+
+// Valid indicates whether the value is a known member of the AskAnswerKind enum.
+func (e AskAnswerKind) Valid() bool {
+	switch e {
+	case AskAnswerKindDEFAULT:
+		return true
+	case AskAnswerKindOPTION:
+		return true
+	case AskAnswerKindTEXT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskEffect.
+const (
+	AskEffectCLIENTDATA   AskEffect = "CLIENT_DATA"
+	AskEffectIRREVERSIBLE AskEffect = "IRREVERSIBLE"
+	AskEffectPUBLISH      AskEffect = "PUBLISH"
+)
+
+// Valid indicates whether the value is a known member of the AskEffect enum.
+func (e AskEffect) Valid() bool {
+	switch e {
+	case AskEffectCLIENTDATA:
+		return true
+	case AskEffectIRREVERSIBLE:
+		return true
+	case AskEffectPUBLISH:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachFlowStyle.
 const (
 	AttachFlowStyleFULLSCREEN AttachFlowStyle = "FULLSCREEN"
@@ -122,6 +164,33 @@ func (e AttachFlowStyle) Valid() bool {
 	case AttachFlowStyleFULLSCREEN:
 		return true
 	case AttachFlowStyleSIDEPANEL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockCause.
+const (
+	BlockCauseCLASSIFICATION BlockCause = "CLASSIFICATION"
+	BlockCauseCLILOGIN       BlockCause = "CLI_LOGIN"
+	BlockCausePROVIDERERROR  BlockCause = "PROVIDER_ERROR"
+	BlockCausePROVIDERLIMIT  BlockCause = "PROVIDER_LIMIT"
+	BlockCauseSTALLED        BlockCause = "STALLED"
+)
+
+// Valid indicates whether the value is a known member of the BlockCause enum.
+func (e BlockCause) Valid() bool {
+	switch e {
+	case BlockCauseCLASSIFICATION:
+		return true
+	case BlockCauseCLILOGIN:
+		return true
+	case BlockCausePROVIDERERROR:
+		return true
+	case BlockCausePROVIDERLIMIT:
+		return true
+	case BlockCauseSTALLED:
 		return true
 	default:
 		return false
@@ -806,6 +875,27 @@ func (e ErrorCode) Valid() bool {
 	}
 }
 
+// Defines values for GroupOutputMode.
+const (
+	GroupOutputModeDECISIONSANDLIVE GroupOutputMode = "DECISIONS_AND_LIVE"
+	GroupOutputModeDECISIONSONLY    GroupOutputMode = "DECISIONS_ONLY"
+	GroupOutputModeEVERYTHING       GroupOutputMode = "EVERYTHING"
+)
+
+// Valid indicates whether the value is a known member of the GroupOutputMode enum.
+func (e GroupOutputMode) Valid() bool {
+	switch e {
+	case GroupOutputModeDECISIONSANDLIVE:
+		return true
+	case GroupOutputModeDECISIONSONLY:
+		return true
+	case GroupOutputModeEVERYTHING:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GroupRole.
 const (
 	GroupRoleAdmin      GroupRole = "admin"
@@ -947,6 +1037,36 @@ func (e IssueLifeState) Valid() bool {
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueSignalLevel.
+const (
+	IssueSignalLevelBLOCKNOTICE IssueSignalLevel = "BLOCK_NOTICE"
+	IssueSignalLevelCLOSING     IssueSignalLevel = "CLOSING"
+	IssueSignalLevelDECISION    IssueSignalLevel = "DECISION"
+	IssueSignalLevelFEEDBACK    IssueSignalLevel = "FEEDBACK"
+	IssueSignalLevelPROGRESS    IssueSignalLevel = "PROGRESS"
+	IssueSignalLevelQUESTION    IssueSignalLevel = "QUESTION"
+)
+
+// Valid indicates whether the value is a known member of the IssueSignalLevel enum.
+func (e IssueSignalLevel) Valid() bool {
+	switch e {
+	case IssueSignalLevelBLOCKNOTICE:
+		return true
+	case IssueSignalLevelCLOSING:
+		return true
+	case IssueSignalLevelDECISION:
+		return true
+	case IssueSignalLevelFEEDBACK:
+		return true
+	case IssueSignalLevelPROGRESS:
+		return true
+	case IssueSignalLevelQUESTION:
 		return true
 	default:
 		return false
@@ -1298,6 +1418,27 @@ func (e OutboxSource) Valid() bool {
 	}
 }
 
+// Defines values for OutputRouting.
+const (
+	OutputRoutingDIGEST OutputRouting = "DIGEST"
+	OutputRoutingGROUP  OutputRouting = "GROUP"
+	OutputRoutingPANEL  OutputRouting = "PANEL"
+)
+
+// Valid indicates whether the value is a known member of the OutputRouting enum.
+func (e OutputRouting) Valid() bool {
+	switch e {
+	case OutputRoutingDIGEST:
+		return true
+	case OutputRoutingGROUP:
+		return true
+	case OutputRoutingPANEL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OwnerKind.
 const (
 	OwnerKindINDIVIDUAL   OwnerKind = "INDIVIDUAL"
@@ -1318,6 +1459,7 @@ func (e OwnerKind) Valid() bool {
 
 // Defines values for PanelActionKind.
 const (
+	PanelActionKindANSWERASK  PanelActionKind = "ANSWER_ASK"
 	PanelActionKindANSWERSTOP PanelActionKind = "ANSWER_STOP"
 	PanelActionKindPAUSE      PanelActionKind = "PAUSE"
 	PanelActionKindRESUME     PanelActionKind = "RESUME"
@@ -1327,6 +1469,8 @@ const (
 // Valid indicates whether the value is a known member of the PanelActionKind enum.
 func (e PanelActionKind) Valid() bool {
 	switch e {
+	case PanelActionKindANSWERASK:
+		return true
 	case PanelActionKindANSWERSTOP:
 		return true
 	case PanelActionKindPAUSE:
@@ -1630,9 +1774,12 @@ const (
 	StopKindAPPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
 	StopKindAUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	StopKindBLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	StopKindDECISIONREQUESTED       StopKind = "DECISION_REQUESTED"
 	StopKindHUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
 	StopKindPERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
+	StopKindQUESTIONASKED           StopKind = "QUESTION_ASKED"
 	StopKindSERVERERROR             StopKind = "SERVER_ERROR"
+	StopKindSTALLED                 StopKind = "STALLED"
 )
 
 // Valid indicates whether the value is a known member of the StopKind enum.
@@ -1644,11 +1791,17 @@ func (e StopKind) Valid() bool {
 		return true
 	case StopKindBLOCKEDBYCLASSIFICATION:
 		return true
+	case StopKindDECISIONREQUESTED:
+		return true
 	case StopKindHUMANREQUESTED:
 		return true
 	case StopKindPERMISSIONDENIED:
 		return true
+	case StopKindQUESTIONASKED:
+		return true
 	case StopKindSERVERERROR:
+		return true
+	case StopKindSTALLED:
 		return true
 	default:
 		return false
@@ -1657,17 +1810,23 @@ func (e StopKind) Valid() bool {
 
 // Defines values for StopResolution.
 const (
-	StopResolutionAPPROVE       StopResolution = "APPROVE"
-	StopResolutionDENY          StopResolution = "DENY"
-	StopResolutionRETRY         StopResolution = "RETRY"
-	StopResolutionREVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
-	StopResolutionTAKEOVER      StopResolution = "TAKE_OVER"
+	StopResolutionANSWER         StopResolution = "ANSWER"
+	StopResolutionAPPROVE        StopResolution = "APPROVE"
+	StopResolutionDEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
+	StopResolutionDENY           StopResolution = "DENY"
+	StopResolutionRETRY          StopResolution = "RETRY"
+	StopResolutionREVIEWANDSEND  StopResolution = "REVIEW_AND_SEND"
+	StopResolutionTAKEOVER       StopResolution = "TAKE_OVER"
 )
 
 // Valid indicates whether the value is a known member of the StopResolution enum.
 func (e StopResolution) Valid() bool {
 	switch e {
+	case StopResolutionANSWER:
+		return true
 	case StopResolutionAPPROVE:
+		return true
+	case StopResolutionDEFAULTAPPLIED:
 		return true
 	case StopResolutionDENY:
 		return true
@@ -2723,6 +2882,12 @@ type AgentStopReason string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
+// AskAnswerKind defines model for AskAnswerKind.
+type AskAnswerKind string
+
+// AskEffect defines model for AskEffect.
+type AskEffect string
+
 // AttachFlowStyle defines model for AttachFlowStyle.
 type AttachFlowStyle string
 
@@ -2735,6 +2900,9 @@ type AudioMessageData struct {
 	Seconds    *int    `json:"seconds,omitempty"`
 	Url        *string `json:"url,omitempty"`
 }
+
+// BlockCause defines model for BlockCause.
+type BlockCause string
 
 // BufferSize defines model for BufferSize.
 type BufferSize string
@@ -3792,6 +3960,9 @@ type GetOrCreateChannelOutput struct {
 	Status        ChannelStatus `json:"status"`
 }
 
+// GroupOutputMode defines model for GroupOutputMode.
+type GroupOutputMode string
+
 // GroupRole defines model for GroupRole.
 type GroupRole string
 
@@ -4021,6 +4192,9 @@ type IssueControlSource string
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
+// IssueSignalLevel defines model for IssueSignalLevel.
+type IssueSignalLevel string
+
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string
 
@@ -4103,6 +4277,9 @@ type OnboardingStep string
 
 // OutboxSource defines model for OutboxSource.
 type OutboxSource string
+
+// OutputRouting defines model for OutputRouting.
+type OutputRouting string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string

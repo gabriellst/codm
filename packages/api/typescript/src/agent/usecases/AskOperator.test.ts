@@ -6,6 +6,7 @@ import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AskOperator } from './AskOperator'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
+import { ASK_QUESTION_MAX } from '@shared/objects'
 
 /**
  * REVIEW FINDING (MAJOR) — `AskOperator` was exercised by ZERO tests before this file. `git grep -n
@@ -65,7 +66,7 @@ describe('AskOperator — fire-and-forget, exactly one stop fact (AC-6.10)', () 
 	 * ledger AND the outbox — not a single `find` — so a hypothetical double-publish (e.g. one call
 	 * that both raises a stop AND records a duplicate) cannot hide behind "a row exists".
 	 */
-	it('produces EXACTLY ONE AgentRunStopRaisedEvent, kind HUMAN_REQUESTED, detail === question, counted on events + outbox', async () => {
+	it('produces EXACTLY ONE AgentRunStopRaisedEvent — since fase 3 a DECISION with the question as its free-text ask — counted on events + outbox', async () => {
 		const useCase = testBed.resolve(AskOperator)
 		const eventRepo = testBed.resolve(DomainEventRepository)
 		const before = await testBed.probe().snapshot(COUNTED)
@@ -76,12 +77,27 @@ describe('AskOperator — fire-and-forget, exactly one stop fact (AC-6.10)', () 
 		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
 		expect(stops).toHaveLength(1)
 		expect(stops[0]?.payload.stopId).toBe(out.stopId)
-		expect(stops[0]?.payload.kind).toBe(StopKind.HUMAN_REQUESTED)
+		// Fase 3: the alias raises what `AskDecision` raises — the legacy HUMAN_REQUESTED said nothing in the group.
+		expect(stops[0]?.payload.kind).toBe(StopKind.DECISION_REQUESTED)
+		expect(stops[0]?.payload.ask).toEqual({ question, options: [], effects: [] })
 		expect(stops[0]?.payload.detail).toBe(question)
 		expect(stops[0]?.payload.source).toBe(FactSource.DECLARED)
 
 		const after = await testBed.probe().snapshot(COUNTED)
 		expect(after.events).toBe(before.events + 1)
 		expect(after.outbox).toBe(before.outbox + 1)
+	})
+
+	it('a question longer than an ask takes is CUT for the ask and kept whole in `detail` — never refused (sessions in flight)', async () => {
+		const useCase = testBed.resolve(AskOperator)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const long = 'x'.repeat(ASK_QUESTION_MAX + 500)
+
+		await useCase.execute({ ownerId, issueId, threadId, question: long })
+
+		const [stop] = await eventRepo.findByType(AgentRunStopRaisedEvent)
+		expect(stop?.payload.detail).toBe(long)
+		expect(stop?.payload.ask?.question).toHaveLength(ASK_QUESTION_MAX)
+		expect(stop?.payload.ask?.question.endsWith('…')).toBe(true)
 	})
 })

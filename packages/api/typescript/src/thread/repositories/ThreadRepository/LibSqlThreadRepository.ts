@@ -1,10 +1,20 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
-import { LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
+import { and, asc, desc, eq, inArray, isNull, lte, max, min, or } from 'drizzle-orm'
+import { BaseError, LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
-import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codm/contracts-typescript/wire/enums'
+import {
+	OutputRouting,
+	StopKind,
+	type ProviderKind,
+	type ContactKind,
+	type ThreadStatus,
+	type BufferSize,
+} from '@codm/contracts-typescript/wire/enums'
+import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
 import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
-import { ThreadRepository } from './ThreadRepository'
+import { askDueAt } from '../../objects/StopAsk'
+import type { DomainErrors } from '../../errors'
+import { ThreadRepository, type OverdueDigest } from './ThreadRepository'
 
 @injectable()
 export class LibSqlThreadRepository extends ThreadRepository {
@@ -82,6 +92,9 @@ export class LibSqlThreadRepository extends ThreadRepository {
 						// set is the worse half — the console would show "follow the account" while every turn kept
 						// speaking the language nobody can see chosen any more.
 						language: data.language,
+						// `configureOutputMode` flips it every way — missing here, a mode change would be a write the
+						// console reports as saved and the output policy never sees.
+						outputMode: data.outputMode,
 						participants: data.participants,
 						bufferSize: data.bufferSize,
 						// Both directions too, and for the same reason the custom prompt is: `configureModel`
@@ -110,7 +123,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 				})
 
 			// `stops_` aliases the drain so it does not shadow the Drizzle table symbol `stops`.
-			const { entries, stops: stops_, stopResolutions, entryLinks } = entity.pullPendingWrites()
+			const { entries, stops: stops_, stopResolutions, entryLinks, digestPatches } = entity.pullPendingWrites()
 			if (entries.length > 0) {
 				await dbc.insert(transcriptEntries).values(entries.map(entry => this.entryToPersistence(entry)))
 			}
@@ -120,8 +133,26 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			// The resolution is an UPDATE of a row that already committed — the caller loaded it with
 			// `findStop`, so it exists. One statement per resolution: a single resolve per request is the
 			// only shape the product has, and a CASE-based bulk update would be machinery for nobody.
+			//
+			// CONDITIONAL (fase 3): only a stop still OPEN is stamped. Two resolvers that both loaded the stop
+			// open — a quoted reply and the panel, an answer and the deadline job — both pass the aggregate's
+			// own `resolvedAt` check; this is where the second one learns it lost. Zero rows ⇒
+			// STOP_ALREADY_RESOLVED, which rolls the caller's whole transaction back, so nothing the loser
+			// recorded beside it (an entry, an echo, a steer) survives.
 			for (const patch of stopResolutions) {
-				await dbc.update(stops).set({ resolution: patch.resolution, resolvedAt: patch.resolvedAt }).where(eq(stops.id, patch.stopId))
+				const stamped = await dbc
+					.update(stops)
+					.set({
+						resolution: patch.resolution,
+						resolvedAt: patch.resolvedAt,
+						answer: patch.answer ?? null,
+						answeredBy: patch.answeredBy ?? null,
+					})
+					.where(and(eq(stops.id, patch.stopId), isNull(stops.resolvedAt)))
+					.returning({ id: stops.id })
+				if (stamped.length === 0) {
+					throw new BaseError<DomainErrors>('STOP_ALREADY_RESOLVED', `stop ${patch.stopId} was resolved by someone else first`)
+				}
 			}
 			// A late routing (`Thread.linkEntryToIssue`) — the entry committed earlier, unrouted. `issue_id IS NULL`
 			// re-asserted in the UPDATE, so a link can never overwrite one decided at ingest.
@@ -130,6 +161,24 @@ export class LibSqlThreadRepository extends ThreadRepository {
 					.update(transcriptEntries)
 					.set({ issueId: link.issueId, classification: link.classification })
 					.where(and(eq(transcriptEntries.id, link.entryId), isNull(transcriptEntries.issueId)))
+			}
+			// The per-person digest (fase 3) — CONDITIONAL on the entry still waiting, the same shape as the stop
+			// resolution above: zero rows ⇒ another flush already sent it, and the whole transaction rolls back.
+			for (const patch of digestPatches) {
+				const flushed = await dbc
+					.update(transcriptEntries)
+					.set({ routing: patch.routing, digestEntryId: patch.digestEntryId ?? null })
+					.where(
+						and(
+							eq(transcriptEntries.id, patch.entryId),
+							eq(transcriptEntries.routing, OutputRouting.DIGEST),
+							isNull(transcriptEntries.digestEntryId),
+						),
+					)
+					.returning({ id: transcriptEntries.id })
+				if (flushed.length === 0) {
+					throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${patch.entryId} was flushed by someone else first`)
+				}
 			}
 			return entity
 		})
@@ -200,6 +249,106 @@ export class LibSqlThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toStop(row))
 	}
 
+	// ── The asks (fase 3) ──────────────────────────────────────────────────────────────────────────
+
+	async nextAskSeq(issueId: string, tx?: LibSqlTransaction): Promise<number> {
+		const dbc = tx ?? this.driver.db
+		const [row] = await dbc
+			.select({ last: max(stops.seq) })
+			.from(stops)
+			.where(eq(stops.issueId, issueId))
+		return (row?.last ?? 0) + 1
+	}
+
+	async markAskDelivered(entryId: string, deliveredAt: Date, tx?: LibSqlTransaction): Promise<string[]> {
+		const dbc = tx ?? this.driver.db
+		// The asks a DIGEST entry carried: each question kept its own entry, pointing at the digest that took it.
+		const carried = dbc.select({ id: transcriptEntries.id }).from(transcriptEntries).where(eq(transcriptEntries.digestEntryId, entryId))
+		const marked = await dbc
+			.update(stops)
+			.set({ dueAt: askDueAt(deliveredAt) })
+			.where(
+				and(
+					eq(stops.kind, StopKind.QUESTION_ASKED),
+					isNull(stops.resolvedAt),
+					isNull(stops.dueAt),
+					or(eq(stops.askEntryId, entryId), inArray(stops.askEntryId, carried)),
+				),
+			)
+			.returning({ id: stops.id })
+		return marked.map(row => row.id)
+	}
+
+	async findDueAsks(now: Date, tx?: LibSqlTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.kind, StopKind.QUESTION_ASKED), isNull(stops.resolvedAt), lte(stops.dueAt, now)))
+			.orderBy(asc(stops.dueAt))
+		return rows.map(row => this.toStop(row))
+	}
+
+	async findAsk(issueId: string, seq: number, tx?: LibSqlTransaction): Promise<Stop | undefined> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.issueId, issueId), eq(stops.seq, seq)))
+			.limit(1)
+		return rows[0] ? this.toStop(rows[0]) : undefined
+	}
+
+	async pendingDigest(threadId: string, addresseeId: string | undefined, tx?: LibSqlTransaction): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(transcriptEntries)
+			.where(
+				and(
+					eq(transcriptEntries.threadId, threadId),
+					eq(transcriptEntries.routing, OutputRouting.DIGEST),
+					isNull(transcriptEntries.digestEntryId),
+					addresseeId === undefined ? isNull(transcriptEntries.addresseeId) : eq(transcriptEntries.addresseeId, addresseeId),
+				),
+			)
+			.orderBy(asc(transcriptEntries.at))
+		return rows.map(row => this.toEntry(row))
+	}
+
+	async overdueDigests(cutoff: Date, tx?: LibSqlTransaction): Promise<OverdueDigest[]> {
+		const dbc = tx ?? this.driver.db
+		// Thread by thread (`thread_id IN (…)`) with the three equalities of `transcript_entries_digest_idx`, and
+		// the age as a HAVING over the few waiting rows: an `at` range in the WHERE makes SQLite pick the
+		// (thread, at) index and walk the whole transcript every sweep (EXPLAIN QUERY PLAN, checked).
+		const rows = await dbc
+			.select({ ownerId: transcriptEntries.ownerId, threadId: transcriptEntries.threadId, addresseeId: transcriptEntries.addresseeId })
+			.from(transcriptEntries)
+			.where(
+				and(
+					inArray(transcriptEntries.threadId, dbc.select({ id: threads.id }).from(threads)),
+					eq(transcriptEntries.routing, OutputRouting.DIGEST),
+					isNull(transcriptEntries.digestEntryId),
+				),
+			)
+			.groupBy(transcriptEntries.ownerId, transcriptEntries.threadId, transcriptEntries.addresseeId)
+			.having(lte(min(transcriptEntries.at), cutoff))
+		return rows.map(row => ({ ownerId: row.ownerId, threadId: row.threadId, addresseeId: row.addresseeId ?? undefined }))
+	}
+
+	async stopsCarriedBy(entryId: string, tx?: LibSqlTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
+		// The entry's own stop (every notice of an issue's stop carries it), and the asks folded into a digest.
+		const own = dbc.select({ id: transcriptEntries.stopId }).from(transcriptEntries).where(eq(transcriptEntries.id, entryId))
+		const carried = dbc.select({ id: transcriptEntries.id }).from(transcriptEntries).where(eq(transcriptEntries.digestEntryId, entryId))
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(or(inArray(stops.id, own), eq(stops.askEntryId, entryId), inArray(stops.askEntryId, carried)))
+			.orderBy(asc(stops.raisedAt))
+		return rows.map(row => this.toStop(row))
+	}
+
 	// ── Mapping ───────────────────────────────────────────────────────────────────────────────────
 
 	private toDomain(row: typeof threads.$inferSelect): Thread {
@@ -218,6 +367,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			// The column is nullable and the field is optional — one spelling of "never chosen" on each
 			// side, collapsed here, exactly as `customPrompt` below does.
 			language: row.language ?? undefined,
+			outputMode: row.outputMode,
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
 			modelByProvider: row.modelByProvider,
@@ -245,6 +395,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			reactionsEnabled: entity.reactionsEnabled,
 			streamingEnabled: entity.streamingEnabled,
 			language: entity.language ?? null,
+			outputMode: entity.outputMode,
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
 			modelByProvider: entity.modelByProvider,
@@ -273,6 +424,11 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			messageType: entry.messageType ?? null,
 			mediaPath: entry.mediaPath ?? null,
 			artifactId: entry.artifactId ?? null,
+			level: entry.level ?? null,
+			routing: entry.routing ?? null,
+			stopId: entry.stopId ?? null,
+			digestEntryId: entry.digestEntryId ?? null,
+			addresseeId: entry.addresseeId ?? null,
 			at: entry.at,
 		}
 	}
@@ -295,10 +451,18 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			raisedAt: stop.raisedAt,
 			resolution: stop.resolution ?? null,
 			resolvedAt: stop.resolvedAt ?? null,
+			ask: stop.ask ?? null,
+			seq: stop.seq ?? null,
+			dueAt: stop.dueAt ?? null,
+			askEntryId: stop.askEntryId ?? null,
+			answer: stop.answer ?? null,
+			answeredBy: stop.answeredBy ?? null,
 		}
 	}
 
-	// No casts, same reason as `toEntry`: `issue_stops.kind` and `.resolution` carry `$type<…>()`.
+	// No casts, same reason as `toEntry`: `issue_stops.kind` and `.resolution` carry `$type<…>()`. The two
+	// JSON columns are PARSED — their shape is the core's (`StopAskSchema` / `StopAnswerSchema`), never
+	// redeclared on the table, so the read is where it is checked.
 	private toStop(row: typeof stops.$inferSelect): Stop {
 		return {
 			stopId: row.id,
@@ -311,6 +475,12 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			raisedAt: row.raisedAt,
 			resolution: row.resolution ?? undefined,
 			resolvedAt: row.resolvedAt ?? undefined,
+			ask: row.ask == null ? undefined : StopAskSchema.parse(row.ask),
+			seq: row.seq ?? undefined,
+			dueAt: row.dueAt ?? undefined,
+			askEntryId: row.askEntryId ?? undefined,
+			answer: row.answer == null ? undefined : StopAnswerSchema.parse(row.answer),
+			answeredBy: row.answeredBy ?? undefined,
 		}
 	}
 
@@ -330,6 +500,11 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			messageType: row.messageType ?? undefined,
 			mediaPath: row.mediaPath ?? undefined,
 			artifactId: row.artifactId ?? undefined,
+			level: row.level ?? undefined,
+			routing: row.routing ?? undefined,
+			stopId: row.stopId ?? undefined,
+			digestEntryId: row.digestEntryId ?? undefined,
+			addresseeId: row.addresseeId ?? undefined,
 			at: row.at,
 		}
 	}

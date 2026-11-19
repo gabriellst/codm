@@ -7,4 +7,10 @@ enum StopResolution {
   TAKE_OVER: "TAKE_OVER",
   APPROVE: "APPROVE",
   DENY: "DENY",
+  // Fase 3: someone answered an ask (DECISION_REQUESTED / QUESTION_ASKED) — an option or free text,
+  // recorded on the stop as its answer.
+  ANSWER: "ANSWER",
+  // Fase 3: a QUESTION_ASKED reached its deadline and the issue went on with its declared default.
+  // Written only by the deadline job, never accepted from a route.
+  DEFAULT_APPLIED: "DEFAULT_APPLIED",
 }

@@ -93,6 +93,10 @@ const steerEntryOf = (payload: unknown): string | undefined => {
 	const parsed = SteerEntryPayloadSchema.safeParse(payload)
 	return parsed.success ? parsed.data.entryId : undefined
 }
+/** Whether a STEER is the automatic declaration reminder (`declarationReminder: true` on its payload). */
+const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
+const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safeParse(payload).success
+
 /**
  * THE LANES — how many turns of each TARGET KIND may be in flight at once, and which kind is claimed
  * first when both have room.
@@ -893,7 +897,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const provider = this.providerFor(item, thread)
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
-		const payload = item.payload as { entryId?: string; originEntryId?: string }
+		const payload = item.payload as { entryId?: string; originEntryId?: string; issueId?: string }
 		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
@@ -915,6 +919,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// the run-token claims, because this turn was triggered by a subagent finishing, not by a
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
+			// WHICH ISSUE the answer speaks for — carried on the item since the result was queued, and dropped
+			// here until fase 3: the reply was recorded with no issue, so `orchestrator_replied.issueId` was empty
+			// and a quote of that answer could not route back to the issue.
+			issueId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.issueId : undefined,
 		})
 		return { spoke: result.spoke, provider, transportStop: result.transportStop }
 	}
@@ -1083,8 +1091,13 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
 			// issue's first turn, which is what `resolveSession` reads as "there is nothing to resume".
 			priorMessageId: session?.lastMessageId,
-			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
+			// The PERSON's message a routed steer carries (`RoutedSteer`) — the turn's words answer them (fase 3,
+			// item 5). Every other steer, and the brief, carry none, and their words are the issue's progress.
+			answersEntryId: item.kind === MailboxItemKind.STEER ? steerEntryOf(item.payload) : undefined,
+			// The automatic nudge (`ReconcileStalledIssues`) — read off its payload, where it always was and
+			// never reached the turn.
+			declarationReminder: item.kind === MailboxItemKind.STEER && reminderOf(item.payload) ? true : undefined,
 		})
 		// A pause killed it (or kept it from starting): nothing was persisted, the item goes back held.
 		if (result.held) return { held: true, spoke: false }

@@ -18,8 +18,8 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	MESSAGE: ({ item }) => <MessageDetail item={item} />,
 	STEER: ({ item }) => <SteerDetail item={item} />,
 	ARTIFACT: ({ item }) => `${enumLabel('ArtifactKind', item.artifactKind)} · ${item.name}`,
-	STOP_RAISED: ({ item }) => `${enumLabel('StopKind', item.stopKind)} · ${item.title}`,
-	STOP_RESOLVED: ({ item }) => enumLabel('StopResolution', item.resolution),
+	STOP_RAISED: ({ item }) => <StopRaisedDetail item={item} />,
+	STOP_RESOLVED: ({ item }) => <StopResolvedDetail item={item} />,
 	COMPLETED: () => null,
 	ARCHIVED: () => null,
 	PAUSED: ({ item }) => <ControlDetail item={item} />,
@@ -93,10 +93,35 @@ function MessageDetail({ item }: { item: ItemOf<'MESSAGE'> }) {
 			<span className="mr-1.5 text-xs text-foreground">
 				{fromPerson ? t('session.timelineFromPerson') : t('session.timelineFromAgent')}
 				{routedBy && ` · ${t(routedBy)}`}
+				{/* Fase 3 — where what the issue said went: the group, a digest, or only the panel. */}
+				{item.routing && ` · ${enumLabel('OutputRouting', item.routing)}`}
 			</span>
 			{item.text}
 		</>
 	)
+}
+
+/** The stop, and — when it is an ask (fase 3) — its code, question and options. */
+function StopRaisedDetail({ item }: { item: ItemOf<'STOP_RAISED'> }) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	if (!item.ask) return <>{`${enumLabel('StopKind', item.stopKind)} · ${item.title}`}</>
+	return (
+		<>
+			<span className="mr-1.5 font-mono text-xs text-foreground">{item.ask.code}</span>
+			{item.ask.question}
+			{item.ask.options.length > 0 && <span className="block text-xs">{item.ask.options.map(option => option.label).join(' · ')}</span>}
+			{item.ask.dueAt && (
+				<span className="block text-xs">{t('session.ask.dueAt', { time: formatDayAndTime(item.ask.dueAt, locale) })}</span>
+			)}
+		</>
+	)
+}
+
+/** How the stop was resolved — and, for an ask (fase 3), what was answered or the default it went on with. */
+function StopResolvedDetail({ item }: { item: ItemOf<'STOP_RESOLVED'> }) {
+	const resolution = enumLabel('StopResolution', item.resolution)
+	return <>{item.answer ? `${resolution} · ${enumLabel('AskAnswerKind', item.answer.kind)}: ${item.answer.label}` : resolution}</>
 }
 
 function SteerDetail({ item }: { item: ItemOf<'STEER'> }) {

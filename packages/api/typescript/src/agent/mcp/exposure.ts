@@ -9,6 +9,10 @@ import { CreateIssueController } from '../controllers/CreateIssue'
 import { TransitionIssueStatusController } from '../controllers/TransitionIssueStatus'
 import { RaiseStopController } from '../controllers/RaiseStop'
 import { AskOperatorController } from '../controllers/AskOperator'
+import { AskDecisionController } from '../controllers/AskDecision'
+import { AskQuestionController } from '../controllers/AskQuestion'
+import { RequestFeedbackController } from '../controllers/RequestFeedback'
+import { ReportProgressController } from '../controllers/ReportProgress'
 import { ForkIssueController } from '../controllers/ForkIssue'
 import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 import { RecordArtifactController, SendArtifactController } from '@artifact/controllers'
@@ -119,6 +123,10 @@ const AGENT_CONTROLLER_CLASSES: readonly McpExposedControllerClass[] = [
 	TransitionIssueStatusController,
 	RaiseStopController,
 	AskOperatorController,
+	AskDecisionController,
+	AskQuestionController,
+	RequestFeedbackController,
+	ReportProgressController,
 	ForkIssueController,
 	SteerIssueTurnController,
 ]
@@ -197,6 +205,13 @@ export {
 	TransitionIssueStatusController,
 	RaiseStopController,
 	AskOperatorController,
+	// Fase 3, item 1 — the four doors an ISSUE speaks through, named by `IssueWorkPromptBuilder`'s
+	// `declarationInstruction()` in place of the `RaiseStop` / `AskOperator` it used to name (both stay in
+	// scope as aliases for the sessions already running). Same context and same license.
+	AskDecisionController,
+	AskQuestionController,
+	RequestFeedbackController,
+	ReportProgressController,
 	ForkIssueController,
 	RecordArtifactController,
 	// The delivery half of "envio de artefatos pelo canal" — named by `OrchestratorPromptBuilder`'s

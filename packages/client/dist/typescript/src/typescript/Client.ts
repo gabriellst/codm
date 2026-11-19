@@ -1,8 +1,11 @@
 // AUTO-GENERATED — do not edit.
 import {
 	addWorkspace,
+	answerStop,
 	archiveIssue,
+	askDecision,
 	askOperator,
+	askQuestion,
 	attachThread,
 	claimSignInCode,
 	completeOnboarding,
@@ -10,6 +13,7 @@ import {
 	configureLanguage,
 	configureMentionGate,
 	configureModel,
+	configureOutputMode,
 	configurePrompt,
 	configureReactions,
 	configureStreaming,
@@ -48,6 +52,8 @@ import {
 	raiseStop,
 	recordArtifact,
 	removeWorkspace,
+	reportProgress,
+	requestFeedback,
 	resolveStop,
 	restoreIssue,
 	resumeIssue,
@@ -86,12 +92,24 @@ export class TypescriptClient {
 		return (addWorkspace as (...a: any[]) => ReturnType<typeof addWorkspace>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	answerStop(...args: Parameters<typeof answerStop>): ReturnType<typeof answerStop> {
+		return (answerStop as (...a: any[]) => ReturnType<typeof answerStop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	archiveIssue(...args: Parameters<typeof archiveIssue>): ReturnType<typeof archiveIssue> {
 		return (archiveIssue as (...a: any[]) => ReturnType<typeof archiveIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	askDecision(...args: Parameters<typeof askDecision>): ReturnType<typeof askDecision> {
+		return (askDecision as (...a: any[]) => ReturnType<typeof askDecision>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	askOperator(...args: Parameters<typeof askOperator>): ReturnType<typeof askOperator> {
 		return (askOperator as (...a: any[]) => ReturnType<typeof askOperator>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	askQuestion(...args: Parameters<typeof askQuestion>): ReturnType<typeof askQuestion> {
+		return (askQuestion as (...a: any[]) => ReturnType<typeof askQuestion>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	attachThread(...args: Parameters<typeof attachThread>): ReturnType<typeof attachThread> {
@@ -120,6 +138,10 @@ export class TypescriptClient {
 
 	configureModel(...args: Parameters<typeof configureModel>): ReturnType<typeof configureModel> {
 		return (configureModel as (...a: any[]) => ReturnType<typeof configureModel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	configureOutputMode(...args: Parameters<typeof configureOutputMode>): ReturnType<typeof configureOutputMode> {
+		return (configureOutputMode as (...a: any[]) => ReturnType<typeof configureOutputMode>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	configurePrompt(...args: Parameters<typeof configurePrompt>): ReturnType<typeof configurePrompt> {
@@ -272,6 +294,14 @@ export class TypescriptClient {
 
 	removeWorkspace(...args: Parameters<typeof removeWorkspace>): ReturnType<typeof removeWorkspace> {
 		return (removeWorkspace as (...a: any[]) => ReturnType<typeof removeWorkspace>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	reportProgress(...args: Parameters<typeof reportProgress>): ReturnType<typeof reportProgress> {
+		return (reportProgress as (...a: any[]) => ReturnType<typeof reportProgress>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	requestFeedback(...args: Parameters<typeof requestFeedback>): ReturnType<typeof requestFeedback> {
+		return (requestFeedback as (...a: any[]) => ReturnType<typeof requestFeedback>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	resolveStop(...args: Parameters<typeof resolveStop>): ReturnType<typeof resolveStop> {

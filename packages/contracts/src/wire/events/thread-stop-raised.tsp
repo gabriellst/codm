@@ -15,4 +15,7 @@ model ThreadStopRaisedEvent extends IntegrationEvent {
 
   @doc("The human-readable reason the agent gave. ADDITIVE field (GOAL-agent-abstraction Fase 6, §4.4 item (i)): without it the text of `RaiseStop(kind, detail)` and the question of `AskOperator(question)` die at the bridge and the Needs-you card is born empty. Empty string when the fact carries no text — required rather than optional so no producer can omit it silently.")
   detail: string;
+
+  @doc("ADDITIVE (fase 3, item 1): the issue's ask — question, options, declared effects, default (a question's), addressee. Present only on the asks (DECISION_REQUESTED / QUESTION_ASKED); transport stops carry none. Typed `unknown` ON PURPOSE: the wire codegen carries scalars, enums and arrays, never nested shapes (the same rule the union slots follow), so the shape is owned by the TS core — `StopAskSchema` in `@shared/objects` — and the consumer parses it there. Producer and consumer are both the TS core; the Go side only carries it.")
+  ask?: unknown;
 }

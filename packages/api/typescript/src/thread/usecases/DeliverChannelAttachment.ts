@@ -27,6 +27,12 @@ export const DeliverChannelAttachmentInputSchema = z.object({
 	mimeType: z.string().optional(),
 	/** The artifact's issue, when it has one — the delivered message is recorded as that issue's message. */
 	issueId: z.uuid().optional(),
+	/**
+	 * The entry this attachment DELIVERS, when it already exists (fase 3: an issue's FEEDBACK, recorded by the
+	 * output policy before it went out). Present ⇒ the sent message is linked to that entry; absent ⇒ this
+	 * handler records the entry itself, as it always did for `SendArtifact`.
+	 */
+	replyEntryId: z.uuid().optional(),
 })
 
 export const DeliverChannelAttachmentOutputSchema = z.void()
@@ -80,7 +86,7 @@ export class DeliverChannelAttachment extends Handler<
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
-		const { ownerId, threadId, artifactId, mediaPath, kind, caption, fileName, mimeType, issueId } = input
+		const { ownerId, threadId, artifactId, mediaPath, kind, caption, fileName, mimeType, issueId, replyEntryId } = input
 
 		// Defensive drop, same posture as `RecordOrchestratorReply`: a delivery for a thread that no
 		// longer resolves has nowhere to go, and a THROW here would only earn a retry against an id that
@@ -106,12 +112,13 @@ export class DeliverChannelAttachment extends Handler<
 
 		await this.withTransaction(tx, async tx => {
 			await this.consumed.claim({ ownerId, channelId: thread.channelId, platformMessageId: messageId }, tx)
-			const entry = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: caption ?? '', mediaPath, artifactId, issueId, at: new Date() })
+			// The entry already exists when the output policy recorded it (an issue's FEEDBACK) — link it, never
+			// record a second one for the same message.
+			const entryId =
+				replyEntryId ??
+				thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: caption ?? '', mediaPath, artifactId, issueId, at: new Date() }).entryId
 			await this.threads.save(thread, tx)
-			await this.consumed.linkEntry(
-				{ channelId: thread.channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: entry.entryId },
-				tx,
-			)
+			await this.consumed.linkEntry({ channelId: thread.channelId, platformMessageId: messageId, threadId: thread.id.value, entryId }, tx)
 		})
 
 		this.logging.info({ content: { message: 'channel attachment delivered', channelId: thread.channelId, messageId, artifactId, kind } })

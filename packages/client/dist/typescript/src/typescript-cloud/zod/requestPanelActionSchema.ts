@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { askAnswerSchema } from "./askAnswerSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
 import { z } from "zod/v4";
 
@@ -34,6 +35,13 @@ export const requestPanelActionMutationRequestSchema = z.union([z.object({
 "stopId": z.uuid(),
 get "resolution"(){
                 return stopResolutionSchema
+              }
+    }), z.object({
+    "kind": z.enum(["ANSWER_ASK"]),
+"issueId": z.uuid(),
+"stopId": z.uuid(),
+get "answer"(){
+                return askAnswerSchema
               }
     })])
 

@@ -129,7 +129,7 @@ interface Film {
 	readonly askRow: string
 	/** A substring of the agent's opening reply — the beat that proves the turn ran. */
 	readonly reply: string
-	/** A substring of the agent's closing line, said on the `ISSUE_RESULT` turn. */
+	/** A substring of the closing line — the declared completion's summary (fase 3: no `ISSUE_RESULT` turn). */
 	readonly closing: string
 	/** The fork goal, slugged server-side — the key the issue row shows. */
 	readonly issueKey: string
@@ -478,8 +478,8 @@ for (const film of FILMS) {
 			await sleep(1_500) // the finished terminal, held
 
 			// 10. BACK TO THE CONVERSATION — where the run's output is waiting: the screen it built and the
-			//     link to its pull request, as rows of the thread, plus the agent's closing line (the second
-			//     act of the orchestrator's script, which the finished issue enqueues on its own).
+			//     link to its pull request, as rows of the thread, plus the closing line ("✅ <key> · … — <summary>"),
+			//     which the declared completion puts in the conversation on its own (fase 3, item 5).
 			await cursor.click(tab('session.tabChat'))
 			const screenshot = page.locator(`img[alt="${film.screenFile}"]`)
 			await expect(screenshot).toBeVisible({ timeout: 30_000 })

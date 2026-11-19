@@ -15,4 +15,14 @@ enum StopKind {
   // (`safety_stops` / `permission_denials`), never declared by a tool. Recorded at once, never retried
   // (a retry under the same posture repeats the denial); resolutions APPROVE / DENY / TAKE_OVER.
   PERMISSION_DENIED: "PERMISSION_DENIED",
+  // Fase 3 ("emagrecer o grupo"): the issue's own asks, each carrying a StopAsk (question, options,
+  // declared effects). DECISION_REQUESTED holds the issue until someone answers (no deadline) — every
+  // ask with a declared AskEffect lands here. QUESTION_ASKED holds it only until its deadline, then the
+  // declared default applies (resolution DEFAULT_APPLIED). Both are answered with StopResolution.ANSWER.
+  DECISION_REQUESTED: "DECISION_REQUESTED",
+  QUESTION_ASKED: "QUESTION_ASKED",
+  // Fase 3: the reconciler's stop "not even after the reminder" — recorded as HUMAN_REQUESTED before,
+  // the same kind AskOperator raised, so no per-kind table could tell a block notice from a request.
+  // Resolutions RETRY (nudge the session) / TAKE_OVER.
+  STALLED: "STALLED",
 }

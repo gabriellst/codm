@@ -32,7 +32,11 @@ describe('SetParticipantElevation — who may run turns with no permission filte
 	})
 	beforeEach(async () => {
 		await testBed.reset()
-		testBed.override(ChannelConnectivity, { isConnected: async () => true, anyConnected: async () => true } as ChannelConnectivity)
+		testBed.override(ChannelConnectivity, {
+			isConnected: async () => true,
+			anyConnected: async () => true,
+			connectedSince: async () => new Date(0),
+		} as ChannelConnectivity)
 	})
 	afterAll(async () => {
 		await testBed.destroy()

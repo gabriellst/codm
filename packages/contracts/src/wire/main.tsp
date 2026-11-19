@@ -52,6 +52,14 @@ import "./enums/panel-action-status.tsp";
 import "./enums/panel-action-outcome.tsp";
 import "./enums/stop-kind.tsp";
 import "./enums/stop-resolution.tsp";
+// Fase 3 ("emagrecer o grupo") — the output policy's vocabulary: the level of what an issue says, the
+// group's mode, where the policy sent it, what an ask's answer authorizes, and the block-notice cause.
+import "./enums/issue-signal-level.tsp";
+import "./enums/group-output-mode.tsp";
+import "./enums/output-routing.tsp";
+import "./enums/ask-effect.tsp";
+import "./enums/block-cause.tsp";
+import "./enums/ask-answer-kind.tsp";
 // The permission regime an agent turn runs under — cross-boundary because the mailbox column, the run
 // token claim and every runner's argv table are typed by it.
 import "./enums/permission-posture.tsp";

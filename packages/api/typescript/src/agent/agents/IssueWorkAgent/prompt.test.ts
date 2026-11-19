@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { MailboxItemKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import { AskEffect, MailboxItemKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { IssueWorkPromptBuilder } from './prompt'
 
 /**
@@ -56,7 +56,7 @@ describe('IssueWorkPromptBuilder — the request is the approval (Decision 13)',
 
 		expect(user).toContain('WHO ASKED FOR THIS')
 		expect(user).toContain('that IS the approval')
-		expect(user).toContain('Do not raise a stop to ask the operator for an ok that was already given')
+		expect(user).toContain('Do not ask the group for an ok that was already given')
 		expect(user).toContain('like deleting data')
 	})
 
@@ -82,5 +82,32 @@ describe('IssueWorkPromptBuilder — the standing prompt does not move between t
 		]) {
 			expect(builder.system(turn)).toBe(first)
 		}
+	})
+})
+
+/**
+ * Fase 3, item 1 — the issue speaks to the group only through its tools, at a level, and the free text of
+ * the turn goes to the panel. FALSIFIER: name `SendDirectMessage` again, or drop the effects paragraph, and
+ * this goes red.
+ */
+describe('IssueWorkPromptBuilder — how the issue reaches the group (fase 3)', () => {
+	const system = new IssueWorkPromptBuilder().system(input)
+
+	it('names the four tools an issue speaks through, and no direct door to the group', () => {
+		for (const tool of ['AskDecision', 'AskQuestion', 'RequestFeedback', 'ReportProgress', 'TransitionIssueStatus', 'RecordArtifact']) {
+			expect(system).toContain(`the ${tool} tool`)
+		}
+		expect(system).not.toContain('SendDirectMessage')
+		expect(system).not.toContain('SendArtifact')
+	})
+
+	it('says the turn text goes to the panel, not the group, and must carry no secret', () => {
+		expect(system).toContain('is NOT sent to the group')
+		expect(system).toContain('never put a secret, a credential or a token in it')
+	})
+
+	it('explains every effect the model has to declare', () => {
+		for (const effect of Object.values(AskEffect)) expect(system).toContain(effect)
+		expect(system).toContain('Any effect makes it a decision only someone who may release can answer')
 	})
 })

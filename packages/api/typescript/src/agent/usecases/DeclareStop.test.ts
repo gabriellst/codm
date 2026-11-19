@@ -2,8 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, testId } from '@test/support'
 import { DomainEventRepository, type BaseError } from '@codm/core-typescript'
-import { StopKind } from '@codm/contracts-typescript/wire/enums'
-import { DeclareStop } from './DeclareStop'
+import { AskEffect, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { DECLARED_AS, DeclareStop } from './DeclareStop'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
 import { TRANSPORT_STOP_KINDS } from '../enums/TransportStopKind'
@@ -65,7 +65,17 @@ describe('DeclareStop — a model may only declare a DOMAIN stop (D6-4)', () => 
 		expect(out.stopId).toBeDefined()
 		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
 		expect(stops).toHaveLength(1)
-		expect(stops[0]?.payload.kind).toBe(StopKind.APPROVAL_NEEDED)
+		// Fase 3: an approval is an ALIAS of a decision — yes/no in the group's language, and an effect that
+		// keeps it for whoever may release (the rule APPROVE always had).
+		expect(stops[0]?.payload.kind).toBe(StopKind.DECISION_REQUESTED)
+		expect(stops[0]?.payload.ask).toEqual({
+			question: 'the migration drops a column — confirm before I run it',
+			options: [
+				{ id: 'yes', label: 'Sim' },
+				{ id: 'no', label: 'Não' },
+			],
+			effects: [AskEffect.IRREVERSIBLE],
+		})
 		expect(stops[0]?.payload.source).toBe(FactSource.DECLARED)
 
 		const after = await testBed.probe().snapshot(COUNTED)
@@ -98,4 +108,55 @@ describe('DeclareStop — a model may only declare a DOMAIN stop (D6-4)', () => 
 			expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 		})
 	}
+
+	/**
+	 * Fase 3 — what each declarable kind BECOMES (`DECLARED_AS`). A person asked for → a decision with a free-text
+	 * answer; a classification block → raised as declared; a question or a stall → refused by name (a question
+	 * needs the default only `AskQuestion` carries; a stall is the reconciler's inference).
+	 */
+	it('HUMAN_REQUESTED and DECISION_REQUESTED become a decision with a free-text answer', async () => {
+		const useCase = testBed.resolve(DeclareStop)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+
+		for (const kind of [StopKind.HUMAN_REQUESTED, StopKind.DECISION_REQUESTED]) {
+			await useCase.execute({ ownerId, issueId, threadId, kind, detail: 'which bucket do the exports go to?' })
+		}
+
+		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
+		expect(stops.map(stop => stop.payload.kind)).toEqual([StopKind.DECISION_REQUESTED, StopKind.DECISION_REQUESTED])
+		for (const stop of stops) expect(stop.payload.ask).toEqual({ question: 'which bucket do the exports go to?', options: [], effects: [] })
+	})
+
+	it('BLOCKED_BY_CLASSIFICATION is raised as declared, with no ask', async () => {
+		const useCase = testBed.resolve(DeclareStop)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+
+		await useCase.execute({ ownerId, issueId, threadId, kind: StopKind.BLOCKED_BY_CLASSIFICATION, detail: 'the reply was held' })
+
+		const [stop] = await eventRepo.findByType(AgentRunStopRaisedEvent)
+		expect(stop?.payload.kind).toBe(StopKind.BLOCKED_BY_CLASSIFICATION)
+		expect(stop?.payload.ask).toBeUndefined()
+	})
+
+	for (const kind of [StopKind.QUESTION_ASKED, StopKind.STALLED]) {
+		it(`refuses ${kind} by name — and NOTHING is written`, async () => {
+			const useCase = testBed.resolve(DeclareStop)
+			const before = await testBed.probe().snapshot(COUNTED)
+
+			const failure = await useCase.execute({ ownerId, issueId, threadId, kind, detail: 'x' }).then(
+				() => undefined,
+				(error: unknown) => error,
+			)
+
+			expect(failure).toEqual(expect.objectContaining({ name: 'AGENT_STOP_KIND_NOT_DECLARABLE' }) as BaseError)
+			expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
+		})
+	}
+
+	it('no tool raises the legacy APPROVAL_NEEDED / HUMAN_REQUESTED any more — they stay for the history', () => {
+		const raised = Object.values(StopKind).filter(kind => DECLARED_AS[kind].as === 'STOP')
+		expect(raised).toEqual([StopKind.BLOCKED_BY_CLASSIFICATION])
+		for (const kind of TRANSPORT_STOP_KINDS)
+			expect(DECLARED_AS[kind]).toEqual({ as: 'REFUSED', refusal: 'AGENT_TRANSPORT_STOP_NOT_DECLARABLE' })
+	})
 })

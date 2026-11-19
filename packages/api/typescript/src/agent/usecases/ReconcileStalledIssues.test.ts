@@ -1,13 +1,25 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
+import { DomainEventRepository } from '@codm/core-typescript'
 import { TestBed, givenIssue, givenThread, givenDomainEvent } from '@test/support'
-import { IssueStatus, MailboxItemKind, MailboxTargetKind, StopKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssueSignalLevel,
+	IssueStatus,
+	MailboxItemKind,
+	MailboxTargetKind,
+	OutputRouting,
+	StopKind,
+	PermissionPosture,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 import { MarkIssueNeedsInputFromStop } from '@issue/handlers/MarkIssueNeedsInputFromStop'
+import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecution'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
@@ -89,6 +101,40 @@ describe('ReconcileStalledIssues', () => {
 		expect(second.remindedIssueIds).toEqual([])
 		const raised = await testBed.probe().count('events', { name: AgentRunStopRaisedEvent.name })
 		expect(raised).toBe(1)
+	})
+
+	/**
+	 * FASE 3 — the stall has its own kind, and it is a BLOCK NOTICE in the group. Before, the reconciler
+	 * wrote `HUMAN_REQUESTED` (the `AskOperator` kind), which says nothing on the channel: the prose of a turn
+	 * that declared nothing ended in silence, only on the panel.
+	 */
+	it('the stop after the reminder is STALLED, and it reaches the group as a block notice', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'APP-12' })
+
+		expect((await usecase.execute({})).stalledIssueIds).toEqual([issue.id.value])
+		const [fact] = await testBed.resolve(DomainEventRepository).findByType(AgentRunStopRaisedEvent)
+		expect(fact?.payload.kind).toBe(StopKind.STALLED)
+		expect(fact?.payload.source).toBe(FactSource.INFERRED)
+
+		// The thread's consumer of the bridged fact, called directly — no dispatcher to drain in `integration`.
+		await testBed.resolve(RecordStopFromExecution).handle(
+			new ThreadStopRaisedEvent({
+				ownerId: issue.ownerId,
+				payload: {
+					stopId: fact!.payload.stopId,
+					issueId: issue.id.value,
+					threadId: thread.id.value,
+					kind: fact!.payload.kind,
+					detail: fact!.payload.detail,
+				},
+			}),
+		)
+
+		const notice = (await testBed.resolve(ThreadRepository).listEntries(thread.id.value)).find(e => e.kind === TranscriptKind.SYSTEM)
+		expect(notice).toMatchObject({ issueId: issue.id.value, level: IssueSignalLevel.BLOCK_NOTICE, routing: OutputRouting.GROUP })
+		expect(notice?.text).toContain('APP-12')
+		expect(await testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })).toBe(1)
 	})
 
 	it('does NOT touch an issue with a mailbox item still in flight', async () => {
@@ -206,7 +252,7 @@ describe('ReconcileStalledIssues', () => {
 					stopId: uuidv7(),
 					issueId: issue.id.value,
 					threadId: thread.id.value,
-					kind: StopKind.HUMAN_REQUESTED,
+					kind: StopKind.STALLED,
 					detail: ReconcileStalledIssues.DETAIL,
 				},
 			}),

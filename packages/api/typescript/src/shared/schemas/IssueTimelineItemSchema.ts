@@ -1,16 +1,20 @@
 import { z } from '@codm/core-typescript'
 import {
 	ArtifactKind,
+	AskAnswerKind,
 	ClassificationMethod,
 	IrreversibleActionKind,
 	IssueControlSource,
+	IssueSignalLevel,
 	IssueTimelineItemKind,
+	OutputRouting,
 	RegretWindowOutcome,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
+import { AskOptionSchema } from '@shared/objects'
 
 /**
  * One closed REGRET WINDOW (fase 2, item 3): which irreversible action waited, how it ended, and for how
@@ -47,6 +51,13 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 		transcriptKind: z.enum(TranscriptKind),
 		text: z.string(),
 		classification: z.enum(ClassificationMethod).optional(),
+		/**
+		 * What the issue said and where the output policy sent it (fase 3, item 2) — present on what an issue
+		 * SAID (`level`) and where it went (`routing`: the group, a digest, or only the panel). Absent on every
+		 * other message, and on rows the cloud stored before fase 3.
+		 */
+		level: z.enum(IssueSignalLevel).optional(),
+		routing: z.enum(OutputRouting).optional(),
 	}),
 	z.object({
 		kind: z.literal(IssueTimelineItemKind.STEER),
@@ -66,8 +77,34 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 		artifactKind: z.enum(ArtifactKind),
 		name: z.string(),
 	}),
-	z.object({ kind: z.literal(IssueTimelineItemKind.STOP_RAISED), id, at, stopId: z.uuid(), stopKind: z.enum(StopKind), title: z.string() }),
-	z.object({ kind: z.literal(IssueTimelineItemKind.STOP_RESOLVED), id, at, stopId: z.uuid(), resolution: z.enum(StopResolution) }),
+	z.object({
+		kind: z.literal(IssueTimelineItemKind.STOP_RAISED),
+		id,
+		at,
+		stopId: z.uuid(),
+		stopKind: z.enum(StopKind),
+		title: z.string(),
+		/**
+		 * The ASK, when the stop is a decision or a question (fase 3): the code people quote, the question,
+		 * its options and — for a question once delivered — when it goes on with its default. One object,
+		 * present or absent as a whole. Optional also for compatibility: the cloud stores rows written by
+		 * daemons that never sent it.
+		 */
+		ask: z.object({ code: z.string(), question: z.string(), options: z.array(AskOptionSchema), dueAt: z.string().optional() }).optional(),
+	}),
+	z.object({
+		kind: z.literal(IssueTimelineItemKind.STOP_RESOLVED),
+		id,
+		at,
+		stopId: z.uuid(),
+		resolution: z.enum(StopResolution),
+		/**
+		 * What was answered (fase 3) — an option's label or the text, or the default it went on with
+		 * (`kind: DEFAULT`). Never WHO answered: this item travels to the cloud panel, and the answerer is a
+		 * WhatsApp address on this machine.
+		 */
+		answer: z.object({ kind: z.enum(AskAnswerKind), label: z.string() }).optional(),
+	}),
 	z.object({ kind: z.literal(IssueTimelineItemKind.COMPLETED), id, at }),
 	z.object({ kind: z.literal(IssueTimelineItemKind.ARCHIVED), id, at }),
 	// Pausa como comando (fase 2, item 2): who held the work, and from where — absent `by` when the

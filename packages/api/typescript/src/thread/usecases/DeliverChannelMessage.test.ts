@@ -3,8 +3,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { scheduledCommands } from '@codm/contracts/db'
 import { LibSqlDatabaseDriver, MockLoggingService, LibSqlCommandQueue, LibSqlTransaction } from '@codm/core-typescript'
-import { TestBed, givenThread } from '@test/support'
-import { ChannelKind, MessageAuthor, MessageType, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
+import { AskAnswerKind, ChannelKind, MessageAuthor, MessageType, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
@@ -16,6 +16,7 @@ import { ConsumeInboundMessage } from '../handlers/ConsumeInboundMessage'
 import { EDIT_WINDOW_MS, ReplyStreamer, streamKey } from '../services/ReplyStreamer'
 import { RecordOrchestratorReply } from './RecordOrchestratorReply'
 import type { Thread } from '../entities/Thread'
+import { QUESTION_DEFAULT_MS } from '../objects/StopAsk'
 
 /**
  * The delivery leg, now a COMMAND (B3, decision 2) — and the two properties that made it worth moving.
@@ -517,5 +518,43 @@ describe('DeliverChannelMessage — the citation reaches the wire, which is the 
 		expect(sender.sent[0]?.quotedMessageId).toBe('wamid-asked')
 		expect(sender.sent[1]?.quotedMessageId).toBeUndefined()
 		expect(sender.edits).toHaveLength(0)
+	})
+
+	it('the delivery of a QUESTION starts its 15-minute clock — once (fase 3, item 1b)', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-12' })
+		const stop = await givenStop(testBed, {
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			notice: 'APP-12 · D1 — Qual cor?',
+			ask: {
+				question: 'Qual cor?',
+				options: [{ id: 'blue', label: 'Azul' }],
+				default: { kind: AskAnswerKind.OPTION, optionId: 'blue' },
+				effects: [],
+				requested: StopKind.QUESTION_ASKED,
+			},
+		})
+		testBed.override(ChannelSender, new MockChannelSender())
+		const deliver = () =>
+			testBed.resolve(DeliverChannelMessage).execute({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text: 'APP-12 · D1 — Qual cor?',
+				author: MessageAuthor.SYSTEM,
+				replyEntryId: stop.askEntryId,
+				replyThreadId: thread.id.value,
+			})
+
+		const before = Date.now()
+		await deliver()
+		const after = Date.now()
+		const due = (await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.dueAt?.getTime() ?? 0
+		expect(due).toBeGreaterThanOrEqual(before + QUESTION_DEFAULT_MS)
+		expect(due).toBeLessThanOrEqual(after + QUESTION_DEFAULT_MS)
+
+		await deliver()
+		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.dueAt?.getTime()).toBe(due)
 	})
 })

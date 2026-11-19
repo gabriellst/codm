@@ -3,6 +3,8 @@
 // EMITI-LA — e o middleware que a carimba vive aqui.
 export { SessionSchema, type Session } from './SessionSchema'
 export { IssueTimelineItemSchema, RegretWindowSchema, type IssueTimelineItem } from './IssueTimelineItemSchema'
+// Uma pergunta aberta da issue (fase 3) como quem responde a vê — no console e no painel.
+export { AskReplySchema, AskViewSchema, type AskReply, type AskView } from './AskViewSchema'
 export {
 	PANEL_STEER_MAX,
 	PanelActionBodySchema,

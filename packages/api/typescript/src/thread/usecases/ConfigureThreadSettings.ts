@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { BufferSize, ProviderKind, AgentModelId, ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind, GroupOutputMode, Language } from '@codm/contracts-typescript/wire/enums'
 import type { Thread } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { GroupMemberReader } from '../services/GroupMemberReader'
@@ -200,6 +200,30 @@ export class ConfigureReactions extends Handler<typeof ConfigureReactionsInputSc
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.configureReactions(input.enabled)
+		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
+	}
+}
+
+// ConfigureOutputMode (fase 3, item 2) — how much of what its issues say reaches this group: decisions only,
+// decisions and previews/closings (the owner's default, DECISIONS_AND_LIVE), or everything. A plain set, no
+// domain event: the output policy reads the mode off the aggregate every time an issue speaks, so the next
+// signal already obeys it — nothing to restart, nothing to notify.
+export const ConfigureOutputModeInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid(), mode: z.enum(GroupOutputMode) })
+export const ConfigureOutputModeOutputSchema = z.void()
+
+@injectable()
+export class ConfigureOutputMode extends Handler<typeof ConfigureOutputModeInputSchema, typeof ConfigureOutputModeOutputSchema> {
+	readonly name = 'configure_output_mode' as const
+	readonly inputSchema = ConfigureOutputModeInputSchema
+	readonly outputSchema = ConfigureOutputModeOutputSchema
+	constructor(private readonly threads: ThreadRepository) {
+		super()
+	}
+	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		thread.configureOutputMode(input.mode)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
 }

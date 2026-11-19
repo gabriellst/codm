@@ -2,8 +2,9 @@ import { injectable } from 'tsyringe-neo'
 import { randomUUID } from 'node:crypto'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { PanelActionKind, PanelActionStatus } from '@codm/contracts-typescript/wire/enums'
-import { PanelActionBodySchema, type PanelActionBody } from '@shared/schemas'
+import { AskAnswerKind, PanelActionKind, PanelActionStatus, StopKind } from '@codm/contracts-typescript/wire/enums'
+import type { AskAnswer } from '@shared/objects'
+import { PanelActionBodySchema, type AskReply, type PanelActionBody } from '@shared/schemas'
 import { PanelIdentityStore, type PanelIdentityGroup, type PanelMember } from '../services/PanelIdentityStore'
 import { PanelActionStore } from '../services/PanelActionStore'
 import { PanelStore } from '../services/PanelStore'
@@ -43,6 +44,23 @@ const KIND_GATE: Readonly<
 		if (!stop) return 'PANEL_NOT_FOUND'
 		return stop.resolutions.includes(action.resolution) ? undefined : 'PANEL_RESOLUTION_NOT_OFFERED'
 	},
+	// Fase 3: answering an issue's ask. Only an OPEN ask of THIS issue as the daemon last reported it; a
+	// decision whose answer authorizes something (`releaseRequired`, computed on the daemon from the ask's
+	// effects) only by someone who may release; and only an answer the ask offers. Anyone else who is
+	// identified passes here — "may act" is not on the roster, and the daemon re-checks the whole ruler.
+	[PanelActionKind.ANSWER_ASK]: ({ action, member, group }) => {
+		if (action.kind !== PanelActionKind.ANSWER_ASK) return undefined
+		const stop = group.openStops.find(open => open.stopId === action.stopId && open.issueId === action.issueId)
+		if (!stop?.ask) return 'PANEL_NOT_FOUND'
+		if (stop.ask.kind === StopKind.DECISION_REQUESTED && stop.ask.releaseRequired && !member.canRelease) return 'PANEL_CANNOT_RELEASE'
+		return offers(stop.ask.reply, action.answer) ? undefined : 'PANEL_RESOLUTION_NOT_OFFERED'
+	},
+}
+
+/** Whether an ask offers this answer — free text always (the domain admits it), an option only if the ask lists it. */
+function offers(reply: AskReply, answer: AskAnswer): boolean {
+	if (answer.kind === AskAnswerKind.TEXT) return true
+	return reply.kind === AskAnswerKind.OPTION && reply.options.some(option => option.id === answer.optionId)
 }
 
 /**

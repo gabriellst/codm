@@ -3,7 +3,10 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { stops, issues, threads } from '@codm/contracts/db'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
-import { resolutionsForKind } from '../utils/StopResolutions'
+import { StopAskSchema } from '@shared/objects'
+import { AskViewSchema } from '@shared/schemas'
+import { bareResolutionsForKind } from '../utils/StopResolutions'
+import { askViewOf } from '../utils/askView'
 
 export const GetNeedsYouPanelInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
 export const GetNeedsYouPanelOutputSchema = z.object({
@@ -21,6 +24,12 @@ export const GetNeedsYouPanelOutputSchema = z.object({
 			detail: z.string(),
 			raisedAt: z.string(),
 			availableResolutions: z.array(z.enum(StopResolution)),
+			/**
+			 * The issue's ASK, when this stop is one (fase 3) — a decision or a question, with the code people
+			 * quote, the question and how to answer it (`POST /stops/:stopId/answer`). Absent on every other
+			 * kind, which keeps its bare resolution buttons.
+			 */
+			ask: AskViewSchema.optional(),
 		}),
 	),
 })
@@ -57,6 +66,9 @@ export class GetNeedsYouPanel extends Handler<typeof GetNeedsYouPanelInputSchema
 				title: stops.title,
 				detail: stops.detail,
 				raisedAt: stops.raisedAt,
+				ask: stops.ask,
+				seq: stops.seq,
+				dueAt: stops.dueAt,
 			})
 			.from(stops)
 			.leftJoin(issues, eq(stops.issueId, issues.id))
@@ -83,7 +95,15 @@ export class GetNeedsYouPanel extends Handler<typeof GetNeedsYouPanelInputSchema
 				title: r.title,
 				detail: r.detail,
 				raisedAt: r.raisedAt.toISOString(),
-				availableResolutions: resolutionsForKind(r.kind),
+				// The card's buttons carry a resolution and nothing else, so an ask's ANSWER (which needs the answer)
+				// and the deadline job's DEFAULT_APPLIED are never offered here (fase 3).
+				availableResolutions: bareResolutionsForKind(r.kind),
+				// The `ask` column is JSON owned by the TS core; a row that no longer parses shows its card
+				// without the ask rather than failing the whole panel.
+				ask: askViewOf(
+					{ kind: r.kind, ask: StopAskSchema.safeParse(r.ask).data, seq: r.seq ?? undefined, dueAt: r.dueAt ?? undefined },
+					r.issueKey ?? '',
+				),
 			})),
 		}
 	}

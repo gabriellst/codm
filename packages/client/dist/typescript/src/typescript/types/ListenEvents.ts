@@ -9,6 +9,7 @@ import type { ChatPresenceType } from "./ChatPresenceType.ts";
 import type { ContactKind } from "./ContactKind.ts";
 import type { HistorySyncType } from "./HistorySyncType.ts";
 import type { IssueArchiveReason } from "./IssueArchiveReason.ts";
+import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { MessageAuthor } from "./MessageAuthor.ts";
 import type { MessageType } from "./MessageType.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
@@ -286,28 +287,34 @@ export const ListenEvents200NameEnum32 = {
 export type ListenEvents200NameEnum32Key = (typeof ListenEvents200NameEnum32)[keyof typeof ListenEvents200NameEnum32];
 
 export const ListenEvents200NameEnum33 = {
-    "integration.thread.message_ingested": "integration.thread.message_ingested"
+    "integration.thread.issue_signal": "integration.thread.issue_signal"
 } as const;
 
 export type ListenEvents200NameEnum33Key = (typeof ListenEvents200NameEnum33)[keyof typeof ListenEvents200NameEnum33];
 
 export const ListenEvents200NameEnum34 = {
-    "integration.thread.stop_raised": "integration.thread.stop_raised"
+    "integration.thread.message_ingested": "integration.thread.message_ingested"
 } as const;
 
 export type ListenEvents200NameEnum34Key = (typeof ListenEvents200NameEnum34)[keyof typeof ListenEvents200NameEnum34];
 
 export const ListenEvents200NameEnum35 = {
-    "integration.thread.stop_resolved": "integration.thread.stop_resolved"
+    "integration.thread.stop_raised": "integration.thread.stop_raised"
 } as const;
 
 export type ListenEvents200NameEnum35Key = (typeof ListenEvents200NameEnum35)[keyof typeof ListenEvents200NameEnum35];
 
 export const ListenEvents200NameEnum36 = {
-    "integration.workspace.removed": "integration.workspace.removed"
+    "integration.thread.stop_resolved": "integration.thread.stop_resolved"
 } as const;
 
 export type ListenEvents200NameEnum36Key = (typeof ListenEvents200NameEnum36)[keyof typeof ListenEvents200NameEnum36];
+
+export const ListenEvents200NameEnum37 = {
+    "integration.workspace.removed": "integration.workspace.removed"
+} as const;
+
+export type ListenEvents200NameEnum37Key = (typeof ListenEvents200NameEnum37)[keyof typeof ListenEvents200NameEnum37];
 
 /**
  * @description Owner-scoped real-time integration events via SSE
@@ -2527,6 +2534,10 @@ export type ListenEvents200 = ({
          * @type string | undefined
         */
         summary?: string;
+        /**
+         * @type string | undefined
+        */
+        finalArtifactId?: string;
     };
 } | {
     /**
@@ -2692,7 +2703,35 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
+        issueId: string;
+        /**
+         * @type string
+        */
         threadId: string;
+        /**
+         * @type string
+        */
+        level: IssueSignalLevel;
+        /**
+         * @type string
+        */
+        text: string;
+        /**
+         * @type array
+        */
+        artifactIds: string[];
+        /**
+         * @type string | undefined
+        */
+        mainArtifactId?: string;
+        /**
+         * @type string | undefined
+        */
+        addresseeId?: string;
+        /**
+         * @type string | undefined
+        */
+        signalId?: string;
     };
 } | {
     /**
@@ -2710,23 +2749,7 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        stopId: string;
-        /**
-         * @type string | undefined
-        */
-        issueId?: string;
-        /**
-         * @type string
-        */
         threadId: string;
-        /**
-         * @type string
-        */
-        kind: StopKind;
-        /**
-         * @type string
-        */
-        detail: string;
     };
 } | {
     /**
@@ -2756,7 +2779,12 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        resolution: StopResolution;
+        kind: StopKind;
+        /**
+         * @type string
+        */
+        detail: string;
+        ask?: any;
     };
 } | {
     /**
@@ -2767,6 +2795,36 @@ export type ListenEvents200 = ({
      * @type string
     */
     name: ListenEvents200NameEnum36Key;
+    /**
+     * @type object
+    */
+    payload: {
+        /**
+         * @type string
+        */
+        stopId: string;
+        /**
+         * @type string | undefined
+        */
+        issueId?: string;
+        /**
+         * @type string
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        resolution: StopResolution;
+    };
+} | {
+    /**
+     * @type string
+    */
+    ownerId: string;
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum37Key;
     /**
      * @type object
     */

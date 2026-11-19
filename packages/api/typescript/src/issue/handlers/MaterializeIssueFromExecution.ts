@@ -63,7 +63,12 @@ export class MaterializeIssueFromExecution extends EventHandler<
 
 		if (event instanceof IssueCompletedEvent) {
 			// The declared summary becomes the issue's `meta` — the console's answer to "why did it close?".
-			await this.completeIssue.execute({ issueId: event.payload.issueId, meta: event.payload.summary })
+			// …and its instant becomes the issue's `completedAt`: the cycle's identity the closing is keyed by.
+			await this.completeIssue.execute({
+				issueId: event.payload.issueId,
+				meta: event.payload.summary,
+				completedAt: new Date(event.payload.completedAt),
+			})
 			return
 		}
 	}

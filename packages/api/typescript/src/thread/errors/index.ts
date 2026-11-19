@@ -14,6 +14,17 @@ export type ThreadDomainErrors =
 	| 'STOP_NOT_IN_THREAD'
 	| 'STOP_ALREADY_RESOLVED'
 	| 'RESOLUTION_NOT_APPLICABLE'
+	// The ASK of a stop (fase 3). The first three are `Thread.resolveStop`'s: an answer naming an option the
+	// ask does not offer, a default applied before the question's deadline, an ANSWER that carries no answer.
+	// The last two are the `StopAsk` value object's: the same option id twice, a question with no default.
+	| 'ASK_OPTION_UNKNOWN'
+	| 'ASK_NOT_DUE'
+	| 'ASK_ANSWER_REQUIRED'
+	| 'ASK_OPTIONS_DUPLICATED'
+	| 'ASK_DEFAULT_REQUIRED'
+	// The per-person digest (fase 3, item 2): an entry already sent on its own or folded into a digest is not
+	// waiting any more — a second flush of it is refused, so nothing goes out twice.
+	| 'SIGNAL_ALREADY_FLUSHED'
 	// Soft delete (thread-deletion spec, decision 8) — `Thread.delete()` refuses a second deletion.
 	| 'THREAD_ALREADY_DELETED'
 	// The operator's custom prompt is capped: it rides in EVERY turn this conversation answers, so an
@@ -101,6 +112,13 @@ registerErrorCodes({
 	STOP_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	STOP_ALREADY_RESOLVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	RESOLUTION_NOT_APPLICABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// 422 beside their siblings: well-formed, but the answer (or the ask) breaks a rule of the stop.
+	ASK_OPTION_UNKNOWN: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ASK_NOT_DUE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	SIGNAL_ALREADY_FLUSHED: HttpStatusCode.CONFLICT,
+	ASK_ANSWER_REQUIRED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ASK_OPTIONS_DUPLICATED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ASK_DEFAULT_REQUIRED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// CONFLICT, not 422: the request is well-formed and was legal a moment ago — the row simply moved on.
 	// Same status THREAD_ALREADY_ATTACHED carries, for the same "you are acting on a stale screen" cause.
 	THREAD_ALREADY_DELETED: HttpStatusCode.CONFLICT,

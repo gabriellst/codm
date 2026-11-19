@@ -25,9 +25,17 @@ export const SendArtifactControllerOutputSchema = SendArtifactOutputSchema
  * (the use case) for the validation order and `DeliverChannelAttachment` for the actual send.
  */
 @injectable()
-export class SendArtifactController extends Controller<typeof SendArtifactControllerInputSchema, typeof SendArtifactControllerOutputSchema> {
-	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
-	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING, McpScope.orchestration]
+export class SendArtifactController extends Controller<
+	typeof SendArtifactControllerInputSchema,
+	typeof SendArtifactControllerOutputSchema
+> {
+	/**
+	 * Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. NOT `ISSUE_HANDLING` since
+	 * fase 3 (item 1): an issue no longer speaks to the group directly — it says what it has to say through
+	 * `RequestFeedback` / `ReportProgress` / `AskDecision` / `AskQuestion`, and the group's output policy
+	 * decides where that goes. The orchestrator (and the operator, over HTTP) keep this door.
+	 */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/artifacts/:artifactId/send'
 	readonly method = 'post' as const
 	readonly description = 'Deliver an already-recorded artifact to the contact on the channel'

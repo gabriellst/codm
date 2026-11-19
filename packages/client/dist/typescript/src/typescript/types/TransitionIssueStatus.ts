@@ -46,6 +46,10 @@ export type TransitionIssueStatusMutationRequest = {
      * @type string | undefined
     */
     key?: string;
+    /**
+     * @type string | undefined, uuid
+    */
+    finalArtifactId?: string;
 };
 
 export type TransitionIssueStatusMutationResponse = TransitionIssueStatus200;

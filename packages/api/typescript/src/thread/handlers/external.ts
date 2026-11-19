@@ -9,3 +9,7 @@ export { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
 // The terminal engine's stop fact lands on the thread that owns the Stop (B4, spec decision 4) — this
 // branch left `issue/handlers/MaterializeIssueFromExecution` with the aggregate.
 export { RecordStopFromExecution } from './RecordStopFromExecution'
+// What an issue says that is neither a stop nor its completion (fase 3) → the group's output policy.
+export { RouteIssueSignal } from './RouteIssueSignal'
+// The declared completion (fase 3, item 5) → the closing line in the group, through the output policy.
+export { CloseIssueOnChannel } from './CloseIssueOnChannel'

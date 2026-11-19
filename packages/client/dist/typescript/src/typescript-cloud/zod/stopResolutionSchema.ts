@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const stopResolutionSchema = z.enum(["RETRY", "REVIEW_AND_SEND", "TAKE_OVER", "APPROVE", "DENY"])
+export const stopResolutionSchema = z.enum(["RETRY", "REVIEW_AND_SEND", "TAKE_OVER", "APPROVE", "DENY", "ANSWER", "DEFAULT_APPLIED"])

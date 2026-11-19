@@ -33,6 +33,7 @@ import { resolutionIsPrimary } from '@/components/console/glyphs'
 import { ProviderWaitBadge } from '@/components/console/IssueRow'
 import { IssueTimeline } from './IssueTimeline'
 import { TranscriptBubble } from '../TranscriptBubble'
+import { StopAskCard } from '../StopAskCard'
 
 type Detail = GetIssueDetailQueryResponse
 type NeedsYouStop = GetNeedsYouPanelQueryResponse['stops'][number]
@@ -293,6 +294,8 @@ function IssueStopCard({
 					</Button>
 				))}
 			</div>
+			{/* Fase 3 — the issue's open ask, with its code, options and deadline, answered right here. */}
+			{stop.ask && <StopAskCard ask={stop.ask} stopId={stop.stopId} threadId={threadId} issueId={issueId} className="basis-full" />}
 		</div>
 	)
 }

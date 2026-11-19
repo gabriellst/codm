@@ -15,6 +15,7 @@ import { PanelRosterRelay, type PanelCodeDelivery, type PanelRosterMember } from
 import { PanelActionLedger } from '../repositories/PanelActionLedger'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import { panelResolutionsForKind } from '../utils/StopResolutions'
+import { askViewOf } from '../utils/askView'
 import type { PanelActionDelivery, PanelOpenStop } from '@shared/schemas'
 import { ExecutePanelAction } from './ExecutePanelAction'
 
@@ -138,15 +139,27 @@ export class PublishPanelRoster extends Handler<typeof PublishPanelRosterInputSc
 		return { sent: true, groups: groups.length, delivered, acted }
 	}
 
-	/** The issue stops of a conversation the panel may answer, each with the answers it admits there. */
+	/**
+	 * The issue stops of a conversation the panel may answer, each with the answers it admits there — and,
+	 * for an issue's ask (fase 3), the ask as people answer it (`askViewOf`: code, question, options or free
+	 * text, whether a releaser is needed). An ask has no bare resolution on the panel (`ANSWER` needs the
+	 * answer), so it goes out for its `ask`, answered through `ANSWER_ASK`.
+	 */
 	private async openStopsOf(thread: Thread): Promise<PanelOpenStop[]> {
 		const open = await this.threads.openStops(thread.id.value)
+		const issueIds = [...new Set(open.flatMap(stop => (stop.issueId ? [stop.issueId] : [])))]
+		const keyRows =
+			issueIds.length === 0
+				? []
+				: await this.driver.db.select({ id: issues.id, key: issues.key }).from(issues).where(inArray(issues.id, issueIds))
+		const keyOf = (issueId: string) => keyRows.find(row => row.id === issueId)?.key ?? ''
 		const answerable: PanelOpenStop[] = []
 		for (const stop of open) {
 			const resolutions = panelResolutionsForKind(stop.kind)
-			// A thread-level stop (no issue) has no card on the board; a kind with no panel answer has no button.
-			if (stop.issueId && resolutions.length > 0)
-				answerable.push({ stopId: stop.stopId, issueId: stop.issueId, kind: stop.kind, resolutions })
+			const ask = stop.issueId ? askViewOf(stop, keyOf(stop.issueId)) : undefined
+			// A thread-level stop (no issue) has no card on the board; a stop with neither a panel answer nor an ask has no button.
+			if (stop.issueId && (resolutions.length > 0 || ask))
+				answerable.push({ stopId: stop.stopId, issueId: stop.issueId, kind: stop.kind, resolutions, ask })
 		}
 		return answerable
 	}

@@ -253,6 +253,13 @@
       "when": 1794960913818,
       "tag": "0035_bizarre_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1795031609547,
+      "tag": "0036_omniscient_silhouette",
+      "breakpoints": true
     }
   ]
 }

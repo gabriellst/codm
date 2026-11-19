@@ -62,6 +62,14 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: "the SCHEDULED-COMMAND row is the subject (B3, envio de artefatos pelo canal design decision 4): it asserts which command name (`deliver_channel_message` for LINK vs. `deliver_channel_attachment` for media) got enqueued and the JSON `input`'s `kind`/`mediaPath`/`fileName`/`mimeType`/`caption` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; same exception class as SendDirectMessage.test.ts and RecordOrchestratorReply.test.ts next door",
 	},
 	{
+		path: 'src/thread/usecases/FlushSignalDigest.test.ts',
+		why: 'the SCHEDULED-COMMAND row is the subject (fase 3, item 2): the per-person digest is proven by WHAT got enqueued — one `deliver_channel_message` whose JSON `input` carries the digest text and the digest entry as `replyEntryId`, a `deliver_issue_preview` keyed on the feedback entry, a `deliver_channel_attachment` with the print, its caption and `replyEntryId` — columns the probe deliberately does not expose (it counts rows); same exception class as SendArtifact.test.ts and RecordOrchestratorReply.test.ts',
+	},
+	{
+		path: 'src/thread/handlers/CloseIssueOnChannel.test.ts',
+		why: "the SCHEDULED-COMMAND row is the subject (fase 3, item 5): the closing is proven by WHAT got enqueued — one `deliver_channel_message` whose JSON `input` carries the closing entry as `replyEntryId` and the request's platform id as `quotedMessageId` (the closing answers whoever asked), or a `deliver_issue_preview` keyed on the closing entry when a final artifact was declared — columns the probe deliberately does not expose (it counts rows); same exception class as FlushSignalDigest.test.ts",
+	},
+	{
 		path: 'src/thread/handlers/DeliverOrchestratorReply.test.ts',
 		why: 'the SCHEDULED-COMMAND row is the subject (B3): the delegation case asserts the enqueued row `name` on `shared_scheduled_commands`, a column the probe does not expose; the envelope-guard case DOES use probe().snapshot()',
 	},

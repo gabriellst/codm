@@ -17,6 +17,7 @@ import {
 	MockStopPolicyConfigRepository,
 } from './repositories/StopPolicyConfigRepository'
 import { OpenIssuesReader, LibSqlOpenIssuesReader, MockOpenIssuesReader } from './services/OpenIssuesReader'
+import { IssueArtifactReader, LibSqlIssueArtifactReader, MockIssueArtifactReader } from './services/IssueArtifactReader'
 import { ChannelConnectivity, LibSqlChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
 import { GroupMemberReader, LibSqlGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 import { ThreadStatusDeriver, LibSqlThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
@@ -60,6 +61,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	},
 	// Classifier candidate set + reply-quote resolution: real table reads in real+integration, empty in mock.
 	{ token: OpenIssuesReader, mock: MockOpenIssuesReader, integration: LibSqlOpenIssuesReader, real: LibSqlOpenIssuesReader },
+	// The artifact a FEEDBACK previews (fase 3, item 2) — the declared `reads.artifact` table read in real+integration.
+	{ token: IssueArtifactReader, mock: MockIssueArtifactReader, integration: LibSqlIssueArtifactReader, real: LibSqlIssueArtifactReader },
 	// Channel-connected gate reads the Go gateway read model: real in real+integration, always-true in mock.
 	{ token: ChannelConnectivity, mock: MockChannelConnectivity, integration: LibSqlChannelConnectivity, real: LibSqlChannelConnectivity },
 	// Group-member hydration reads the Go gateway `remote_memberships` read model: real in

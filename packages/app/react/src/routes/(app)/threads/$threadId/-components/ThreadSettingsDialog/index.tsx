@@ -12,6 +12,7 @@ import {
 	useConfigureLanguage,
 	useConfigureMentionGate,
 	useConfigureModel,
+	useConfigureOutputMode,
 	useConfigurePrompt,
 	useConfigureReactions,
 	useConfigureStreaming,
@@ -22,6 +23,7 @@ import {
 	useSetParticipantInvocation,
 	useSetParticipantElevation,
 	AgentModelIdEnum,
+	GroupOutputModeEnum,
 	LanguageEnum,
 } from '@codm/client-typescript/typescript'
 import type { BufferSize, ProviderKind } from '@codm/client-typescript/typescript'
@@ -114,6 +116,7 @@ export function ThreadSettingsDialog({
 				<ThinkingIndicatorSection threadId={threadId} />
 				<ReactionsSection threadId={threadId} />
 				<StreamingSection threadId={threadId} />
+				<OutputModeSection threadId={threadId} />
 				<LanguageSection threadId={threadId} />
 				<AgentsSection threadId={threadId} />
 				<BufferSection threadId={threadId} />
@@ -317,6 +320,48 @@ function ThinkingIndicatorSection({ threadId, className, ...props }: { threadId:
 					disabled={configureThinkingIndicator.isPending}
 					aria-label={t('session.thinkingIndicator')}
 					onCheckedChange={value => configureThinkingIndicator.mutate({ threadId, data: { enabled: value } }, { onSuccess: invalidate })}
+				/>
+			</div>
+		</section>
+	)
+}
+
+/**
+ * O que chega ao grupo (fase 3, item 2) — how much of what its tasks say this group receives: decisions
+ * only, decisions plus previews and closings (the default), or everything including progress. The enum
+ * select is generated from `GroupOutputModeEnum`; each option's label (`enums.GroupOutputMode.*`) carries
+ * its one-line explanation. Takes effect on the next thing a task says — nothing restarts.
+ */
+function OutputModeSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const configureOutputMode = useConfigureOutputMode({
+		mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) }) },
+	})
+
+	if (isLoading || !data) {
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-6 rounded-lg" />
+			</div>
+		)
+	}
+
+	return (
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.outputMode')}</h3>
+			<div className="flex items-center gap-4">
+				<p className="flex-1 text-sm text-muted-foreground">{t('session.outputModeHint')}</p>
+				<Select
+					enum={GroupOutputModeEnum}
+					i18nPrefix="enums.GroupOutputMode"
+					value={data.outputMode}
+					disabled={configureOutputMode.isPending}
+					onValueChange={mode => configureOutputMode.mutate({ threadId, data: { mode } })}
+					aria-label={t('session.outputMode')}
+					data-testid="output-mode-select"
 				/>
 			</div>
 		</section>

@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { and, asc, desc, eq, gte, isNotNull, isNull, lt, sql } from 'drizzle-orm'
 import { PgDatabaseDriver, PgTransaction } from '@codm/core-typescript'
 import { panelCodeRequests, panelGroups, panelSessions } from '@codm/contracts/db/pg'
+import { parseOpenStops } from '../../utils/openStops'
 import {
 	PanelIdentityStore,
 	type PanelCodeRequestRow,
@@ -28,7 +29,7 @@ export class PgPanelIdentityStore extends PanelIdentityStore {
 			.from(panelGroups)
 			.where(eq(panelGroups.token, token))
 			.limit(1)
-		return group
+		return group && { ...group, openStops: parseOpenStops(group.openStops) }
 	}
 
 	async replaceRoster(
