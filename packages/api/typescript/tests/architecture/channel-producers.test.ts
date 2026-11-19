@@ -34,6 +34,8 @@ const CHANNEL_PRODUCERS: Record<string, string> = {
 		'POLICY — a FEEDBACK the policy sent on its own, with its preview (fase 3, item 2); as text when the preview is gone.',
 	'thread/usecases/RaiseStop.ts':
 		"POLICY — a stop's notice: an issue's stop through `recordIssueSignal`; a conversation's stop keeps today's notice.",
+	'thread/usecases/RecordBatch.ts':
+		'POLICY — the batch receipt (fase 4, item 5), at `BATCH_RECEIPT_LEVEL` routed by the group mode, through `enqueueSignalDelivery`.',
 	'thread/usecases/RecordOrchestratorReply.ts':
 		"THE ORCHESTRATOR'S VOICE — its reply to whoever spoke, outside the policy by the owner's decision.",
 	'thread/usecases/SendDirectMessage.ts': 'THE OPERATOR / THE ORCHESTRATOR — a direct message from the console or an orchestration run.',

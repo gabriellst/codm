@@ -448,6 +448,7 @@ pub mod types {
     ///    "ASK_OPTION_UNKNOWN",
     ///    "BATCH_ISSUE_NOT_IN_THREAD",
     ///    "BATCH_ITEMS_MISMATCH",
+    ///    "BATCH_NOT_FOUND",
     ///    "CANNOT_CONVERT_INPUT",
     ///    "CHANNEL_MEDIA_UNSUPPORTED",
     ///    "CHANNEL_NOT_CONNECTED",
@@ -611,6 +612,8 @@ pub mod types {
         BatchIssueNotInThread,
         #[serde(rename = "BATCH_ITEMS_MISMATCH")]
         BatchItemsMismatch,
+        #[serde(rename = "BATCH_NOT_FOUND")]
+        BatchNotFound,
         #[serde(rename = "CANNOT_CONVERT_INPUT")]
         CannotConvertInput,
         #[serde(rename = "CHANNEL_MEDIA_UNSUPPORTED")]
@@ -867,6 +870,7 @@ pub mod types {
                 Self::AskOptionUnknown => f.write_str("ASK_OPTION_UNKNOWN"),
                 Self::BatchIssueNotInThread => f.write_str("BATCH_ISSUE_NOT_IN_THREAD"),
                 Self::BatchItemsMismatch => f.write_str("BATCH_ITEMS_MISMATCH"),
+                Self::BatchNotFound => f.write_str("BATCH_NOT_FOUND"),
                 Self::CannotConvertInput => f.write_str("CANNOT_CONVERT_INPUT"),
                 Self::ChannelMediaUnsupported => f.write_str("CHANNEL_MEDIA_UNSUPPORTED"),
                 Self::ChannelNotConnected => f.write_str("CHANNEL_NOT_CONNECTED"),
@@ -1027,6 +1031,7 @@ pub mod types {
                 "ASK_OPTION_UNKNOWN" => Ok(Self::AskOptionUnknown),
                 "BATCH_ISSUE_NOT_IN_THREAD" => Ok(Self::BatchIssueNotInThread),
                 "BATCH_ITEMS_MISMATCH" => Ok(Self::BatchItemsMismatch),
+                "BATCH_NOT_FOUND" => Ok(Self::BatchNotFound),
                 "CANNOT_CONVERT_INPUT" => Ok(Self::CannotConvertInput),
                 "CHANNEL_MEDIA_UNSUPPORTED" => Ok(Self::ChannelMediaUnsupported),
                 "CHANNEL_NOT_CONNECTED" => Ok(Self::ChannelNotConnected),
@@ -2588,13 +2593,16 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
-    ///    "destination",
     ///    "excerpt",
     ///    "n"
     ///  ],
     ///  "properties": {
     ///    "destination": {
-    ///      "$ref": "#/components/schemas/BatchItemDestination"
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/BatchItemDestination"
+    ///        }
+    ///      ]
     ///    },
     ///    "excerpt": {
     ///      "type": "string",
@@ -2613,7 +2621,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct BatchItem {
-        pub destination: BatchItemDestination,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub destination: ::std::option::Option<BatchItemDestination>,
         pub excerpt: BatchItemExcerpt,
         pub n: ::std::num::NonZeroU64,
     }

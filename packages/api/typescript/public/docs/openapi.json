@@ -11210,6 +11210,7 @@
           "ASK_OPTION_UNKNOWN",
           "BATCH_ISSUE_NOT_IN_THREAD",
           "BATCH_ITEMS_MISMATCH",
+          "BATCH_NOT_FOUND",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_MEDIA_UNSUPPORTED",
           "CHANNEL_NOT_CONNECTED",
@@ -12226,13 +12227,16 @@
             "maxLength": 500
           },
           "destination": {
-            "$ref": "#/components/schemas/BatchItemDestination"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatchItemDestination"
+              }
+            ]
           }
         },
         "required": [
           "n",
-          "excerpt",
-          "destination"
+          "excerpt"
         ],
         "additionalProperties": false
       },
@@ -12263,6 +12267,7 @@
     "ASK_OPTION_UNKNOWN",
     "BATCH_ISSUE_NOT_IN_THREAD",
     "BATCH_ITEMS_MISMATCH",
+    "BATCH_NOT_FOUND",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_MEDIA_UNSUPPORTED",
     "CHANNEL_NOT_CONNECTED",

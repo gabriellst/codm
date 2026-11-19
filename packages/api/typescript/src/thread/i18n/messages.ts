@@ -1,4 +1,11 @@
-import { BlockCause, IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	BatchItemDestinationKind,
+	BlockCause,
+	IssueLifeState,
+	IssueSignalLevel,
+	Language,
+	StopKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
 import { BulletinSection } from '../enums/ThreadCommand'
@@ -316,6 +323,55 @@ function bulletin(
 	return [`📋 ${words.heading}`, ...body, p.link].filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n\n')
 }
 
+/**
+ * The batch receipt's parts (fase 4, item 5): the code, how many items, how many went to each destination and the
+ * reasons the declined/deferred ones carry. The order of the parts is `BATCH_RECEIPT_ORDER`.
+ */
+export interface BatchReceiptParams {
+	code: string
+	total: number
+	counts: Readonly<Record<BatchItemDestinationKind, number>>
+	/** The reasons of the items whose destination carries one (declined, deferred) — said in the receipt. */
+	reasons: Readonly<Record<BatchItemDestinationKind, readonly string[]>>
+	link?: string
+}
+
+/** The order the receipt names the destinations in — where the work went first, what did not go anywhere last. */
+export const BATCH_RECEIPT_ORDER: readonly BatchItemDestinationKind[] = [
+	BatchItemDestinationKind.NEW_ISSUE,
+	BatchItemDestinationKind.ATTACHED,
+	BatchItemDestinationKind.ALREADY_LIVE,
+	BatchItemDestinationKind.NEEDS_DECISION,
+	BatchItemDestinationKind.DEFERRED,
+	BatchItemDestinationKind.DECLINED,
+]
+
+const BATCH_PART_PT: Record<BatchItemDestinationKind, (n: number) => string> = {
+	[BatchItemDestinationKind.NEW_ISSUE]: n => `${n} ${n === 1 ? 'tarefa nova' : 'tarefas novas'}`,
+	[BatchItemDestinationKind.ATTACHED]: n => `${n} em ${n === 1 ? 'tarefa existente' : 'tarefas existentes'}`,
+	[BatchItemDestinationKind.ALREADY_LIVE]: n => `${n} já no ar`,
+	[BatchItemDestinationKind.NEEDS_DECISION]: n => `${n} esperando decisão`,
+	[BatchItemDestinationKind.DEFERRED]: n => `${n} ${n === 1 ? 'adiado' : 'adiados'}`,
+	[BatchItemDestinationKind.DECLINED]: n => `${n} ${n === 1 ? 'recusado' : 'recusados'}`,
+}
+
+const BATCH_PART_EN: Record<BatchItemDestinationKind, (n: number) => string> = {
+	[BatchItemDestinationKind.NEW_ISSUE]: n => `${n} new ${n === 1 ? 'task' : 'tasks'}`,
+	[BatchItemDestinationKind.ATTACHED]: n => `${n} in existing ${n === 1 ? 'task' : 'tasks'}`,
+	[BatchItemDestinationKind.ALREADY_LIVE]: n => `${n} already live`,
+	[BatchItemDestinationKind.NEEDS_DECISION]: n => `${n} waiting on a decision`,
+	[BatchItemDestinationKind.DEFERRED]: n => `${n} deferred`,
+	[BatchItemDestinationKind.DECLINED]: n => `${n} declined`,
+}
+
+function batchReceipt(p: BatchReceiptParams, heading: string, part: Record<BatchItemDestinationKind, (n: number) => string>): string {
+	const parts = BATCH_RECEIPT_ORDER.filter(kind => p.counts[kind] > 0).map(kind => {
+		const reasons = p.reasons[kind]
+		return `${part[kind](p.counts[kind])}${reasons.length > 0 ? ` (${reasons.join('; ')})` : ''}`
+	})
+	return lines(`${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`, p.link)
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -390,6 +446,20 @@ const PT_MESSAGES = {
 	 * decisão, o que parou, o que está andando e o que terminou nas últimas 24 h; uma linha por tarefa, no
 	 * máximo 8 por seção, e o link do painel no fim.
 	 */
+	/**
+	 * O recibo do lote (fase 4, item 5) — determinístico, sem modelo, uma vez por lote, só quando todo item tem
+	 * destino: quantos itens foram para cada destino, os motivos dos recusados/adiados e o link do lote no painel.
+	 */
+	batchReceipt: (p: BatchReceiptParams) => batchReceipt(p, 'Lote', BATCH_PART_PT),
+	/**
+	 * O lembrete ao orquestrador de um lote que ficou sem destino (fase 4, item 5) — linha só para os agentes
+	 * (sussurro), nunca no grupo. O como registrar vem na dica do lote que o item leva (o nome da ferramenta é do
+	 * prompt, derivado da classe).
+	 */
+	/** O aviso STALLED da conversa quando o lote seguiu sem destino depois do lembrete (fase 4, item 5). */
+	batchStalled: (p: { code: string; total: number }) =>
+		`O lote ${p.code} (${p.total} itens) seguiu sem destino registrado depois do lembrete.`,
+	batchReminder: (p: { code: string; total: number }) => `O lote ${p.code} (${p.total} itens) ainda não tem destino registrado.`,
 	boardBulletin: (p: BoardBulletinParams) =>
 		bulletin(
 			p,
@@ -420,6 +490,9 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
 		approvalYes: () => 'Yes',
 		approvalNo: () => 'No',
+		batchReceipt: p => batchReceipt(p, 'Batch', BATCH_PART_EN),
+		batchStalled: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded after the reminder.`,
+		batchReminder: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded.`,
 		boardBulletin: p =>
 			bulletin(
 				p,

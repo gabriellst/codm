@@ -10,6 +10,6 @@ export const batchItemSchema = z.object({
     "n": z.int().min(1).max(50),
 "excerpt": z.string().max(500),
 get "destination"(){
-                return batchItemDestinationSchema
+                return batchItemDestinationSchema.optional()
               }
     })

@@ -38,6 +38,7 @@ const (
 	ASKOPTIONUNKNOWN                ApiErrors = "ASK_OPTION_UNKNOWN"
 	BATCHISSUENOTINTHREAD           ApiErrors = "BATCH_ISSUE_NOT_IN_THREAD"
 	BATCHITEMSMISMATCH              ApiErrors = "BATCH_ITEMS_MISMATCH"
+	BATCHNOTFOUND                   ApiErrors = "BATCH_NOT_FOUND"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELMEDIAUNSUPPORTED         ApiErrors = "CHANNEL_MEDIA_UNSUPPORTED"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
@@ -188,6 +189,8 @@ func (e ApiErrors) Valid() bool {
 	case BATCHISSUENOTINTHREAD:
 		return true
 	case BATCHITEMSMISMATCH:
+		return true
+	case BATCHNOTFOUND:
 		return true
 	case CANNOTCONVERTINPUT:
 		return true

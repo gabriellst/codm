@@ -31,6 +31,7 @@ import {
 	DeleteThreadLoopController,
 	GetSessionChatController,
 	SendDirectMessageController,
+	RecordBatchController,
 } from '@thread/controllers'
 // The 2026-08-25 founder amendment: `orchestration` grows to a strict superset of `issue-handling` +
 // `system`, and these are the read/config/messaging tools the prompt now names by class. Same license
@@ -254,4 +255,6 @@ export {
 	// an explicit ask. Same context and same license as the workspace import above.
 	AddWorkspaceController,
 	RemoveWorkspaceController,
+	// Fase 4, item 5 — named by the orchestrator's batch hint under a message that listed several requests.
+	RecordBatchController,
 }

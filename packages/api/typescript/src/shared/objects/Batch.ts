@@ -31,11 +31,14 @@ export const BatchItemDestinationSchema = z.discriminatedUnion('kind', [
 ])
 export type BatchItemDestination = Z.output<typeof BatchItemDestinationSchema>
 
-/** One numbered item of the batch: its number (1-based), what it said, and where it went. */
+/**
+ * One numbered item of the batch: its number (1-based), what it said, and where it went — `destination` is absent
+ * exactly while the batch is `INCOMPLETE` (the orchestrator records every item at once, `RecordBatch`).
+ */
 export const BatchItemSchema = z.object({
 	n: z.number().int().min(1).max(BATCH_ITEMS_MAX),
 	excerpt: z.string().max(BATCH_EXCERPT_MAX),
-	destination: BatchItemDestinationSchema,
+	destination: BatchItemDestinationSchema.optional(),
 })
 export type BatchItem = Z.output<typeof BatchItemSchema>
 

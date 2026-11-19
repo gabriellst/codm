@@ -515,6 +515,7 @@
 		"ASK_OPTIONS_DUPLICATED": "Each option of a question needs its own id.",
 		"ASK_OPTION_UNKNOWN": "That option is not one of the choices of this question.",
 		"BATCH_ISSUE_NOT_IN_THREAD": "That task is not from this conversation.",
+		"BATCH_NOT_FOUND": "That batch is not from this conversation.",
 		"BATCH_ITEMS_MISMATCH": "Every item of the batch needs exactly one destination.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_DEVICE_INVALIDATED": "This channel's connection was invalidated by the messaging platform. Reconnect it to generate a new pairing code.",

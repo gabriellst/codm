@@ -32,6 +32,7 @@ import {
 	GetHomeDashboardController,
 	AddWorkspaceController,
 	RemoveWorkspaceController,
+	RecordBatchController,
 } from '../../mcp/exposure'
 import { ASKED_AS } from '@thread/objects'
 import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
@@ -1001,7 +1002,9 @@ export class OrchestratorPromptBuilder {
 						? { de: item.quoted.speaker, hora: clockOf(item.quoted.at, input.now, input.timezone), text: item.quoted.text }
 						: undefined,
 					content: item.text,
-				}).concat(triageHint(item.triage))
+				})
+					.concat(triageHint(item.triage))
+					.concat(batchHint(item.batch))
 			case MailboxItemKind.ISSUE_RESULT:
 				return this.issueResult(item)
 			default: {
@@ -1106,6 +1109,29 @@ function midiaLabel(messageType: MessageType | undefined): MediaLabel | undefine
  */
 function isGroup(input: { contactKind: ContactKind }): boolean {
 	return input.contactKind === ContactKind.GROUP
+}
+
+/**
+ * A BATCH under the live block (fase 4, item 5): the message listed several requests, and the turn owes each of them
+ * a destination through the tool. The receipt the group gets is composed by codm from what the tool recorded — so
+ * the turn is told not to write its own list (the group would read the same thing twice).
+ */
+function batchHint(batch: { batchCode: string; total: number; pending: readonly { n: number; excerpt: string }[] } | undefined): string[] {
+	if (!batch) return []
+	const recordBatch = toolNameOf(RecordBatchController)
+	const still =
+		batch.pending.length < batch.total
+			? `${batch.pending.length} of its ${batch.total} items still have`
+			: `none of its ${batch.total} items has`
+	return [
+		`(batch ${batch.batchCode}: this message lists ${batch.total} requests and ${still} a destination. Handle each one ` +
+			`as you would a message on its own — open an issue, add it to an issue of this conversation, say it is already ` +
+			`live, decline it, defer it, or wait on a decision — then call ${recordBatch} ONCE with batchCode ` +
+			`"${batch.batchCode}" and a destination for EVERY item 1..${batch.total}. codm sends the group the receipt with ` +
+			'every destination; do not list them yourself.',
+		...batch.pending.map(item => `  ${item.n}. ${item.excerpt}`),
+		')',
+	]
 }
 
 /** WHO may ask for work and answer a stop, in the words of the sections that gate on it. */

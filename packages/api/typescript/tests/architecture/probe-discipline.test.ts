@@ -26,6 +26,10 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve LibSqlDatabaseDriver — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
+		path: 'src/thread/usecases/RecordBatch.test.ts',
+		why: "MAILBOX PAYLOAD + WRITE-ONLY SEED (fase 4, S8): the batch rides the orchestrator item's JSON payload, which no probe exposes, and the follow-up sweep needs the batch's turn and the reminder marked consumed (what the dispatcher writes) without running an orchestrator turn. Every batch state is read back through the repository or the use cases",
+	},
+	{
 		path: 'src/ui/usecases/GetIssueTimeline.test.ts',
 		why: 'WRITE-ONLY SEED (fase 4, S0a): the timeline reader learns two sources whose writers land in later slices — `thread_batch_items` (S8, RecordBatch) and the `agent.publish.ran` fact (S11) — so the only way to give the reader those rows today is a raw INSERT. Every read goes through the use case under test; nothing is read back from the driver',
 	},

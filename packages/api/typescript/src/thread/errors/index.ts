@@ -98,6 +98,8 @@ export type ThreadApplicationErrors =
 	// The batch (fase 4, item 5): a destination names an issue that was not forked from THIS conversation —
 	// checked by the use case through the agent's `ForkedIssueReader`, so it is an application code.
 	| 'BATCH_ISSUE_NOT_IN_THREAD'
+	// The batch code the tool named is not one of THIS conversation's batches (fase 4, S8).
+	| 'BATCH_NOT_FOUND'
 	// Fase 4 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK build
 	// against it — but its behaviour lands in a later slice. Every such WRITE refuses with THIS code, never a
 	// silent 2xx (a 2xx from a tool tells the model it was recorded). 501: the route is declared, the
@@ -117,6 +119,7 @@ registerErrorCodes({
 	// Fase 4 — the batch's invariant and its cross-context check (S8), and the declared door (S0b).
 	BATCH_ITEMS_MISMATCH: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	BATCH_ISSUE_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	BATCH_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THROUGHPUT_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 	NO_PROVIDER_SELECTED: HttpStatusCode.BAD_REQUEST,
 	LAST_INVOKER: HttpStatusCode.UNPROCESSABLE_ENTITY,

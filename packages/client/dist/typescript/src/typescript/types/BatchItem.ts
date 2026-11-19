@@ -17,5 +17,5 @@ export type BatchItem = {
      * @type string
     */
     excerpt: string;
-    destination: BatchItemDestination;
+    destination?: BatchItemDestination;
 };

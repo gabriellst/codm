@@ -21,6 +21,9 @@ export type UiApplicationErrors =
 	| 'ONBOARDING_NOT_COMPLETED'
 	| 'ONBOARDING_DRAFT_INCOMPLETE'
 	| 'THROUGHPUT_NOT_READY'
+	// Fase 4 (S8): the console asked for a batch code this conversation does not have — same code and status as
+	// the `thread` tool's refusal.
+	| 'BATCH_NOT_FOUND'
 export type ApplicationErrors = BaseApplicationErrors | UiApplicationErrors
 
 export type UiInfrastructureErrors = never
@@ -36,4 +39,5 @@ registerErrorCodes({
 	ONBOARDING_NOT_COMPLETED: HttpStatusCode.FORBIDDEN,
 	ONBOARDING_DRAFT_INCOMPLETE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	THROUGHPUT_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
+	BATCH_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 })

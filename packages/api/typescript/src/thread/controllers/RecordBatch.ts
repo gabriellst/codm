@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { BatchItemDestinationKind, McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunIdentityCtxSchema } from '@agent/types/AgentRunIdentity'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import { BATCH_ITEMS_MAX, BatchItemSchema, BatchSchema } from '@shared/objects'
+import { BATCH_ITEMS_MAX, BatchItemDestinationSchema, BatchItemSchema, BatchSchema } from '@shared/objects'
 import { ThreadParam } from '../schemas'
-import type { ApplicationErrors } from '../errors'
+import { RecordBatch } from '../usecases/RecordBatch'
 
 export const RecordBatchControllerInputSchema = ThreadParam.extend({
 	// The run identity `AgentIdentityMiddleware` stamps on a tool call — composed so Zod does not strip it.
@@ -15,7 +15,8 @@ export const RecordBatchControllerInputSchema = ThreadParam.extend({
 		batchCode: BatchSchema.shape.code,
 		/** One entry per item of the batch: its number and where it went — every item 1..N exactly once. */
 		items: z
-			.array(BatchItemSchema.pick({ n: true, destination: true }))
+			// The item's number and its destination — REQUIRED here, where the destination is the whole point.
+			.array(z.object({ n: BatchItemSchema.shape.n, destination: BatchItemDestinationSchema }))
 			.min(1)
 			.max(BATCH_ITEMS_MAX),
 	}),
@@ -46,11 +47,10 @@ export const RecordBatchControllerOutputSchema = z.void()
 /**
  * The orchestrator records WHERE EACH ITEM OF A BATCH WENT (fase 4, item 5) — a new task, guidance to an
  * existing one, already live, declined, deferred, or waiting on a decision. Every item 1..N needs exactly
- * one destination; with all of them recorded, the receipt goes to the group.
+ * one destination; with all of them recorded, the receipt goes to the group through the output policy.
  *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use
- * case (`RecordBatch`, with the `Batch` aggregate) lands in S8. Until then it refuses with
- * `THROUGHPUT_NOT_READY` — never a 2xx that would tell the model the batch was recorded.
+ * The run's conversation is confined by the generic identity comparison: an `orchestration` identity carries
+ * `threadId`, and so does this route's `params` — a run of one conversation cannot record another's batch.
  */
 @injectable()
 export class RecordBatchController extends Controller<typeof RecordBatchControllerInputSchema, typeof RecordBatchControllerOutputSchema> {
@@ -62,7 +62,16 @@ export class RecordBatchController extends Controller<typeof RecordBatchControll
 	readonly inputSchema = RecordBatchControllerInputSchema
 	readonly outputSchema = RecordBatchControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('THROUGHPUT_NOT_READY', 'RecordBatch lands in fase 4, slice S8')
+	constructor(private useCase: RecordBatch) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			batchCode: request.body.batchCode,
+			items: request.body.items,
+		})
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }
