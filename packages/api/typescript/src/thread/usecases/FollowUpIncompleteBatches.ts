@@ -36,7 +36,8 @@ export const BATCH_REMINDER_SPEAKER = 'codm'
  * A BATCH LEFT INCOMPLETE (fase 4, item 5) — the turn that got the batch ended without recording every destination.
  *
  * Judged on persisted state by a repeated sweep (SCH-01/02), and ONLY while the conversation's orchestrator has
- * nothing left to run (`hasPending`): a batch waiting behind other messages is not late, its turn has not come.
+ * nothing left to run (`hasPending` — every unconsumed item, running or deferred by a provider pause included): a
+ * batch waiting behind other messages, or behind a pause, is not late, its turn has not come.
  *  1. `BATCH_REMIND_AFTER_MS` after it arrived: ONE reminder to the orchestrator — an item of the conversation
  *     (class `REMINDER`, never ahead of anybody's message), carrying the batch again, keyed on the batch so it is
  *     queued once (`enqueue` answers false the second time — which is how the sweep knows it was reminded);

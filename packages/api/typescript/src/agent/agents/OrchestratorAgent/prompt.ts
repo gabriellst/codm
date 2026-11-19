@@ -1113,8 +1113,8 @@ function isGroup(input: { contactKind: ContactKind }): boolean {
 
 /**
  * A BATCH under the live block (fase 4, item 5): the message listed several requests, and the turn owes each of them
- * a destination through the tool. The receipt the group gets is composed by codm from what the tool recorded — so
- * the turn is told not to write its own list (the group would read the same thing twice).
+ * a destination through the tool. The receipt is composed by codm from what the tool recorded and routed by the
+ * group's output mode — so the turn is told not to write its own list (the group would read the same thing twice).
  */
 function batchHint(batch: { batchCode: string; total: number; pending: readonly { n: number; excerpt: string }[] } | undefined): string[] {
 	if (!batch) return []
@@ -1127,8 +1127,8 @@ function batchHint(batch: { batchCode: string; total: number; pending: readonly 
 		`(batch ${batch.batchCode}: this message lists ${batch.total} requests and ${still} a destination. Handle each one ` +
 			`as you would a message on its own — open an issue, add it to an issue of this conversation, say it is already ` +
 			`live, decline it, defer it, or wait on a decision — then call ${recordBatch} ONCE with batchCode ` +
-			`"${batch.batchCode}" and a destination for EVERY item 1..${batch.total}. codm sends the group the receipt with ` +
-			'every destination; do not list them yourself.',
+			`"${batch.batchCode}" and a destination for EVERY item 1..${batch.total}. codm composes the receipt with every ` +
+			"destination and the group's output mode decides where it goes; do not list them yourself.",
 		...batch.pending.map(item => `  ${item.n}. ${item.excerpt}`),
 		')',
 	]
