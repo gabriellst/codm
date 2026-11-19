@@ -11,7 +11,14 @@ import {
 	type StopKind,
 	type TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import { PublishRunSchema, RegretWindowSchema, type IssueTimelineItem } from '@shared/schemas'
+import {
+	NudgeMarkSchema,
+	PublishRunSchema,
+	RegretWindowSchema,
+	RetryScheduledSchema,
+	SupervisorReviewSchema,
+	type IssueTimelineItem,
+} from '@shared/schemas'
 import { IssuePausedEventSchema } from '../events/IssuePausedEvent'
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
@@ -25,6 +32,10 @@ const EVENT_KINDS = {
 	'agent.regret_window_closed': IssueTimelineItemKind.REGRET_WINDOW,
 	// Fase 4 (item 6c): the workspace's declared publish command ran — written from slice S11 on.
 	'agent.publish.ran': IssueTimelineItemKind.PUBLISH_RAN,
+	// Fase 5: a nudge (S3), a retry scheduled (S2) and an ACTED supervisor verdict (S5) — no producer until then.
+	'agent.issue.nudged': IssueTimelineItemKind.NUDGED,
+	'agent.mailbox.retry_scheduled': IssueTimelineItemKind.RETRY_SCHEDULED,
+	'agent.supervisor.reviewed': IssueTimelineItemKind.SUPERVISOR_REVIEWED,
 } as const satisfies Record<string, IssueTimelineItemKind>
 type EventName = keyof typeof EVENT_KINDS
 const EVENT_NAMES = Object.keys(EVENT_KINDS) as EventName[]
@@ -94,6 +105,16 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			// Outcome, exit code and duration only — the fact never carries the command line nor the output.
 			const run = PublishRunSchema.safeParse(fact.payload)
 			if (run.success) items.push({ kind, id: fact.id, at: when, ...run.data })
+		} else if (kind === IssueTimelineItemKind.NUDGED) {
+			const nudge = NudgeMarkSchema.safeParse(fact.payload)
+			if (nudge.success) items.push({ kind, id: fact.id, at: when, ...nudge.data })
+		} else if (kind === IssueTimelineItemKind.RETRY_SCHEDULED) {
+			const retry = RetryScheduledSchema.safeParse(fact.payload)
+			if (retry.success) items.push({ kind, id: fact.id, at: when, ...retry.data })
+		} else if (kind === IssueTimelineItemKind.SUPERVISOR_REVIEWED) {
+			// Only what the supervisor DID: a verdict recorded in observation (`acted: false`) is audit, not a moment.
+			const review = SupervisorReviewSchema.extend({ acted: z.literal(true) }).safeParse(fact.payload)
+			if (review.success) items.push({ kind, id: fact.id, at: when, reason: review.data.reason, verdict: review.data.verdict })
 		} else items.push({ kind, id: fact.id, at: when })
 	}
 	for (const entry of entries) {

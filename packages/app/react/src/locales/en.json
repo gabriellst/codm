@@ -417,7 +417,8 @@
 			"STALLED": "Stalled",
 			"WAITING_BUDGET": "Held by the budget",
 			"WAITING_PERSON": "Waiting on someone",
-			"WAITING_PROVIDER": "Waiting on usage limit"
+			"WAITING_PROVIDER": "Waiting on usage limit",
+			"WAITING_RETRY": "Trying again"
 		},
 		"IssueStatus": {
 			"COMPLETED": "Completed",
@@ -438,7 +439,10 @@
 			"STEER": "Steer",
 			"STOP_RAISED": "Asked for someone",
 			"STOP_RESOLVED": "Answered",
-			"TURN_STARTED": "Turn started"
+			"TURN_STARTED": "Turn started",
+			"NUDGED": "Nudge",
+			"RETRY_SCHEDULED": "Retry scheduled",
+			"SUPERVISOR_REVIEWED": "Supervisor"
 		},
 		"Language": {
 			"en-US": "English (US)",
@@ -513,7 +517,8 @@
 			"DENY": "Deny",
 			"RETRY": "Retry",
 			"REVIEW_AND_SEND": "Review & send",
-			"TAKE_OVER": "Take over"
+			"TAKE_OVER": "Take over",
+			"AUTO_RETRY": "Retried by the supervisor"
 		},
 		"ThreadStatus": {
 			"IDLE": "Idle",
@@ -531,6 +536,22 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
 			"GIT": "git"
+		},
+		"NudgeSource": {
+			"RECONCILER": "automatic",
+			"SUPERVISOR": "supervisor"
+		},
+		"SuspicionReason": {
+			"STALLED_OPEN": "Stalled for a while",
+			"PROVIDER_ERROR_OPEN": "Provider error for a while",
+			"NUDGE_LOOP": "Keeps going quiet",
+			"SILENT_TURN": "Silent turn"
+		},
+		"SupervisorVerdict": {
+			"NUDGE": "nudged",
+			"RESTART_WITH_NOTES": "restarted with the notes",
+			"ESCALATE": "escalated",
+			"LEAVE": "left as is"
 		}
 	},
 	"errors": {
@@ -907,7 +928,9 @@
 		"timelineTriage": "routed by triage",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
-		"waitingTerminal": "Waiting for terminal output…"
+		"waitingTerminal": "Waiting for terminal output…",
+		"timelineNudged": "nudge {{ordinal}} · {{source}}",
+		"timelineRetryScheduled": "attempt {{attempt}} of {{max}} · {{time}}"
 	},
 	"settings": {
 		"agentProviders": "Agent providers",

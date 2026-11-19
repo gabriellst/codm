@@ -13,4 +13,7 @@ enum StopResolution {
   // Fase 3: a QUESTION_ASKED reached its deadline and the issue went on with its declared default.
   // Written only by the deadline job, never accepted from a route.
   DEFAULT_APPLIED: "DEFAULT_APPLIED",
+  // Fase 5: the supervisor resumed a STALLED / SERVER_ERROR task once more, in AUTO, as the last nudge of
+  // its episode. Written only by the supervisor job, never accepted from a route, the panel or MCP.
+  AUTO_RETRY: "AUTO_RETRY",
 }

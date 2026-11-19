@@ -13,12 +13,15 @@ import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
+import { nudgeSourceSchema } from "./nudgeSourceSchema.ts";
 import { outputRoutingSchema } from "./outputRoutingSchema.ts";
 import { panelHealthSchema } from "./panelHealthSchema.ts";
 import { publishRunOutcomeSchema } from "./publishRunOutcomeSchema.ts";
 import { regretWindowOutcomeSchema } from "./regretWindowOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
+import { supervisorVerdictSchema } from "./supervisorVerdictSchema.ts";
+import { suspicionReasonSchema } from "./suspicionReasonSchema.ts";
 import { transcriptKindSchema } from "./transcriptKindSchema.ts";
 import { z } from "zod/v4";
 
@@ -49,6 +52,8 @@ get "lifeState"(){
                 return issueLifeStateSchema
               },
 "waitingForProviderUntil": z.optional(z.iso.datetime()),
+"retryingAt": z.optional(z.iso.datetime()),
+"escalatedAt": z.optional(z.iso.datetime()),
 "archived": z.boolean(),
 "timeline": z.array(z.union([z.object({
     "kind": z.enum(["CREATED"]),
@@ -175,6 +180,31 @@ get "outcome"(){
               },
 "exitCode": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
 "durationMs": z.optional(z.int().min(0).max(9007199254740991))
+    }), z.object({
+    "kind": z.enum(["NUDGED"]),
+"id": z.string(),
+"at": z.string(),
+"ordinal": z.int().min(1).max(9007199254740991),
+get "source"(){
+                return nudgeSourceSchema
+              }
+    }), z.object({
+    "kind": z.enum(["RETRY_SCHEDULED"]),
+"id": z.string(),
+"at": z.string(),
+"attempt": z.int().min(1).max(9007199254740991),
+"maxAttempts": z.int().min(1).max(9007199254740991),
+"retryAt": z.string()
+    }), z.object({
+    "kind": z.enum(["SUPERVISOR_REVIEWED"]),
+"id": z.string(),
+"at": z.string(),
+get "reason"(){
+                return suspicionReasonSchema
+              },
+get "verdict"(){
+                return supervisorVerdictSchema
+              }
     })])).max(2000),
 "updatedAt": z.iso.datetime()
     })).max(500),

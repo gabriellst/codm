@@ -8,4 +8,5 @@ export enum StopResolution {
 	DENY = 'DENY',
 	ANSWER = 'ANSWER',
 	DEFAULT_APPLIED = 'DEFAULT_APPLIED',
+	AUTO_RETRY = 'AUTO_RETRY',
 }

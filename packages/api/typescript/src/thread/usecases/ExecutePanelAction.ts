@@ -70,6 +70,9 @@ const ANSWER_ECHO: Readonly<Record<StopResolution, PanelActionEcho>> = {
 	[StopResolution.TAKE_OVER]: PanelActionEcho.ANSWERED,
 	[StopResolution.ANSWER]: PanelActionEcho.ANSWERED,
 	[StopResolution.DEFAULT_APPLIED]: PanelActionEcho.ANSWERED,
+	// Fase 5: never reached — `OFFERED_ON_PANEL[AUTO_RETRY]` is false, so the panel refuses it before any echo
+	// (the same standing as DEFAULT_APPLIED: a job's resolution, never a person's).
+	[StopResolution.AUTO_RETRY]: PanelActionEcho.ANSWERED,
 }
 
 type ActionOf<K extends PanelActionKind> = Extract<PanelActionBody, { kind: K }>

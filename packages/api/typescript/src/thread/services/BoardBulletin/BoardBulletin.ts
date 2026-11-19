@@ -24,6 +24,8 @@ export const SECTION_OF_LIFE: Record<IssueLifeState, BulletinSection> = {
 	[IssueLifeState.PAUSED]: BulletinSection.STOPPED,
 	[IssueLifeState.STALLED]: BulletinSection.STOPPED,
 	[IssueLifeState.WAITING_PROVIDER]: BulletinSection.STOPPED,
+	// Fase 5: a failed turn waiting for its next attempt — the system is still trying, so it is work in progress.
+	[IssueLifeState.WAITING_RETRY]: BulletinSection.DOING,
 	// Fase 4: held by the budget so the orchestrator keeps its reserve — the same section as the provider's limit.
 	[IssueLifeState.WAITING_BUDGET]: BulletinSection.STOPPED,
 	[IssueLifeState.RUNNING]: BulletinSection.DOING,

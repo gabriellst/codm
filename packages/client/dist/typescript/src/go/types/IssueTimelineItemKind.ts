@@ -18,7 +18,10 @@ export const IssueTimelineItemKindEnum = {
     RESUMED: "RESUMED",
     REGRET_WINDOW: "REGRET_WINDOW",
     BATCH_LINKED: "BATCH_LINKED",
-    PUBLISH_RAN: "PUBLISH_RAN"
+    PUBLISH_RAN: "PUBLISH_RAN",
+    NUDGED: "NUDGED",
+    RETRY_SCHEDULED: "RETRY_SCHEDULED",
+    SUPERVISOR_REVIEWED: "SUPERVISOR_REVIEWED"
 } as const;
 
 export type IssueTimelineItemKindEnumKey = (typeof IssueTimelineItemKindEnum)[keyof typeof IssueTimelineItemKindEnum];

@@ -83,6 +83,10 @@ export const panelIssues = panelSchema.table(
 		status: text('status').$type<IssueStatus>().notNull(),
 		lifeState: text('life_state').$type<IssueLifeState>().notNull(),
 		waitingForProviderUntil: timestamp('waiting_for_provider_until', { withTimezone: true, mode: 'date' }),
+		/** Fase 5 — when a failed turn's next attempt is due (`WAITING_RETRY`); null otherwise. */
+		retryingAt: timestamp('retrying_at', { withTimezone: true, mode: 'date' }),
+		/** Fase 5 — when the supervisor last escalated the issue (badge only; nobody is messaged); null otherwise. */
+		escalatedAt: timestamp('escalated_at', { withTimezone: true, mode: 'date' }),
 		archived: boolean('archived').notNull().default(false),
 		/** The `GetIssueTimeline` items, verbatim — the panel renders them; nothing here queries inside. */
 		timeline: jsonb('timeline').notNull(),

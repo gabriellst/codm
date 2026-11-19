@@ -15,6 +15,9 @@ export interface PanelIssueSnapshot {
 	status: IssueStatus
 	lifeState: IssueLifeState
 	waitingForProviderUntil?: string
+	/** Fase 5 — filled from S2 (retry) and S5 (escalation). */
+	retryingAt?: string
+	escalatedAt?: string
 	archived: boolean
 	timeline: IssueTimelineItem[]
 	updatedAt: string

@@ -41,6 +41,10 @@ export const GetIssueDetailOutputSchema = z.object({
 		paused: z.boolean(),
 		/** ISO instant until which the issue waits on the provider's usage limit; absent when it is not. */
 		waitingForProviderUntil: z.string().optional(),
+		/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent otherwise (filled from S2). */
+		retryingAt: z.string().optional(),
+		/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
+		escalatedAt: z.string().optional(),
 		/** Where the work stands right now, by rule (`lifeStateOf`). */
 		lifeState: z.enum(IssueLifeState),
 	}),

@@ -43,6 +43,29 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: DetailProps<K>) => ReactNo
 	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
 	BATCH_LINKED: ({ item }) => <BatchLinkedDetail item={item} />,
 	PUBLISH_RAN: ({ item, issueId }) => <PublishRanDetail item={item} issueId={issueId} />,
+	// Fase 5 — the nudge, the scheduled retry and what the supervisor did (minimal text; S6 refines).
+	NUDGED: ({ item }) => <NudgedDetail item={item} />,
+	RETRY_SCHEDULED: ({ item }) => <RetryScheduledDetail item={item} />,
+	SUPERVISOR_REVIEWED: ({ item }) => `${enumLabel('SuspicionReason', item.reason)} → ${enumLabel('SupervisorVerdict', item.verdict)}`,
+}
+
+function NudgedDetail({ item }: { item: ItemOf<'NUDGED'> }) {
+	const { t } = useTranslation()
+	return <>{t('session.timelineNudged', { ordinal: item.ordinal, source: enumLabel('NudgeSource', item.source) })}</>
+}
+
+function RetryScheduledDetail({ item }: { item: ItemOf<'RETRY_SCHEDULED'> }) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<>
+			{t('session.timelineRetryScheduled', {
+				attempt: item.attempt,
+				max: item.maxAttempts,
+				time: formatDayAndTime(item.retryAt, locale),
+			})}
+		</>
+	)
 }
 
 /**

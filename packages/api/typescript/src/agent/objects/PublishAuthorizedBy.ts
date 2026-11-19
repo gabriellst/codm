@@ -51,4 +51,6 @@ export const PUBLISH_AUTHORIZED_BY: Readonly<Record<StopResolution, (stop: Resol
 	[StopResolution.TAKE_OVER]: never,
 	[StopResolution.ANSWER]: chosenOptionAuthorizes,
 	[StopResolution.DEFAULT_APPLIED]: chosenOptionAuthorizes,
+	// Fase 5: the supervisor's retry is never a person's authorization — it never triggers the publish command.
+	[StopResolution.AUTO_RETRY]: never,
 }

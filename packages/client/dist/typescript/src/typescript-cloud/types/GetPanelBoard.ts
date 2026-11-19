@@ -66,6 +66,14 @@ export type GetPanelBoard200 = {
         */
         waitingForProviderUntil?: string;
         /**
+         * @type string | undefined
+        */
+        retryingAt?: string;
+        /**
+         * @type string | undefined
+        */
+        escalatedAt?: string;
+        /**
          * @type string
         */
         updatedAt: string;

@@ -1113,6 +1113,7 @@ const (
 	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+	IssueLifeStateWAITINGRETRY    IssueLifeState = "WAITING_RETRY"
 )
 
 // Valid indicates whether the value is a known member of the IssueLifeState enum.
@@ -1135,6 +1136,8 @@ func (e IssueLifeState) Valid() bool {
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	case IssueLifeStateWAITINGRETRY:
 		return true
 	default:
 		return false
@@ -1215,20 +1218,23 @@ func (e IssueStatus) Valid() bool {
 
 // Defines values for IssueTimelineItemKind.
 const (
-	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
-	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
-	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
-	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
-	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
-	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
-	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
-	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
-	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
-	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
-	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
-	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
-	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
-	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+	IssueTimelineItemKindARCHIVED           IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT           IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED        IssueTimelineItemKind = "BATCH_LINKED"
+	IssueTimelineItemKindCOMPLETED          IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED            IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE            IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindNUDGED             IssueTimelineItemKind = "NUDGED"
+	IssueTimelineItemKindPAUSED             IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN         IssueTimelineItemKind = "PUBLISH_RAN"
+	IssueTimelineItemKindREGRETWINDOW       IssueTimelineItemKind = "REGRET_WINDOW"
+	IssueTimelineItemKindRESUMED            IssueTimelineItemKind = "RESUMED"
+	IssueTimelineItemKindRETRYSCHEDULED     IssueTimelineItemKind = "RETRY_SCHEDULED"
+	IssueTimelineItemKindSTEER              IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED         IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED       IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindSUPERVISORREVIEWED IssueTimelineItemKind = "SUPERVISOR_REVIEWED"
+	IssueTimelineItemKindTURNSTARTED        IssueTimelineItemKind = "TURN_STARTED"
 )
 
 // Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
@@ -1246,6 +1252,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindMESSAGE:
 		return true
+	case IssueTimelineItemKindNUDGED:
+		return true
 	case IssueTimelineItemKindPAUSED:
 		return true
 	case IssueTimelineItemKindPUBLISHRAN:
@@ -1254,11 +1262,15 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindRESUMED:
 		return true
+	case IssueTimelineItemKindRETRYSCHEDULED:
+		return true
 	case IssueTimelineItemKindSTEER:
 		return true
 	case IssueTimelineItemKindSTOPRAISED:
 		return true
 	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindSUPERVISORREVIEWED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
 		return true
@@ -1384,6 +1396,24 @@ func (e MessageType) Valid() bool {
 	case MessageTypeTEXT:
 		return true
 	case MessageTypeVIDEO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NudgeSource.
+const (
+	RECONCILER NudgeSource = "RECONCILER"
+	SUPERVISOR NudgeSource = "SUPERVISOR"
+)
+
+// Valid indicates whether the value is a known member of the NudgeSource enum.
+func (e NudgeSource) Valid() bool {
+	switch e {
+	case RECONCILER:
+		return true
+	case SUPERVISOR:
 		return true
 	default:
 		return false
@@ -1724,6 +1754,7 @@ func (e StopKind) Valid() bool {
 const (
 	ANSWER         StopResolution = "ANSWER"
 	APPROVE        StopResolution = "APPROVE"
+	AUTORETRY      StopResolution = "AUTO_RETRY"
 	DEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
 	DENY           StopResolution = "DENY"
 	RETRY          StopResolution = "RETRY"
@@ -1737,6 +1768,8 @@ func (e StopResolution) Valid() bool {
 	case ANSWER:
 		return true
 	case APPROVE:
+		return true
+	case AUTORETRY:
 		return true
 	case DEFAULTAPPLIED:
 		return true
@@ -1765,6 +1798,54 @@ func (e Stream) Valid() bool {
 	case Stderr:
 		return true
 	case Stdout:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupervisorVerdict.
+const (
+	ESCALATE         SupervisorVerdict = "ESCALATE"
+	LEAVE            SupervisorVerdict = "LEAVE"
+	NUDGE            SupervisorVerdict = "NUDGE"
+	RESTARTWITHNOTES SupervisorVerdict = "RESTART_WITH_NOTES"
+)
+
+// Valid indicates whether the value is a known member of the SupervisorVerdict enum.
+func (e SupervisorVerdict) Valid() bool {
+	switch e {
+	case ESCALATE:
+		return true
+	case LEAVE:
+		return true
+	case NUDGE:
+		return true
+	case RESTARTWITHNOTES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SuspicionReason.
+const (
+	NUDGELOOP         SuspicionReason = "NUDGE_LOOP"
+	PROVIDERERROROPEN SuspicionReason = "PROVIDER_ERROR_OPEN"
+	SILENTTURN        SuspicionReason = "SILENT_TURN"
+	STALLEDOPEN       SuspicionReason = "STALLED_OPEN"
+)
+
+// Valid indicates whether the value is a known member of the SuspicionReason enum.
+func (e SuspicionReason) Valid() bool {
+	switch e {
+	case NUDGELOOP:
+		return true
+	case PROVIDERERROROPEN:
+		return true
+	case SILENTTURN:
+		return true
+	case STALLEDOPEN:
 		return true
 	default:
 		return false
@@ -2023,6 +2104,9 @@ type MessageAuthor string
 // MessageType defines model for MessageType.
 type MessageType string
 
+// NudgeSource defines model for NudgeSource.
+type NudgeSource string
+
 // OnboardingStep defines model for OnboardingStep.
 type OnboardingStep string
 
@@ -2123,6 +2207,12 @@ type StopResolution string
 
 // Stream defines model for Stream.
 type Stream string
+
+// SupervisorVerdict defines model for SupervisorVerdict.
+type SupervisorVerdict string
+
+// SuspicionReason defines model for SuspicionReason.
+type SuspicionReason string
 
 // ThreadMode defines model for ThreadMode.
 type ThreadMode string
@@ -2286,6 +2376,34 @@ type GetIssueTimeline200JSONResponseBodyItems13 struct {
 	Id         string            `json:"id"`
 	Kind       string            `json:"kind"`
 	Outcome    PublishRunOutcome `json:"outcome"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems14 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems14 struct {
+	At      string      `json:"at"`
+	Id      string      `json:"id"`
+	Kind    string      `json:"kind"`
+	Ordinal int         `json:"ordinal"`
+	Source  NudgeSource `json:"source"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems15 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems15 struct {
+	At          string `json:"at"`
+	Attempt     int    `json:"attempt"`
+	Id          string `json:"id"`
+	Kind        string `json:"kind"`
+	MaxAttempts int    `json:"maxAttempts"`
+	RetryAt     string `json:"retryAt"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems16 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems16 struct {
+	At      string            `json:"at"`
+	Id      string            `json:"id"`
+	Kind    string            `json:"kind"`
+	Reason  SuspicionReason   `json:"reason"`
+	Verdict SupervisorVerdict `json:"verdict"`
 }
 
 // GetIssueTimeline200JSONResponseBody_Items_Item defines parameters for GetIssueTimeline.
@@ -3491,6 +3609,84 @@ func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200
 
 // MergeGetIssueTimeline200JSONResponseBodyItems13 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems13
 func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems13(v GetIssueTimeline200JSONResponseBodyItems13) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems14 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems14
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems14() (GetIssueTimeline200JSONResponseBodyItems14, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems14
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems14 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems14
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems14(v GetIssueTimeline200JSONResponseBodyItems14) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems14 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems14
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems14(v GetIssueTimeline200JSONResponseBodyItems14) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems15 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems15
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems15() (GetIssueTimeline200JSONResponseBodyItems15, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems15
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems15 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems15
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems15(v GetIssueTimeline200JSONResponseBodyItems15) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems15 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems15
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems15(v GetIssueTimeline200JSONResponseBodyItems15) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems16 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems16
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems16() (GetIssueTimeline200JSONResponseBodyItems16, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems16
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems16 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems16
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems16(v GetIssueTimeline200JSONResponseBodyItems16) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems16 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems16
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems16(v GetIssueTimeline200JSONResponseBodyItems16) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -9744,11 +9940,13 @@ type GetIssuesOverviewResponse struct {
 	JSON200      *struct {
 		Archived []struct {
 			Archived                bool               `json:"archived"`
+			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
 			Paused                  bool               `json:"paused"`
+			RetryingAt              *string            `json:"retryingAt,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			ThreadDisplayName       string             `json:"threadDisplayName"`
 			ThreadId                openapi_types.UUID `json:"threadId"`
@@ -9758,11 +9956,13 @@ type GetIssuesOverviewResponse struct {
 		Groups []struct {
 			Items []struct {
 				Archived                bool               `json:"archived"`
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Paused                  bool               `json:"paused"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
 				ThreadId                openapi_types.UUID `json:"threadId"`
@@ -9810,11 +10010,13 @@ type GetIssueDetailResponse struct {
 	JSON200      *struct {
 		Issue struct {
 			Archived                bool               `json:"archived"`
+			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
 			Paused                  bool               `json:"paused"`
+			RetryingAt              *string            `json:"retryingAt,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			Title                   string             `json:"title"`
 			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
@@ -13700,11 +13902,13 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 		var dest struct {
 			Archived []struct {
 				Archived                bool               `json:"archived"`
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Paused                  bool               `json:"paused"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
 				ThreadId                openapi_types.UUID `json:"threadId"`
@@ -13714,11 +13918,13 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 			Groups []struct {
 				Items []struct {
 					Archived                bool               `json:"archived"`
+					EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 					IssueId                 openapi_types.UUID `json:"issueId"`
 					Key                     string             `json:"key"`
 					LifeState               IssueLifeState     `json:"lifeState"`
 					Meta                    *string            `json:"meta,omitempty"`
 					Paused                  bool               `json:"paused"`
+					RetryingAt              *string            `json:"retryingAt,omitempty"`
 					Status                  IssueStatus        `json:"status"`
 					ThreadDisplayName       string             `json:"threadDisplayName"`
 					ThreadId                openapi_types.UUID `json:"threadId"`
@@ -13762,11 +13968,13 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 		var dest struct {
 			Issue struct {
 				Archived                bool               `json:"archived"`
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Paused                  bool               `json:"paused"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				Title                   string             `json:"title"`
 				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`

@@ -348,6 +348,8 @@ const ANSWER_RECORDED_BY: Record<StopResolution, (stop: Stop, given: StopAnswerG
 		}
 		return { kind: AskAnswerKind.DEFAULT, default: stop.ask.default }
 	},
+	// Fase 5: the supervisor resumes the task once more — no answer to record.
+	[StopResolution.AUTO_RETRY]: () => undefined,
 }
 
 /**

@@ -47,6 +47,8 @@ export class PgPanelStore extends PanelStore {
 					status: sql`excluded.status`,
 					lifeState: sql`excluded.life_state`,
 					waitingForProviderUntil: sql`excluded.waiting_for_provider_until`,
+					retryingAt: sql`excluded.retrying_at`,
+					escalatedAt: sql`excluded.escalated_at`,
 					archived: sql`excluded.archived`,
 					timeline: sql`excluded.timeline`,
 					updatedAt: sql`excluded.updated_at`,
