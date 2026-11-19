@@ -86,6 +86,18 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 			},
 		})
 
+	/** A person's message to the issue that came over the channel — the ledger knows its platform id. */
+	async function askedOnTheWire(threadId: string, platformMessageId: string) {
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = (await threads.findById(threadId))!
+		const asked = thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'APP-12 já subiu?', senderExternalId: 'participant-b' })
+		await threads.save(thread)
+		const consumed = testBed.resolve(ConsumedMessageRepository)
+		await consumed.claim({ ownerId: MOCK_CLOUD_OWNER_ID, channelId: thread.channelId, platformMessageId })
+		await consumed.linkEntry({ channelId: thread.channelId, platformMessageId, threadId, entryId: asked.entryId })
+		return asked.entryId
+	}
+
 	async function commands(name: string) {
 		const db = testBed.resolve(LibSqlDatabaseDriver).db
 		return db.select().from(scheduledCommands).where(eq(scheduledCommands.name, name))
@@ -198,18 +210,55 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 	// mode that keeps closings on the panel, or they would be left unanswered.
 	it('a closing that answers a person quotes their message, and goes to the group even in DECISIONS_ONLY', async () => {
 		const { threadId, issueId } = await setUp(GroupOutputMode.DECISIONS_ONLY)
-		const threads = testBed.resolve(ThreadRepository)
-		const thread = (await threads.findById(threadId))!
-		const asked = thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'APP-12 já subiu?', senderExternalId: 'participant-b' })
-		await threads.save(thread)
+		const asked = await askedOnTheWire(threadId, 'platform-asked-steer')
 
 		await testBed
 			.resolve(CloseIssueOnChannel)
-			.handle(completed({ threadId, issueId, summary: 'Subiu agora.', answersEntryId: asked.entryId }) as never)
+			.handle(completed({ threadId, issueId, summary: 'Subiu agora.', answersEntryId: asked }) as never)
 
 		const [closing] = await closings(threadId)
-		expect(closing).toMatchObject({ routing: OutputRouting.GROUP, quotedEntryId: asked.entryId })
-		expect(await commands('deliver_channel_message')).toHaveLength(1)
+		expect(closing).toMatchObject({ routing: OutputRouting.GROUP, quotedEntryId: asked })
+		const [delivery] = await commands('deliver_channel_message')
+		expect(delivery?.input).toMatchObject({ replyEntryId: closing?.entryId, quotedMessageId: 'platform-asked-steer' })
+	})
+
+	/**
+	 * A person wrote to the issue while it was still working (the steer queued, no reopen); the cycle then closed;
+	 * the queued turn answered them and declared COMPLETED again. That turn sends no reply of its own — the
+	 * closing is its answer — so the closing cannot be deduped into the cycle's first one, or the person hears
+	 * nothing at all.
+	 */
+	it('a closing that answers a person, after the cycle already closed, still goes — it is their only answer', async () => {
+		const { threadId, issueId } = await setUp()
+		const asked = await askedOnTheWire(threadId, 'platform-asked-later')
+
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar.', at: new Date('2026-11-18T12:00:00.000Z') }))
+		await deliverCompletion(
+			completed({ threadId, issueId, summary: 'Sim, o link é o mesmo.', answersEntryId: asked, at: new Date('2026-11-18T12:03:00.000Z') }),
+		)
+		// …and the same answer declared twice is still said once.
+		await deliverCompletion(
+			completed({ threadId, issueId, summary: 'Sim, o link é o mesmo.', answersEntryId: asked, at: new Date('2026-11-18T12:03:09.000Z') }),
+		)
+
+		const said = await closings(threadId)
+		expect(said).toHaveLength(2)
+		expect(said[1]).toMatchObject({ routing: OutputRouting.GROUP, quotedEntryId: asked })
+		const deliveries = await commands('deliver_channel_message')
+		expect(deliveries).toHaveLength(2)
+		expect(deliveries.map(d => (d.input as { quotedMessageId?: string }).quotedMessageId)).toContain('platform-asked-later')
+	})
+
+	it('the cycle closed by answering a person, a later plain declaration closes nothing more', async () => {
+		const { threadId, issueId } = await setUp()
+		const asked = await askedOnTheWire(threadId, 'platform-asked-first')
+
+		await deliverCompletion(
+			completed({ threadId, issueId, summary: 'Subiu.', answersEntryId: asked, at: new Date('2026-11-18T12:00:00.000Z') }),
+		)
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Subiu.', at: new Date('2026-11-18T12:05:00.000Z') }))
+
+		expect(await closings(threadId)).toHaveLength(1)
 	})
 
 	it('the declared final artifact goes with the closing (the preview path), as its caption', async () => {
