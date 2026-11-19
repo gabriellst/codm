@@ -13,6 +13,7 @@ import { AskDecisionController } from '../controllers/AskDecision'
 import { AskQuestionController } from '../controllers/AskQuestion'
 import { RequestFeedbackController } from '../controllers/RequestFeedback'
 import { ReportProgressController } from '../controllers/ReportProgress'
+import { WriteHandoffNotesController } from '../controllers/WriteHandoffNotes'
 import { ForkIssueController } from '../controllers/ForkIssue'
 import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 import { RecordArtifactController, SendArtifactController } from '@artifact/controllers'
@@ -127,6 +128,7 @@ const AGENT_CONTROLLER_CLASSES: readonly McpExposedControllerClass[] = [
 	AskQuestionController,
 	RequestFeedbackController,
 	ReportProgressController,
+	WriteHandoffNotesController,
 	ForkIssueController,
 	SteerIssueTurnController,
 ]

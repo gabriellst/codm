@@ -26,6 +26,7 @@ import {
 	forkIssue,
 	getArtifactContent,
 	getAttachThreadWizard,
+	getBatch,
 	getContactAvatar,
 	getHomeDashboard,
 	getIssueDetail,
@@ -39,9 +40,11 @@ import {
 	getSessionChat,
 	getSessionIssues,
 	getSettings,
+	getSystemHealth,
 	getThreadPanelLink,
 	getThreadSettings,
 	getUserInfo,
+	getWorkspacePublishCommand,
 	health,
 	listArtifacts,
 	listThreadLoops,
@@ -51,6 +54,7 @@ import {
 	pauseThread,
 	raiseStop,
 	recordArtifact,
+	recordBatch,
 	removeWorkspace,
 	reportProgress,
 	requestFeedback,
@@ -66,6 +70,7 @@ import {
 	setParticipantElevation,
 	setParticipantInvocation,
 	setThreadLoopEnabled,
+	setWorkspacePublishCommand,
 	signInLoopback,
 	steerIssue,
 	steerIssueTurn,
@@ -74,6 +79,7 @@ import {
 	transitionIssueStatus,
 	updateStopCriteria,
 	updateThreadLoop,
+	writeHandoffNotes,
 } from './client/index.ts'
 
 export interface TypescriptClientConfig {
@@ -192,6 +198,10 @@ export class TypescriptClient {
 		return (getAttachThreadWizard as (...a: any[]) => ReturnType<typeof getAttachThreadWizard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getBatch(...args: Parameters<typeof getBatch>): ReturnType<typeof getBatch> {
+		return (getBatch as (...a: any[]) => ReturnType<typeof getBatch>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getContactAvatar(...args: Parameters<typeof getContactAvatar>): ReturnType<typeof getContactAvatar> {
 		return (getContactAvatar as (...a: any[]) => ReturnType<typeof getContactAvatar>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -244,6 +254,10 @@ export class TypescriptClient {
 		return (getSettings as (...a: any[]) => ReturnType<typeof getSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getSystemHealth(...args: Parameters<typeof getSystemHealth>): ReturnType<typeof getSystemHealth> {
+		return (getSystemHealth as (...a: any[]) => ReturnType<typeof getSystemHealth>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getThreadPanelLink(...args: Parameters<typeof getThreadPanelLink>): ReturnType<typeof getThreadPanelLink> {
 		return (getThreadPanelLink as (...a: any[]) => ReturnType<typeof getThreadPanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -254,6 +268,10 @@ export class TypescriptClient {
 
 	getUserInfo(...args: Parameters<typeof getUserInfo>): ReturnType<typeof getUserInfo> {
 		return (getUserInfo as (...a: any[]) => ReturnType<typeof getUserInfo>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getWorkspacePublishCommand(...args: Parameters<typeof getWorkspacePublishCommand>): ReturnType<typeof getWorkspacePublishCommand> {
+		return (getWorkspacePublishCommand as (...a: any[]) => ReturnType<typeof getWorkspacePublishCommand>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	health(...args: Parameters<typeof health>): ReturnType<typeof health> {
@@ -290,6 +308,10 @@ export class TypescriptClient {
 
 	recordArtifact(...args: Parameters<typeof recordArtifact>): ReturnType<typeof recordArtifact> {
 		return (recordArtifact as (...a: any[]) => ReturnType<typeof recordArtifact>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	recordBatch(...args: Parameters<typeof recordBatch>): ReturnType<typeof recordBatch> {
+		return (recordBatch as (...a: any[]) => ReturnType<typeof recordBatch>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	removeWorkspace(...args: Parameters<typeof removeWorkspace>): ReturnType<typeof removeWorkspace> {
@@ -352,6 +374,10 @@ export class TypescriptClient {
 		return (setThreadLoopEnabled as (...a: any[]) => ReturnType<typeof setThreadLoopEnabled>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	setWorkspacePublishCommand(...args: Parameters<typeof setWorkspacePublishCommand>): ReturnType<typeof setWorkspacePublishCommand> {
+		return (setWorkspacePublishCommand as (...a: any[]) => ReturnType<typeof setWorkspacePublishCommand>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	signInLoopback(...args: Parameters<typeof signInLoopback>): ReturnType<typeof signInLoopback> {
 		return (signInLoopback as (...a: any[]) => ReturnType<typeof signInLoopback>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -382,5 +408,9 @@ export class TypescriptClient {
 
 	updateThreadLoop(...args: Parameters<typeof updateThreadLoop>): ReturnType<typeof updateThreadLoop> {
 		return (updateThreadLoop as (...a: any[]) => ReturnType<typeof updateThreadLoop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	writeHandoffNotes(...args: Parameters<typeof writeHandoffNotes>): ReturnType<typeof writeHandoffNotes> {
+		return (writeHandoffNotes as (...a: any[]) => ReturnType<typeof writeHandoffNotes>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 }

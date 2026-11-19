@@ -2,7 +2,14 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssuePriority,
+	IssueWorkKind,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	PriorityReason,
+} from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { issuePrefixOf } from '@workspace/objects'
@@ -16,8 +23,20 @@ export const ForkIssueInputSchema = z.object({
 	threadId: z.uuid(),
 	/** What the operator asked for, in their words (§7.2 — `{ goal }` is all the tool takes from the model). */
 	goal: z.string().trim().min(1).max(2000),
-	/** A short human title for the card — the WHAT only. Absent ⇒ the goal, truncated. */
+	/**
+	 * A short title for the issue card, up to 80 characters: WHAT is being done, in plain words — no requester,
+	 * no date, no permission notes (those live in the goal). Absent ⇒ the goal, truncated (long, hard to scan).
+	 */
 	title: z.string().trim().min(1).max(80).optional(),
+	/**
+	 * Fase 4 (items 4 and 6d) — what the orchestrator declares about the task at birth: its priority, why it
+	 * has it (`CLIENT_BUG` — a bug a client is hitting — is claimed first) and what kind of work it is
+	 * (`DIAGNOSIS` runs on a cheaper model). Absent ⇒ `NORMAL` / `DEFAULT` / `CHANGE`. Declared in the contract
+	 * in S0b; recorded from slice S0c on.
+	 */
+	priority: z.enum(IssuePriority).optional(),
+	priorityReason: z.enum(PriorityReason).optional(),
+	workKind: z.enum(IssueWorkKind).optional(),
 	/**
 	 * The transcript entry that asked. INJECTED from the run token's claims, never an argument the
 	 * model supplies (§7.2): a model able to name the message it was "answering" could attribute its

@@ -37,6 +37,7 @@ import { listThreadLoopsHandler } from "./listThreadLoops.ts";
 import { listWorkspacesHandler } from "./listWorkspaces.ts";
 import { raiseStopHandler } from "./raiseStop.ts";
 import { recordArtifactHandler } from "./recordArtifact.ts";
+import { recordBatchHandler } from "./recordBatch.ts";
 import { removeWorkspaceHandler } from "./removeWorkspace.ts";
 import { resolveStopHandler } from "./resolveStop.ts";
 import { saveOnboardingStepHandler } from "./saveOnboardingStep.ts";
@@ -80,6 +81,7 @@ import { listThreadLoopsQueryResponseSchema } from "../../../zod/listThreadLoops
 import { listWorkspacesQueryResponseSchema } from "../../../zod/listWorkspacesSchema.ts";
 import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from "../../../zod/raiseStopSchema.ts";
 import { recordArtifactMutationRequestSchema, recordArtifactMutationResponseSchema } from "../../../zod/recordArtifactSchema.ts";
+import { recordBatchMutationRequestSchema, recordBatchMutationResponseSchema } from "../../../zod/recordBatchSchema.ts";
 import { removeWorkspaceMutationResponseSchema } from "../../../zod/removeWorkspaceSchema.ts";
 import { resolveStopMutationRequestSchema, resolveStopMutationResponseSchema } from "../../../zod/resolveStopSchema.ts";
 import { saveOnboardingStepMutationRequestSchema, saveOnboardingStepMutationResponseSchema } from "../../../zod/saveOnboardingStepSchema.ts";
@@ -339,6 +341,15 @@ server.registerTool("ConfigureOutputMode", {
   inputSchema: { threadId: z.string(), data: configureOutputModeMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return configureOutputModeHandler({ threadId, data })
+})
+          
+
+server.registerTool("RecordBatch", {
+  description: "Record where each item of a batch (a message listing several requests) went — every item exactly once",
+  outputSchema: { data: recordBatchMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: recordBatchMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return recordBatchHandler({ threadId, data })
 })
           
 

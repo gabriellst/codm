@@ -46,6 +46,9 @@ export type ThreadDomainErrors =
 	| 'LOOP_WITHOUT_WEEKDAY'
 	| 'INVALID_LOOP_INTERVAL'
 	| 'LOOP_PROMPT_TOO_LONG'
+	// The batch (fase 4, item 5) — the `Batch` aggregate's invariant: every item 1..N has exactly one
+	// destination. A record with an item missing or one too many is refused, and no receipt goes out.
+	| 'BATCH_ITEMS_MISMATCH'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -92,6 +95,14 @@ export type ThreadApplicationErrors =
 	// no longer has the "pode liberar" grant, or is a muted participant who may not act on the work.
 	| 'PARTICIPANT_CANNOT_RELEASE'
 	| 'PARTICIPANT_CANNOT_ACT'
+	// The batch (fase 4, item 5): a destination names an issue that was not forked from THIS conversation —
+	// checked by the use case through the agent's `ForkedIssueReader`, so it is an application code.
+	| 'BATCH_ISSUE_NOT_IN_THREAD'
+	// Fase 4 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK build
+	// against it — but its behaviour lands in a later slice. Every such WRITE refuses with THIS code, never a
+	// silent 2xx (a 2xx from a tool tells the model it was recorded). 501: the route is declared, the
+	// implementation is not there yet. Registered in `agent`, `thread` and `workspace` with the same status.
+	| 'THROUGHPUT_NOT_READY'
 export type ApplicationErrors = BaseApplicationErrors | ThreadApplicationErrors
 
 export type ThreadInterfaceErrors = never
@@ -103,6 +114,10 @@ export type InfrastructureErrors = BaseInfrastructureErrors | ThreadInfrastructu
 export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
 
 registerErrorCodes({
+	// Fase 4 — the batch's invariant and its cross-context check (S8), and the declared door (S0b).
+	BATCH_ITEMS_MISMATCH: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	BATCH_ISSUE_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	THROUGHPUT_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 	NO_PROVIDER_SELECTED: HttpStatusCode.BAD_REQUEST,
 	LAST_INVOKER: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	PARTICIPANT_NOT_FOUND: HttpStatusCode.NOT_FOUND,

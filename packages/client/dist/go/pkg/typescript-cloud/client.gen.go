@@ -36,6 +36,8 @@ const (
 	ASKNOTDUE                       ApiErrors = "ASK_NOT_DUE"
 	ASKOPTIONSDUPLICATED            ApiErrors = "ASK_OPTIONS_DUPLICATED"
 	ASKOPTIONUNKNOWN                ApiErrors = "ASK_OPTION_UNKNOWN"
+	BATCHISSUENOTINTHREAD           ApiErrors = "BATCH_ISSUE_NOT_IN_THREAD"
+	BATCHITEMSMISMATCH              ApiErrors = "BATCH_ITEMS_MISMATCH"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELMEDIAUNSUPPORTED         ApiErrors = "CHANNEL_MEDIA_UNSUPPORTED"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
@@ -139,6 +141,7 @@ const (
 	THREADNOTFOUND                  ApiErrors = "THREAD_NOT_FOUND"
 	THREADNOTPAUSED                 ApiErrors = "THREAD_NOT_PAUSED"
 	THREADPAUSED                    ApiErrors = "THREAD_PAUSED"
+	THROUGHPUTNOTREADY              ApiErrors = "THROUGHPUT_NOT_READY"
 	TOOMANYTERMINALSTREAMS          ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
 	UNAUTHORIZED                    ApiErrors = "UNAUTHORIZED"
 	USERNOTFOUND                    ApiErrors = "USER_NOT_FOUND"
@@ -181,6 +184,10 @@ func (e ApiErrors) Valid() bool {
 	case ASKOPTIONSDUPLICATED:
 		return true
 	case ASKOPTIONUNKNOWN:
+		return true
+	case BATCHISSUENOTINTHREAD:
+		return true
+	case BATCHITEMSMISMATCH:
 		return true
 	case CANNOTCONVERTINPUT:
 		return true
@@ -387,6 +394,8 @@ func (e ApiErrors) Valid() bool {
 	case THREADNOTPAUSED:
 		return true
 	case THREADPAUSED:
+		return true
+	case THROUGHPUTNOTREADY:
 		return true
 	case TOOMANYTERMINALSTREAMS:
 		return true

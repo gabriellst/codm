@@ -11,6 +11,9 @@ export { CompleteOnboardingController } from './CompleteOnboarding'
 export { SaveOnboardingStepController } from './SaveOnboardingStep'
 export { GetIssueTimelineController } from './GetIssueTimeline'
 export { GetThreadPanelLinkController } from './GetThreadPanelLink'
+// Fase 4 (S0b) — quota health and the batch screen, in mock mode until S9.
+export { GetSystemHealthController } from './GetSystemHealth'
+export { GetBatchController } from './GetBatch'
 
 import { ListenEventsController } from './ListenEvents'
 import { GetUserInfoController } from './GetUserInfo'
@@ -25,6 +28,8 @@ import { CompleteOnboardingController } from './CompleteOnboarding'
 import { SaveOnboardingStepController } from './SaveOnboardingStep'
 import { GetIssueTimelineController } from './GetIssueTimeline'
 import { GetThreadPanelLinkController } from './GetThreadPanelLink'
+import { GetSystemHealthController } from './GetSystemHealth'
+import { GetBatchController } from './GetBatch'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10). Todo contexto expõe o mesmo símbolo, e é isso que deixa o
@@ -45,4 +50,6 @@ export default {
 	SaveOnboardingStepController,
 	GetIssueTimelineController,
 	GetThreadPanelLinkController,
+	GetSystemHealthController,
+	GetBatchController,
 }

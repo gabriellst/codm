@@ -446,6 +446,8 @@ pub mod types {
     ///    "ASK_NOT_DUE",
     ///    "ASK_OPTIONS_DUPLICATED",
     ///    "ASK_OPTION_UNKNOWN",
+    ///    "BATCH_ISSUE_NOT_IN_THREAD",
+    ///    "BATCH_ITEMS_MISMATCH",
     ///    "CANNOT_CONVERT_INPUT",
     ///    "CHANNEL_MEDIA_UNSUPPORTED",
     ///    "CHANNEL_NOT_CONNECTED",
@@ -549,6 +551,7 @@ pub mod types {
     ///    "THREAD_NOT_FOUND",
     ///    "THREAD_NOT_PAUSED",
     ///    "THREAD_PAUSED",
+    ///    "THROUGHPUT_NOT_READY",
     ///    "TOO_MANY_TERMINAL_STREAMS",
     ///    "UNAUTHORIZED",
     ///    "USER_NOT_FOUND",
@@ -604,6 +607,10 @@ pub mod types {
         AskOptionsDuplicated,
         #[serde(rename = "ASK_OPTION_UNKNOWN")]
         AskOptionUnknown,
+        #[serde(rename = "BATCH_ISSUE_NOT_IN_THREAD")]
+        BatchIssueNotInThread,
+        #[serde(rename = "BATCH_ITEMS_MISMATCH")]
+        BatchItemsMismatch,
         #[serde(rename = "CANNOT_CONVERT_INPUT")]
         CannotConvertInput,
         #[serde(rename = "CHANNEL_MEDIA_UNSUPPORTED")]
@@ -810,6 +817,8 @@ pub mod types {
         ThreadNotPaused,
         #[serde(rename = "THREAD_PAUSED")]
         ThreadPaused,
+        #[serde(rename = "THROUGHPUT_NOT_READY")]
+        ThroughputNotReady,
         #[serde(rename = "TOO_MANY_TERMINAL_STREAMS")]
         TooManyTerminalStreams,
         #[serde(rename = "UNAUTHORIZED")]
@@ -856,6 +865,8 @@ pub mod types {
                 Self::AskNotDue => f.write_str("ASK_NOT_DUE"),
                 Self::AskOptionsDuplicated => f.write_str("ASK_OPTIONS_DUPLICATED"),
                 Self::AskOptionUnknown => f.write_str("ASK_OPTION_UNKNOWN"),
+                Self::BatchIssueNotInThread => f.write_str("BATCH_ISSUE_NOT_IN_THREAD"),
+                Self::BatchItemsMismatch => f.write_str("BATCH_ITEMS_MISMATCH"),
                 Self::CannotConvertInput => f.write_str("CANNOT_CONVERT_INPUT"),
                 Self::ChannelMediaUnsupported => f.write_str("CHANNEL_MEDIA_UNSUPPORTED"),
                 Self::ChannelNotConnected => f.write_str("CHANNEL_NOT_CONNECTED"),
@@ -977,6 +988,7 @@ pub mod types {
                 Self::ThreadNotFound => f.write_str("THREAD_NOT_FOUND"),
                 Self::ThreadNotPaused => f.write_str("THREAD_NOT_PAUSED"),
                 Self::ThreadPaused => f.write_str("THREAD_PAUSED"),
+                Self::ThroughputNotReady => f.write_str("THROUGHPUT_NOT_READY"),
                 Self::TooManyTerminalStreams => f.write_str("TOO_MANY_TERMINAL_STREAMS"),
                 Self::Unauthorized => f.write_str("UNAUTHORIZED"),
                 Self::UserNotFound => f.write_str("USER_NOT_FOUND"),
@@ -1013,6 +1025,8 @@ pub mod types {
                 "ASK_NOT_DUE" => Ok(Self::AskNotDue),
                 "ASK_OPTIONS_DUPLICATED" => Ok(Self::AskOptionsDuplicated),
                 "ASK_OPTION_UNKNOWN" => Ok(Self::AskOptionUnknown),
+                "BATCH_ISSUE_NOT_IN_THREAD" => Ok(Self::BatchIssueNotInThread),
+                "BATCH_ITEMS_MISMATCH" => Ok(Self::BatchItemsMismatch),
                 "CANNOT_CONVERT_INPUT" => Ok(Self::CannotConvertInput),
                 "CHANNEL_MEDIA_UNSUPPORTED" => Ok(Self::ChannelMediaUnsupported),
                 "CHANNEL_NOT_CONNECTED" => Ok(Self::ChannelNotConnected),
@@ -1116,6 +1130,7 @@ pub mod types {
                 "THREAD_NOT_FOUND" => Ok(Self::ThreadNotFound),
                 "THREAD_NOT_PAUSED" => Ok(Self::ThreadNotPaused),
                 "THREAD_PAUSED" => Ok(Self::ThreadPaused),
+                "THROUGHPUT_NOT_READY" => Ok(Self::ThroughputNotReady),
                 "TOO_MANY_TERMINAL_STREAMS" => Ok(Self::TooManyTerminalStreams),
                 "UNAUTHORIZED" => Ok(Self::Unauthorized),
                 "USER_NOT_FOUND" => Ok(Self::UserNotFound),
@@ -2565,6 +2580,473 @@ pub mod types {
             value.clone()
         }
     }
+    ///`BatchItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "destination",
+    ///    "excerpt",
+    ///    "n"
+    ///  ],
+    ///  "properties": {
+    ///    "destination": {
+    ///      "$ref": "#/components/schemas/BatchItemDestination"
+    ///    },
+    ///    "excerpt": {
+    ///      "type": "string",
+    ///      "maxLength": 500
+    ///    },
+    ///    "n": {
+    ///      "type": "integer",
+    ///      "maximum": 50.0,
+    ///      "minimum": 1.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct BatchItem {
+        pub destination: BatchItemDestination,
+        pub excerpt: BatchItemExcerpt,
+        pub n: ::std::num::NonZeroU64,
+    }
+    impl ::std::convert::From<&BatchItem> for BatchItem {
+        fn from(value: &BatchItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`BatchItemDestination`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NEW_ISSUE"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ATTACHED"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "note"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ALREADY_LIVE"
+    ///          ]
+    ///        },
+    ///        "note": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "reason"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DECLINED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "reason"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DEFERRED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "type": "string",
+    ///          "maxLength": 500,
+    ///          "minLength": 1
+    ///        },
+    ///        "until": {
+    ///          "type": "string",
+    ///          "format": "date-time",
+    ///          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NEEDS_DECISION"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum BatchItemDestination {
+        #[serde(rename = "NEW_ISSUE")]
+        NewIssue { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "ATTACHED")]
+        Attached { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "ALREADY_LIVE")]
+        AlreadyLive {
+            #[serde(
+                rename = "issueId",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            issue_id: ::std::option::Option<::uuid::Uuid>,
+            note: BatchItemDestinationNote,
+        },
+        #[serde(rename = "DECLINED")]
+        Declined { reason: BatchItemDestinationReason },
+        #[serde(rename = "DEFERRED")]
+        Deferred {
+            reason: BatchItemDestinationReason,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            until: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+        },
+        #[serde(rename = "NEEDS_DECISION")]
+        NeedsDecision {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+    }
+    impl ::std::convert::From<&Self> for BatchItemDestination {
+        fn from(value: &BatchItemDestination) -> Self {
+            value.clone()
+        }
+    }
+    ///`BatchItemDestinationNote`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemDestinationNote(::std::string::String);
+    impl ::std::ops::Deref for BatchItemDestinationNote {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemDestinationNote> for ::std::string::String {
+        fn from(value: BatchItemDestinationNote) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemDestinationNote> for BatchItemDestinationNote {
+        fn from(value: &BatchItemDestinationNote) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemDestinationNote {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemDestinationNote {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemDestinationNote {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`BatchItemDestinationReason`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemDestinationReason(::std::string::String);
+    impl ::std::ops::Deref for BatchItemDestinationReason {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemDestinationReason> for ::std::string::String {
+        fn from(value: BatchItemDestinationReason) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemDestinationReason>
+    for BatchItemDestinationReason {
+        fn from(value: &BatchItemDestinationReason) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemDestinationReason {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemDestinationReason {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemDestinationReason {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`BatchItemExcerpt`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 500
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct BatchItemExcerpt(::std::string::String);
+    impl ::std::ops::Deref for BatchItemExcerpt {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<BatchItemExcerpt> for ::std::string::String {
+        fn from(value: BatchItemExcerpt) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&BatchItemExcerpt> for BatchItemExcerpt {
+        fn from(value: &BatchItemExcerpt) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for BatchItemExcerpt {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 500usize {
+                return Err("longer than 500 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for BatchItemExcerpt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for BatchItemExcerpt {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`ClaimSignInCodeResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -3807,10 +4289,19 @@ pub mod types {
     ///      "maxLength": 2000,
     ///      "minLength": 1
     ///    },
+    ///    "priority": {
+    ///      "$ref": "#/components/schemas/IssuePriority"
+    ///    },
+    ///    "priorityReason": {
+    ///      "$ref": "#/components/schemas/PriorityReason"
+    ///    },
     ///    "title": {
     ///      "type": "string",
     ///      "maxLength": 80,
     ///      "minLength": 1
+    ///    },
+    ///    "workKind": {
+    ///      "$ref": "#/components/schemas/IssueWorkKind"
     ///    }
     ///  }
     ///}
@@ -3820,7 +4311,27 @@ pub mod types {
     pub struct ForkIssueBody {
         pub goal: ForkIssueBodyGoal,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub priority: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::IssuePriority,
+        >,
+        #[serde(
+            rename = "priorityReason",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub priority_reason: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::PriorityReason,
+        >,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub title: ::std::option::Option<ForkIssueBodyTitle>,
+        #[serde(
+            rename = "workKind",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub work_kind: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::IssueWorkKind,
+        >,
     }
     impl ::std::convert::From<&ForkIssueBody> for ForkIssueBody {
         fn from(value: &ForkIssueBody) -> Self {
@@ -4420,6 +4931,210 @@ pub mod types {
     impl ::std::convert::From<&GetAttachThreadWizardResponseWorkspacesItem>
     for GetAttachThreadWizardResponseWorkspacesItem {
         fn from(value: &GetAttachThreadWizardResponseWorkspacesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetBatchResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "issues",
+    ///    "items",
+    ///    "sourceEntryId",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string",
+    ///      "maxLength": 20,
+    ///      "minLength": 1
+    ///    },
+    ///    "issues": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "issueId",
+    ///          "key",
+    ///          "title"
+    ///        ],
+    ///        "properties": {
+    ///          "issueId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "title": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "items": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/BatchItem"
+    ///      },
+    ///      "maxItems": 50
+    ///    },
+    ///    "sourceEntryId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/BatchStatus"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetBatchResponse {
+        pub code: GetBatchResponseCode,
+        pub issues: ::std::vec::Vec<GetBatchResponseIssuesItem>,
+        pub items: ::std::vec::Vec<BatchItem>,
+        #[serde(rename = "sourceEntryId")]
+        pub source_entry_id: ::uuid::Uuid,
+        pub status: ::codm_contracts_rust::wire::enums::BatchStatus,
+    }
+    impl ::std::convert::From<&GetBatchResponse> for GetBatchResponse {
+        fn from(value: &GetBatchResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetBatchResponseCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 20,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetBatchResponseCode(::std::string::String);
+    impl ::std::ops::Deref for GetBatchResponseCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetBatchResponseCode> for ::std::string::String {
+        fn from(value: GetBatchResponseCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetBatchResponseCode> for GetBatchResponseCode {
+        fn from(value: &GetBatchResponseCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetBatchResponseCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 20usize {
+                return Err("longer than 20 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for GetBatchResponseCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for GetBatchResponseCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for GetBatchResponseCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for GetBatchResponseCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`GetBatchResponseIssuesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "issueId",
+    ///    "key",
+    ///    "title"
+    ///  ],
+    ///  "properties": {
+    ///    "issueId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "title": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetBatchResponseIssuesItem {
+        #[serde(rename = "issueId")]
+        pub issue_id: ::uuid::Uuid,
+        pub key: ::std::string::String,
+        pub title: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetBatchResponseIssuesItem>
+    for GetBatchResponseIssuesItem {
+        fn from(value: &GetBatchResponseIssuesItem) -> Self {
             value.clone()
         }
     }
@@ -11386,6 +12101,47 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetWorkspacePublishCommandResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "command"
+    ///  ],
+    ///  "properties": {
+    ///    "command": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/PublishCommand"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetWorkspacePublishCommandResponse {
+        pub command: ::std::option::Option<PublishCommand>,
+    }
+    impl ::std::convert::From<&GetWorkspacePublishCommandResponse>
+    for GetWorkspacePublishCommandResponse {
+        fn from(value: &GetWorkspacePublishCommandResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`HealthResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -12178,6 +12934,121 @@ pub mod types {
             value.clone()
         }
     }
+    ///`PublishCommand`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "argv"
+    ///  ],
+    ///  "properties": {
+    ///    "argv": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string",
+    ///        "maxLength": 4096,
+    ///        "minLength": 1
+    ///      },
+    ///      "maxItems": 64,
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PublishCommand {
+        pub argv: ::std::vec::Vec<PublishCommandArgvItem>,
+    }
+    impl ::std::convert::From<&PublishCommand> for PublishCommand {
+        fn from(value: &PublishCommand) -> Self {
+            value.clone()
+        }
+    }
+    ///`PublishCommandArgvItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 4096,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct PublishCommandArgvItem(::std::string::String);
+    impl ::std::ops::Deref for PublishCommandArgvItem {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<PublishCommandArgvItem> for ::std::string::String {
+        fn from(value: PublishCommandArgvItem) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&PublishCommandArgvItem> for PublishCommandArgvItem {
+        fn from(value: &PublishCommandArgvItem) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for PublishCommandArgvItem {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 4096usize {
+                return Err("longer than 4096 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for PublishCommandArgvItem {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for PublishCommandArgvItem {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for PublishCommandArgvItem {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for PublishCommandArgvItem {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`PublishFollowUp`
     ///
     /// <details><summary>JSON schema</summary>
@@ -12320,6 +13191,343 @@ pub mod types {
                 .map_err(|e: self::error::ConversionError| {
                     <D::Error as ::serde::de::Error>::custom(e.to_string())
                 })
+        }
+    }
+    ///`QuotaSnapshot`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "diskFreeBytes",
+    ///    "queue",
+    ///    "slots",
+    ///    "state",
+    ///    "week",
+    ///    "window"
+    ///  ],
+    ///  "properties": {
+    ///    "diskFreeBytes": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "queue": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "heldByBudget",
+    ///        "pending"
+    ///      ],
+    ///      "properties": {
+    ///        "heldByBudget": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "pending": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "slots": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "effective",
+    ///        "inUse",
+    ///        "limitedBy",
+    ///        "max"
+    ///      ],
+    ///      "properties": {
+    ///        "effective": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "inUse": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "limitedBy": {
+    ///          "$ref": "#/components/schemas/SlotLimit"
+    ///        },
+    ///        "max": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "state": {
+    ///      "$ref": "#/components/schemas/QuotaState"
+    ///    },
+    ///    "week": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "ceiling",
+    ///        "spent"
+    ///      ],
+    ///      "properties": {
+    ///        "ceiling": {
+    ///          "type": "number",
+    ///          "minimum": 0.0
+    ///        },
+    ///        "resetsAt": {
+    ///          "type": "string",
+    ///          "format": "date-time",
+    ///          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///        },
+    ///        "spent": {
+    ///          "type": "number",
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "window": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "ceiling",
+    ///        "reserve",
+    ///        "spent"
+    ///      ],
+    ///      "properties": {
+    ///        "ceiling": {
+    ///          "type": "number",
+    ///          "minimum": 0.0
+    ///        },
+    ///        "reserve": {
+    ///          "type": "number",
+    ///          "minimum": 0.0
+    ///        },
+    ///        "resetsAt": {
+    ///          "type": "string",
+    ///          "format": "date-time",
+    ///          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///        },
+    ///        "spent": {
+    ///          "type": "number",
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshot {
+        #[serde(rename = "diskFreeBytes")]
+        pub disk_free_bytes: i64,
+        pub queue: QuotaSnapshotQueue,
+        pub slots: QuotaSnapshotSlots,
+        pub state: ::codm_contracts_rust::wire::enums::QuotaState,
+        pub week: QuotaSnapshotWeek,
+        pub window: QuotaSnapshotWindow,
+    }
+    impl ::std::convert::From<&QuotaSnapshot> for QuotaSnapshot {
+        fn from(value: &QuotaSnapshot) -> Self {
+            value.clone()
+        }
+    }
+    ///`QuotaSnapshotQueue`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "heldByBudget",
+    ///    "pending"
+    ///  ],
+    ///  "properties": {
+    ///    "heldByBudget": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "pending": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshotQueue {
+        #[serde(rename = "heldByBudget")]
+        pub held_by_budget: i64,
+        pub pending: i64,
+    }
+    impl ::std::convert::From<&QuotaSnapshotQueue> for QuotaSnapshotQueue {
+        fn from(value: &QuotaSnapshotQueue) -> Self {
+            value.clone()
+        }
+    }
+    ///`QuotaSnapshotSlots`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "effective",
+    ///    "inUse",
+    ///    "limitedBy",
+    ///    "max"
+    ///  ],
+    ///  "properties": {
+    ///    "effective": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "inUse": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
+    ///    "limitedBy": {
+    ///      "$ref": "#/components/schemas/SlotLimit"
+    ///    },
+    ///    "max": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshotSlots {
+        pub effective: i64,
+        #[serde(rename = "inUse")]
+        pub in_use: i64,
+        #[serde(rename = "limitedBy")]
+        pub limited_by: ::codm_contracts_rust::wire::enums::SlotLimit,
+        pub max: i64,
+    }
+    impl ::std::convert::From<&QuotaSnapshotSlots> for QuotaSnapshotSlots {
+        fn from(value: &QuotaSnapshotSlots) -> Self {
+            value.clone()
+        }
+    }
+    ///`QuotaSnapshotWeek`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "ceiling",
+    ///    "spent"
+    ///  ],
+    ///  "properties": {
+    ///    "ceiling": {
+    ///      "type": "number",
+    ///      "minimum": 0.0
+    ///    },
+    ///    "resetsAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
+    ///    "spent": {
+    ///      "type": "number",
+    ///      "minimum": 0.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshotWeek {
+        pub ceiling: f64,
+        #[serde(
+            rename = "resetsAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub resets_at: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+        pub spent: f64,
+    }
+    impl ::std::convert::From<&QuotaSnapshotWeek> for QuotaSnapshotWeek {
+        fn from(value: &QuotaSnapshotWeek) -> Self {
+            value.clone()
+        }
+    }
+    ///`QuotaSnapshotWindow`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "ceiling",
+    ///    "reserve",
+    ///    "spent"
+    ///  ],
+    ///  "properties": {
+    ///    "ceiling": {
+    ///      "type": "number",
+    ///      "minimum": 0.0
+    ///    },
+    ///    "reserve": {
+    ///      "type": "number",
+    ///      "minimum": 0.0
+    ///    },
+    ///    "resetsAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
+    ///    "spent": {
+    ///      "type": "number",
+    ///      "minimum": 0.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct QuotaSnapshotWindow {
+        pub ceiling: f64,
+        pub reserve: f64,
+        #[serde(
+            rename = "resetsAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub resets_at: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+        pub spent: f64,
+    }
+    impl ::std::convert::From<&QuotaSnapshotWindow> for QuotaSnapshotWindow {
+        fn from(value: &QuotaSnapshotWindow) -> Self {
+            value.clone()
         }
     }
     ///`RaiseStopBody`
@@ -12718,6 +13926,175 @@ pub mod types {
     }
     impl ::std::convert::From<&RecordArtifactResponse> for RecordArtifactResponse {
         fn from(value: &RecordArtifactResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`RecordBatchBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "batchCode",
+    ///    "items"
+    ///  ],
+    ///  "properties": {
+    ///    "batchCode": {
+    ///      "type": "string",
+    ///      "maxLength": 20,
+    ///      "minLength": 1
+    ///    },
+    ///    "items": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "destination",
+    ///          "n"
+    ///        ],
+    ///        "properties": {
+    ///          "destination": {
+    ///            "$ref": "#/components/schemas/BatchItemDestination"
+    ///          },
+    ///          "n": {
+    ///            "type": "integer",
+    ///            "maximum": 50.0,
+    ///            "minimum": 1.0
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 50,
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct RecordBatchBody {
+        #[serde(rename = "batchCode")]
+        pub batch_code: RecordBatchBodyBatchCode,
+        pub items: ::std::vec::Vec<RecordBatchBodyItemsItem>,
+    }
+    impl ::std::convert::From<&RecordBatchBody> for RecordBatchBody {
+        fn from(value: &RecordBatchBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RecordBatchBodyBatchCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 20,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RecordBatchBodyBatchCode(::std::string::String);
+    impl ::std::ops::Deref for RecordBatchBodyBatchCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RecordBatchBodyBatchCode> for ::std::string::String {
+        fn from(value: RecordBatchBodyBatchCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RecordBatchBodyBatchCode> for RecordBatchBodyBatchCode {
+        fn from(value: &RecordBatchBodyBatchCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RecordBatchBodyBatchCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 20usize {
+                return Err("longer than 20 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RecordBatchBodyBatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for RecordBatchBodyBatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for RecordBatchBodyBatchCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RecordBatchBodyBatchCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RecordBatchBodyItemsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "destination",
+    ///    "n"
+    ///  ],
+    ///  "properties": {
+    ///    "destination": {
+    ///      "$ref": "#/components/schemas/BatchItemDestination"
+    ///    },
+    ///    "n": {
+    ///      "type": "integer",
+    ///      "maximum": 50.0,
+    ///      "minimum": 1.0
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct RecordBatchBodyItemsItem {
+        pub destination: BatchItemDestination,
+        pub n: ::std::num::NonZeroU64,
+    }
+    impl ::std::convert::From<&RecordBatchBodyItemsItem> for RecordBatchBodyItemsItem {
+        fn from(value: &RecordBatchBodyItemsItem) -> Self {
             value.clone()
         }
     }
@@ -13957,6 +15334,45 @@ pub mod types {
             Self {
                 next_run_at: Default::default(),
             }
+        }
+    }
+    ///`SetWorkspacePublishCommandBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "command"
+    ///  ],
+    ///  "properties": {
+    ///    "command": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/PublishCommand"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SetWorkspacePublishCommandBody {
+        pub command: ::std::option::Option<PublishCommand>,
+    }
+    impl ::std::convert::From<&SetWorkspacePublishCommandBody>
+    for SetWorkspacePublishCommandBody {
+        fn from(value: &SetWorkspacePublishCommandBody) -> Self {
+            value.clone()
         }
     }
     ///`SignInLoopbackCode`
@@ -15365,6 +16781,117 @@ pub mod types {
             }
         }
     }
+    ///`WriteHandoffNotesBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "notes"
+    ///  ],
+    ///  "properties": {
+    ///    "notes": {
+    ///      "type": "string",
+    ///      "maxLength": 8000,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct WriteHandoffNotesBody {
+        pub notes: WriteHandoffNotesBodyNotes,
+    }
+    impl ::std::convert::From<&WriteHandoffNotesBody> for WriteHandoffNotesBody {
+        fn from(value: &WriteHandoffNotesBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`WriteHandoffNotesBodyNotes`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 8000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct WriteHandoffNotesBodyNotes(::std::string::String);
+    impl ::std::ops::Deref for WriteHandoffNotesBodyNotes {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<WriteHandoffNotesBodyNotes> for ::std::string::String {
+        fn from(value: WriteHandoffNotesBodyNotes) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&WriteHandoffNotesBodyNotes>
+    for WriteHandoffNotesBodyNotes {
+        fn from(value: &WriteHandoffNotesBodyNotes) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for WriteHandoffNotesBodyNotes {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 8000usize {
+                return Err("longer than 8000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for WriteHandoffNotesBodyNotes {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for WriteHandoffNotesBodyNotes {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for WriteHandoffNotesBodyNotes {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for WriteHandoffNotesBodyNotes {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     /// Generation of default values for serde.
     pub mod defaults {
         pub(super) fn transition_issue_status_body_summary() -> super::TransitionIssueStatusBodySummary {
@@ -16223,6 +17750,44 @@ Sends a `POST` request to `/threads/{threadId}/artifacts/{artifactId}/send`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Record where each item of a batch (a message listing several requests) went — every item exactly once
+
+Sends a `POST` request to `/threads/{threadId}/batches/record`
+
+*/
+    pub async fn record_batch<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::RecordBatchBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/batches/record", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Set the rolling context-buffer size {25,50,100,200} (C14)
 
 Sends a `PUT` request to `/threads/{threadId}/buffer`
@@ -16495,6 +18060,45 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/feedback`
         let url = format!(
             "{}/threads/{}/issues/{}/feedback", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Write handoff notes for this task (goal, state, decisions, files/branch, next step) — a fresh session will continue from them.
+
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/handoff-notes`
+
+*/
+    pub async fn write_handoff_notes<'a>(
+        &'a self,
+        thread_id: &'a str,
+        issue_id: &'a str,
+        body: &'a types::WriteHandoffNotesBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/issues/{}/handoff-notes", self.baseurl, encode_path(&
+            thread_id.to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -17922,6 +19526,75 @@ Sends a `GET` request to `/ui/settings`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Quota health: both windows, task slots and their limit, queue, free disk
+
+Sends a `GET` request to `/ui/system/health`
+
+*/
+    pub async fn get_system_health<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::QuotaSnapshot>, Error<()>> {
+        let url = format!("{}/ui/system/health", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**A conversation's batch: each listed item and where it went
+
+Sends a `GET` request to `/ui/threads/{threadId}/batches/{batchCode}`
+
+*/
+    pub async fn get_batch<'a>(
+        &'a self,
+        thread_id: &'a str,
+        batch_code: &'a str,
+    ) -> Result<ResponseValue<types::GetBatchResponse>, Error<()>> {
+        let url = format!(
+            "{}/ui/threads/{}/batches/{}", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& batch_code.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Header context — user identity, all member owners (role), active owner, and profile alerts
 
 Sends a `GET` request to `/ui/user-info`
@@ -18046,6 +19719,80 @@ Sends a `DELETE` request to `/workspaces/{workspaceId}`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The workspace's declared publish command, or null
+
+Sends a `GET` request to `/workspaces/{workspaceId}/publish-command`
+
+*/
+    pub async fn get_workspace_publish_command<'a>(
+        &'a self,
+        workspace_id: &'a str,
+    ) -> Result<ResponseValue<types::GetWorkspacePublishCommandResponse>, Error<()>> {
+        let url = format!(
+            "{}/workspaces/{}/publish-command", self.baseurl, encode_path(& workspace_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Declare or remove the workspace's publish command (an argument list, never a shell line)
+
+Sends a `PUT` request to `/workspaces/{workspaceId}/publish-command`
+
+*/
+    pub async fn set_workspace_publish_command<'a>(
+        &'a self,
+        workspace_id: &'a str,
+        body: &'a types::SetWorkspacePublishCommandBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/workspaces/{}/publish-command", self.baseurl, encode_path(& workspace_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;

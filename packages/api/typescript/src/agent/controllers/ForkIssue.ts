@@ -3,7 +3,7 @@ import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
-import { ForkIssue, ForkIssueOutputSchema } from '../usecases/ForkIssue'
+import { ForkIssue, ForkIssueInputSchema, ForkIssueOutputSchema } from '../usecases/ForkIssue'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
 /**
@@ -23,16 +23,9 @@ export const ForkIssueControllerInputSchema = z
 	.object({
 		ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 		params: z.object({ threadId: z.uuid() }),
-		body: z.object({
-			/** What the operator asked for, in their words. Becomes the subagent's prompt. */
-			goal: z.string().trim().min(1).max(2000),
-			/**
-			 * A short title for the issue card, up to 80 characters: WHAT is being done, in plain words —
-			 * no requester, no date, no permission notes (those live in the goal). Omit it and the goal is
-			 * truncated into a title, which is long and hard to scan.
-			 */
-			title: z.string().trim().min(1).max(80).optional(),
-		}),
+		// The use case's own fields, DERIVED (CTRL-C04) — `goal`, the card `title` and, since fase 4, the task's
+		// priority, why, and kind of work. Everything else the use case takes is injected, never the model's.
+		body: ForkIssueInputSchema.pick({ goal: true, title: true, priority: true, priorityReason: true, workKind: true }),
 	})
 	.example([
 		{

@@ -20,6 +20,8 @@ export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 export { ResolveStopController } from './ResolveStop'
 export { AnswerStopController } from './AnswerStop'
 export { ConfigureOutputModeController } from './ConfigureOutputMode'
+// Fase 4 (S0b) — the orchestrator records each batch item's destination (item 5), declared ahead of S8.
+export { RecordBatchController } from './RecordBatch'
 export { UpdateStopCriteriaController } from './UpdateStopCriteria'
 // Thread LOOPS — the recurring scheduled whisper, five doors in one file (T11 / C21-C24).
 export {
@@ -57,6 +59,7 @@ import { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 import { ResolveStopController } from './ResolveStop'
 import { AnswerStopController } from './AnswerStop'
 import { ConfigureOutputModeController } from './ConfigureOutputMode'
+import { RecordBatchController } from './RecordBatch'
 import { UpdateStopCriteriaController } from './UpdateStopCriteria'
 import {
 	ListThreadLoopsController,
@@ -100,6 +103,7 @@ const productionControllers = {
 	ResolveStopController,
 	AnswerStopController,
 	ConfigureOutputModeController,
+	RecordBatchController,
 	UpdateStopCriteriaController,
 	ListThreadLoopsController,
 	CreateThreadLoopController,

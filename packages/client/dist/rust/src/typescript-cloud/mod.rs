@@ -61,6 +61,8 @@ pub mod types {
     ///    "ASK_NOT_DUE",
     ///    "ASK_OPTIONS_DUPLICATED",
     ///    "ASK_OPTION_UNKNOWN",
+    ///    "BATCH_ISSUE_NOT_IN_THREAD",
+    ///    "BATCH_ITEMS_MISMATCH",
     ///    "CANNOT_CONVERT_INPUT",
     ///    "CHANNEL_MEDIA_UNSUPPORTED",
     ///    "CHANNEL_NOT_CONNECTED",
@@ -164,6 +166,7 @@ pub mod types {
     ///    "THREAD_NOT_FOUND",
     ///    "THREAD_NOT_PAUSED",
     ///    "THREAD_PAUSED",
+    ///    "THROUGHPUT_NOT_READY",
     ///    "TOO_MANY_TERMINAL_STREAMS",
     ///    "UNAUTHORIZED",
     ///    "USER_NOT_FOUND",
@@ -219,6 +222,10 @@ pub mod types {
         AskOptionsDuplicated,
         #[serde(rename = "ASK_OPTION_UNKNOWN")]
         AskOptionUnknown,
+        #[serde(rename = "BATCH_ISSUE_NOT_IN_THREAD")]
+        BatchIssueNotInThread,
+        #[serde(rename = "BATCH_ITEMS_MISMATCH")]
+        BatchItemsMismatch,
         #[serde(rename = "CANNOT_CONVERT_INPUT")]
         CannotConvertInput,
         #[serde(rename = "CHANNEL_MEDIA_UNSUPPORTED")]
@@ -425,6 +432,8 @@ pub mod types {
         ThreadNotPaused,
         #[serde(rename = "THREAD_PAUSED")]
         ThreadPaused,
+        #[serde(rename = "THROUGHPUT_NOT_READY")]
+        ThroughputNotReady,
         #[serde(rename = "TOO_MANY_TERMINAL_STREAMS")]
         TooManyTerminalStreams,
         #[serde(rename = "UNAUTHORIZED")]
@@ -471,6 +480,8 @@ pub mod types {
                 Self::AskNotDue => f.write_str("ASK_NOT_DUE"),
                 Self::AskOptionsDuplicated => f.write_str("ASK_OPTIONS_DUPLICATED"),
                 Self::AskOptionUnknown => f.write_str("ASK_OPTION_UNKNOWN"),
+                Self::BatchIssueNotInThread => f.write_str("BATCH_ISSUE_NOT_IN_THREAD"),
+                Self::BatchItemsMismatch => f.write_str("BATCH_ITEMS_MISMATCH"),
                 Self::CannotConvertInput => f.write_str("CANNOT_CONVERT_INPUT"),
                 Self::ChannelMediaUnsupported => f.write_str("CHANNEL_MEDIA_UNSUPPORTED"),
                 Self::ChannelNotConnected => f.write_str("CHANNEL_NOT_CONNECTED"),
@@ -592,6 +603,7 @@ pub mod types {
                 Self::ThreadNotFound => f.write_str("THREAD_NOT_FOUND"),
                 Self::ThreadNotPaused => f.write_str("THREAD_NOT_PAUSED"),
                 Self::ThreadPaused => f.write_str("THREAD_PAUSED"),
+                Self::ThroughputNotReady => f.write_str("THROUGHPUT_NOT_READY"),
                 Self::TooManyTerminalStreams => f.write_str("TOO_MANY_TERMINAL_STREAMS"),
                 Self::Unauthorized => f.write_str("UNAUTHORIZED"),
                 Self::UserNotFound => f.write_str("USER_NOT_FOUND"),
@@ -628,6 +640,8 @@ pub mod types {
                 "ASK_NOT_DUE" => Ok(Self::AskNotDue),
                 "ASK_OPTIONS_DUPLICATED" => Ok(Self::AskOptionsDuplicated),
                 "ASK_OPTION_UNKNOWN" => Ok(Self::AskOptionUnknown),
+                "BATCH_ISSUE_NOT_IN_THREAD" => Ok(Self::BatchIssueNotInThread),
+                "BATCH_ITEMS_MISMATCH" => Ok(Self::BatchItemsMismatch),
                 "CANNOT_CONVERT_INPUT" => Ok(Self::CannotConvertInput),
                 "CHANNEL_MEDIA_UNSUPPORTED" => Ok(Self::ChannelMediaUnsupported),
                 "CHANNEL_NOT_CONNECTED" => Ok(Self::ChannelNotConnected),
@@ -731,6 +745,7 @@ pub mod types {
                 "THREAD_NOT_FOUND" => Ok(Self::ThreadNotFound),
                 "THREAD_NOT_PAUSED" => Ok(Self::ThreadNotPaused),
                 "THREAD_PAUSED" => Ok(Self::ThreadPaused),
+                "THROUGHPUT_NOT_READY" => Ok(Self::ThroughputNotReady),
                 "TOO_MANY_TERMINAL_STREAMS" => Ok(Self::TooManyTerminalStreams),
                 "UNAUTHORIZED" => Ok(Self::Unauthorized),
                 "USER_NOT_FOUND" => Ok(Self::UserNotFound),
