@@ -1,6 +1,6 @@
 # Fase 4 — vazão
 
-Status: Draft (fase 4 do plano "tarefas visíveis, controláveis e que não se perdem")
+Status: Reviewed (fase 4 do plano "tarefas visíveis, controláveis e que não se perdem")
 Data: 2026-11-19
 Depende de: `2026-11-12-pausa-por-pista-e-adiamento-liberavel-design.md` (pausa por limite, adiamento liberável), `2026-11-12-fase-0-tarefas-visiveis-design.md` (`first_claimed_at`, estado "esperando cota"), `2026-11-13-painel-na-nuvem-design.md` (snapshot do painel), `2026-11-16-falar-e-parar-na-hora-design.md` (triagem no modelo pequeno, "agora", pausa), `2026-11-17-emagrecer-o-grupo-design.md` (política de saída, `BlockCause`, um aviso por causa, resultado sem orquestrador).
 
@@ -53,92 +53,100 @@ Depende de: `2026-11-12-pausa-por-pista-e-adiamento-liberavel-design.md` (pausa 
 
 ### Quem é dono
 
-- **`agent`** é dono do orçamento, das vagas, da prioridade de reivindicação, de juntar recados, da troca de sessão e do modelo por tipo de tarefa. Ele já é dono da fila (`agent_mailbox`), das sessões, dos fatos de uso (`agent.turn.usage`), da leitura do limite do provedor (`RateLimitRecord`) e da pausa (`LibSqlMailboxDispatcher`). Nenhum outro contexto lê ou escreve a fila.
-- **`issue`** guarda os dois atributos declarados da tarefa que o `agent` consulta: prioridade e tipo de trabalho (colunas em `issue_issues`, escritas no fork, lidas pela porta que o `agent` já usa para a issue).
-- **`thread`** é dono do lote: a mensagem de origem é dele, o recibo é fala do orquestrador no grupo e o destino "anexado a X" é um steer roteado, que ele já produz.
+- **`agent`** é dono do orçamento, das vagas, da ordem de reivindicação, de juntar recados, da troca de sessão e do modelo por tipo de tarefa. Ele já é dono da fila (`agent_mailbox`), das sessões, dos fatos de uso (`agent.turn.usage`), da leitura do limite do provedor (`RateLimitRecord`), da pausa (`LibSqlMailboxDispatcher`) e do fork (`ForkIssue`). Os atributos que a fila consulta (prioridade, tipo de trabalho, modelo) nascem no fork, que é do `agent` — então ficam numa tabela do `agent` (`agent_issue_attributes`), e a fila os lê por junção **dentro do próprio contexto**. O `agent` continua sem leitura de `issue` em execução (`ForkIssue.ts`, docblock).
+- **`issue`** recebe esses atributos pelo evento de integração que já cria a issue (`IssueCreatedEvent`, via `PublishAgentIntegrationEvents`) e os guarda para leitura (console, painel, quadro). É projeção, não fonte.
+- **`thread`** é dono do lote (agregado próprio `Batch`, não filho do `Thread`: o `Thread` já é grande e o lote tem ciclo de vida próprio). A mensagem de origem é dele, o recibo é fala do orquestrador no grupo e o destino "anexado a X" é um steer roteado, que ele já produz.
 - **`ui`** (BFF) monta a saúde do sistema para o console; **`panel`** (nuvem) mostra lote e saúde a partir do snapshot.
+- Arestas novas, declaradas nas notas de `context.ts` e no mapa de contextos: `ui → agent` (porta `QuotaStatusReader`), `issue → agent` (mesma porta, para `WAITING_BUDGET` e o snapshot do painel), `thread → agent` (porta `ForkedIssueReader`, para validar destinos de lote).
 
 ### Unidade de orçamento
 
-O provedor não expõe saldo nem utilização (medido acima). O orçamento usa uma **unidade de custo** derivada dos quatro baldes do `AgentUsageEvent` por uma tabela declarada `USAGE_COST_WEIGHTS: Record<AgentModelId, Record<UsageBucket, number>>` em `agent/utils/UsageCost.ts` (proporção de preço público entre entrada, escrita e leitura de cache e saída por modelo; `DEFAULT` herda a linha do modelo padrão do CLI). A tabela é uma suposição: o teto é aprendido na mesma unidade, então um erro de escala se anula; um erro de **mistura** (peso relativo errado entre baldes ou modelos) não se anula e aparece como teto instável — por isso a simulação de aceite roda também com pesos só de saída, e o spec mede as duas.
+O provedor não expõe saldo nem utilização (medido acima). O orçamento usa uma **unidade de custo** derivada dos baldes do `AgentUsageEvent` por uma tabela declarada `USAGE_COST_WEIGHTS: Record<AgentModelId, Record<UsageBucket, number>>` em `agent/utils/UsageCost.ts`, com `UsageBucket` = entrada, escrita de cache, leitura de cache, saída **e saída de raciocínio** (o docblock do `AgentUsageEvent` proíbe descartar esse balde). Proporção de preço público por modelo; `DEFAULT` herda a linha do modelo padrão de cada CLI pela tabela. A tabela é uma suposição: o teto é aprendido na mesma unidade, então um erro de escala se anula; um erro de **mistura** não se anula e aparece como teto instável — por isso a simulação de aceite roda também com pesos só de saída.
 
 ### Contrato primeiro
 
-TypeSpec (`packages/contracts/src/wire/enums/`), todos cruzam o fio (console, painel, SDK):
+TypeSpec (`packages/contracts/src/wire/enums/`), todos cruzam o fio (console, painel, SDK, ou o evento de integração para o Go):
 - `UsageRole` — `ORCHESTRATOR`, `ISSUE`, `TRIAGE`. Quem gastou.
-- `ProviderLimitWindow` — `FIVE_HOUR`, `WEEKLY`, `UNKNOWN`. Mapeamento declarado de `rateLimitType` (`five_hour → FIVE_HOUR`, `seven_day* → WEEKLY`, ausente/outro → `UNKNOWN`) numa tabela em `StreamJsonCodec`, nunca por prefixo de string fora dela.
-- `IssuePriority` — `HIGH`, `NORMAL`, `LOW`. Prioridade declarada da tarefa (lote ou orquestrador).
+- `ProviderLimitWindow` — `FIVE_HOUR`, `WEEKLY`, `UNKNOWN`. Mapeamento declarado de `rateLimitType` numa tabela em `StreamJsonCodec` (`five_hour → FIVE_HOUR`, `seven_day`/`seven_day_overage_included`/… `→ WEEKLY`, resto `→ UNKNOWN`), nunca por prefixo de string fora dela.
+- `IssuePriority` — `HIGH`, `NORMAL`, `LOW`. Prioridade declarada da tarefa.
 - `PriorityReason` — `CLIENT_BUG`, `DECLARED`, `DEFAULT`. Por que a tarefa tem essa prioridade; `CLIENT_BUG` é o "bug de cliente" do objetivo.
 - `IssueWorkKind` — `CHANGE`, `DIAGNOSIS`. O que a tarefa faz; escolhe o modelo.
 - `BatchItemDestinationKind` — `NEW_ISSUE`, `ATTACHED`, `ALREADY_LIVE`, `DECLINED`, `DEFERRED`, `NEEDS_DECISION`. Discriminante do destino de um item de lote.
 - `QuotaState` — `OK`, `NEAR` (≥ 70% da semana), `HOLDING` (tarefas seguradas pelo orçamento), `REFUSED` (provedor recusando). Selo da saúde.
-- Existentes que crescem: `IssueLifeState += WAITING_BUDGET` (a próxima vez da tarefa está segurada pelo orçamento, não pelo provedor); `BlockCause += BUDGET_HELD` (um aviso por grupo enquanto o orçamento segura tarefas daquele grupo); `IssueTimelineItemKind += BATCH_LINKED` (a tarefa nasceu ou recebeu um item de lote).
+- `SlotLimit` — `MAX`, `MACHINE`, `BUDGET`. Por que a vaga efetiva é a que é.
+- Existentes que crescem: `IssueLifeState += WAITING_BUDGET`; `BlockCause += BUDGET_HELD`; `IssueTimelineItemKind += BATCH_LINKED`. **Tabelas totais tocadas** (o compilador acusa, mas a lista é do spec): `issue/utils/issueLifeState.ts`, `thread/utils/OutputPolicy.ts` (`CAUSE_OF_STOP`/textos de causa), `thread/i18n/messages.ts`, `issue/services/BoardBulletin.ts`, leitor da linha do tempo no `ui`, react `IssueCard.tsx` e `IssuesOverviewSection`, CHECK `panel_issues_life_state_check` na nuvem.
+- Evento de integração `issue.created` (TypeSpec, com bindings Go/Rust) ganha `priority`, `priorityReason`, `workKind`, `model` — opcionais (o Go só carrega).
 
-Fatos de domínio do `agent` (`z.domainEvent`, só TS — não cruzam serviço):
-- `AgentUsageEvent` ganha `role: UsageRole`, `provider: ProviderKind`, `model: AgentModelId` (opcionais no schema porque linhas antigas não os têm; **o orçamento só soma eventos com `role`** — nada de inferir papel pelo `entity_id`). A triagem passa a gravar o fato (`role: TRIAGE`, entidade = conversa).
-- **Novo** `AgentProviderLimitEvent` (`agent.provider.limit_observed`) — `{ provider, model?, window: ProviderLimitWindow, status: 'REJECTED' | 'WARNING', resetsAt? }`. Gravado quando o runner vê `rejected` (já lido hoje) ou `allowed_warning` (se aparecer). É o fato de que o teto aprende e o que torna as horas pausadas mensuráveis daqui em diante (hoje só a hora do aviso existe).
-- **Novo** `AgentSessionHandedOffEvent` (`agent.session.handed_off`) — `{ issueId, fromContextTokens, notesSource: 'SESSION' | 'DERIVED' }`. Linha do tempo e medição do item 6.
+Enums só do `agent` (`agent/enums`, não cruzam o fio): `MailboxClaimClass` — `DECISION_ANSWER`, `INTERRUPT` (o "agora"), `STEER`, `WORK`, `REMINDER`, `RESULT`, `OPERATOR` — campo **obrigatório** de `EnqueueMailboxItem`, gravado em coluna pelos 9 produtores de item (agent e thread). Substitui toda leitura de payload ou de prefixo de dedup (`resume:`) para saber "que item é este" (Non-Negotiable 5). `ProviderLimitStatus` — `REJECTED`, `WARNING`, `ALLOWED`. `HandoffNotesSource` — `SESSION`, `DERIVED`.
 
-Schemas compartilhados em `shared/objects/` (só o `shared` declara `exposes.objects`, então é o único barril que o `registerSchemas` publica — mesma regra do `StopAsk` da fase 3; sem `.refine()` sensível). Os invariantes ficam nos objetos de valor/agregados dos contextos donos (`thread/entities/Batch`):
-- `QuotaSnapshotSchema` — `{ state: QuotaState, window: { spent, ceiling, reserve, resetsAt? }, week: { spent, ceiling, resetsAt? }, slots: { inUse, max, effective }, queue: { pending, heldByBudget }, diskFreeBytes }`.
-- `BatchItemDestinationSchema` — união discriminada por `kind`: `NEW_ISSUE { issueId }`, `ATTACHED { issueId }`, `ALREADY_LIVE { issueId?, note }`, `DECLINED { reason }`, `DEFERRED { reason, until? }`, `NEEDS_DECISION { issueId, stopId }`. Non-Negotiable 3: nada de `issueId?/reason?` soltos.
-- `BatchItemSchema` — `{ n, excerpt, destination: BatchItemDestination }`; `BatchSchema` — `{ code ('L-31'), sourceEntryId, items[] }`.
+Fatos de domínio do `agent` (`z.domainEvent`, só TS):
+- `AgentUsageEvent` ganha `role: UsageRole`, `provider: ProviderKind`, `model: AgentModelId` e `windows?: { window: ProviderLimitWindow, resetsAt }[]` (a fronteira de janela que o CLI informou no run, inclusive em linhas `allowed` — persiste no fato, então sobrevive ao reinício). Opcionais no schema porque linhas antigas não os têm; **o orçamento só soma eventos com `role`** — nada de inferir papel pelo `entity_id`. A triagem grava o fato (`role: TRIAGE`) por um `TriageUsageRecorder` do `agent`, chamado de dentro do `ModelInboundTriage` (o `thread`, que chama a triagem, não grava fato do `agent`).
+- **Novo** `AgentProviderLimitEvent` (`agent.provider.limit_observed`) — `{ provider, model?, window: ProviderLimitWindow, status: ProviderLimitStatus, resetsAt? }`. Gravado quando o run termina com recusa ou aviso. É o fato de que o teto aprende e o que torna as horas pausadas mensuráveis daqui em diante.
+- **Novo** `AgentQuotaHeldEvent` (`agent.quota.held`) — `{ window, spent, ceiling, reserve, enforced: boolean }`, gravado na transição "admitia → não admite" (e o inverso como `released`). Em modo observação, `enforced: false`: é onde o "teria segurado" fica registrado e medível.
+- **Novo** `AgentSessionHandedOffEvent` (`agent.session.handed_off`) — `{ issueId, fromContextTokens, notesSource: HandoffNotesSource }`.
 
-Migrações: ver seção própria.
+Schemas compartilhados em `shared/objects/` (só o `shared` declara `exposes.objects`, então é o único barril que o `registerSchemas` publica — mesma regra do `StopAsk` da fase 3; sem `.refine()`; invariantes ficam nos agregados donos):
+- `QuotaSnapshotSchema` (console) — `{ state: QuotaState, window: { spent, ceiling, reserve, resetsAt? }, week: { spent, ceiling, resetsAt? }, slots: { inUse, max, effective, limitedBy: SlotLimit }, queue: { pending, heldByBudget }, diskFreeBytes }`.
+- `PanelHealthSchema` (painel na nuvem, **sem números absolutos de conta**) — `{ state, windowPercent, weekPercent, slots: { inUse, effective }, queuePending, daemonSeenAt }`.
+- `BatchItemDestinationSchema` — união discriminada por `kind`: `NEW_ISSUE { issueId }`, `ATTACHED { issueId }`, `ALREADY_LIVE { issueId?, note }`, `DECLINED { reason }`, `DEFERRED { reason, until? }`, `NEEDS_DECISION { issueId, stopId }`. Non-Negotiable 3.
+- `BatchItemSchema` — `{ n, excerpt, destination }`; `BatchSchema` — `{ code ('L-31'), sourceEntryId, items[] }`.
 
 ### Item 1 — vagas: 4 → 6, com portão de máquina
 
-- `TURN_LANES[ISSUE].slots` vira o **máximo** (6); a vaga **efetiva** é `min(max, MachineCapacity.issueSlots(), orçamento)`. Nenhum número novo no laço: `drainLoop` passa a ler `effectiveSlots(kind)` em vez de `this.lanes[kind].slots`.
-- `agent/services/MachineCapacity` (porta + implementação `real` que lê `statfs` do volume de dados e a pressão de memória do SO; `mock` e `integration` devolvem valores fixos). Tabela declarada `ISSUE_SLOTS_BY_DISK: readonly { minFreeBytes, slots }[]` (proposta: ≥ 20 GiB → 6; ≥ 10 GiB → 4; ≥ 5 GiB → 2; abaixo → 1). O piso não é decidido sozinho: ver "Perguntar ao dono".
-- "Medir antes de passar de 6": o snapshot de saúde registra RSS total dos processos de turno e disco livre a cada amostra; nada acima de 6 entra nesta fase.
-- A pista THREAD fica com 3 vagas e **nunca** passa pelo orçamento (é a reserva).
+- O máximo da pista ISSUE vira configuração declarada (`CODM_AGENT_ISSUE_SLOTS_MAX`, padrão 6, manifesto com consumidores) — reverter para 4 não exige build novo. A vaga **efetiva** é `min(máximo, MachineCapacity.issueSlots(), admissão)`, com `limitedBy`. `drainLoop` passa a ler `effectiveSlots(kind)` em vez de `this.lanes[kind].slots`.
+- `agent/services/MachineCapacity` (porta; `real` lê `statfs` do volume de dados e a pressão de memória do SO; `mock`/`integration` fixos). Tabela declarada `ISSUE_SLOTS_BY_DISK: readonly { minFreeBytes, slots }[]` (proposta: ≥ 20 GiB → 6; ≥ 10 GiB → 4; ≥ 5 GiB → 2; abaixo → 1). O piso é pergunta ao dono.
+- "Medir antes de passar de 6": o snapshot de saúde registra RSS dos processos de turno e disco livre a cada amostra; nada acima de 6 nesta fase.
+- A pista THREAD fica com 3 vagas e **nunca** passa pelo orçamento.
 
 ### Item 2 — orçamento adaptativo por janela de 5 h e semanal
 
-**Quem decide:** um serviço puro `agent/services/QuotaBudget` (sem I/O), alimentado por um leitor `QuotaLedgerReader` (lê `shared_events` por `name` + `occurred_at`, índice existente `events_name_idx`). O dispatcher pergunta antes de abrir a pista ISSUE.
+**Quem decide:** um serviço puro `agent/services/QuotaBudget` (sem I/O), alimentado por `QuotaLedgerReader` (lê `shared_events` por `name` + `occurred_at`, índice `events_name_idx`). O dispatcher pergunta antes de abrir a pista ISSUE.
 
-**Janelas.** Por provedor: a de 5 h e a semanal. Fronteira: o último `resetsAt` conhecido daquela janela (de recusa ou de `rate_limit_event`); sem ele, janela deslizante (5 h / 7 dias). A semana do provedor não é a semana ISO.
+**Global da conta, não por provedor.** O dispatcher não sabe em que CLI um item roda antes de reivindicá-lo (`LibSqlMailboxDispatcher.pausedUntil`, docblock) — a mesma razão pela qual a pausa é global. A admissão segue a mesma postura: se **qualquer** provedor com fatos estiver acima do teto de alguma janela, a pista ISSUE fica fechada. Numa instalação com claude e codex juntos, um segura o outro; registrado como custo aceito (a medição é de uma instalação só com claude).
 
-**Teto aprendido (por provedor × janela)** — derivado dos fatos, recalculado no boot e a cada fato novo, sem tabela:
-- semente declarada (`QUOTA_SEED_CEILING: Record<ProviderLimitWindow, number>` em unidades; proposta a partir desta medição: 5 h ≈ p25 do gasto nas 5 h antes das recusas de 5 h de 06–10/11; semana ≈ 90% do gasto de 7 dias antes das recusas de 11–13/11; registrado no código com a origem);
-- **recusa** da janela W com gasto G na janela corrente ⇒ `teto = min(teto, G)` (a recusa prova que G bastou);
-- **aviso** (`allowed_warning`) ⇒ o mesmo, multiplicado por um fator declarado (o aviso vem antes do fim);
-- **folga**: janela W que terminou sem recusa com gasto G > teto ⇒ `teto = G` (prova de que cabia mais);
-- uma janela `UNKNOWN` aprende só a de 5 h (a mais conservadora) e é registrada para revisão.
+**Janelas.** A de 5 h e a semanal. Fronteira: o último `resetsAt` daquela janela gravado nos fatos (`windows` do uso, ou `limit_observed`); sem ele, janela deslizante (5 h / 7 dias). A semana do provedor não é a semana ISO.
+
+**Teto aprendido (por janela)** — derivado dos fatos, recalculado no boot e a cada fato novo, sem tabela (os fatos guardam o que é preciso, inclusive a fronteira):
+- semente declarada `QUOTA_SEED_CEILING: Record<ProviderLimitWindow, number>`, ajustada **só com a semana W45** desta medição (as semanas seguintes ficam para validar fora da amostra, ver Testes);
+- **recusa** na janela W ⇒ `teto = min(teto, G + emVoo × custoEsperado)` — G subconta, porque turnos em voo só reportam no fim;
+- **aviso** (`WARNING`) ⇒ o mesmo vezes um fator declarado;
+- **sonda para cima**: com o orçamento ligado, G nunca passa do teto, então "folga" nunca prova nada sozinha. Depois de `QUOTA_PROBE_AFTER` janelas seguidas terminadas sem recusa **e** com a pista segurada pelo orçamento em algum momento (havia demanda), o teto sobe `QUOTA_PROBE_STEP` (declarados; proposta 2 janelas, +10%). A recusa seguinte corta de volta;
+- **troca de conta**: os fatos não carregam conta. Uma recusa com `resetsAt` e, depois, um turno aceito **antes** desse `resetsAt` (o `creditAcceptedTurn` de hoje) é a evidência que existe de conta trocada ou janela zerada antes: os cortes daquela janela voltam à semente;
+- recusa `UNKNOWN` (ex.: codex, que não informa o tipo) corta só a janela de 5 h.
 
 **Admissão (antes do `claimNext`, nunca depois).** A pista ISSUE só entra em `open` se, para as duas janelas:
-`gasto(todos os papéis) + emVoo × custoEsperado + custoEsperado ≤ teto × (1 − reserva)`.
-- `custoEsperado` = mediana do custo dos últimos 50 turnos de issue (custo só chega no fim do turno, então turnos em voo são projetados por ele).
-- Sem admissão, a pista ISSUE sai de `open` como já sai na pausa: **nenhum item é reivindicado e devolvido** (desfazer uma reivindicação nunca é de graça — lição de 05/08). Itens STEER que respondem a decisão (prioridade de item, abaixo) continuam sujeitos ao orçamento: a reserva é do orquestrador, não das tarefas.
-- Estado da tarefa: issue com item vivo e pista segurada pelo orçamento ⇒ `IssueLifeState.WAITING_BUDGET`; um aviso por grupo afetado (`BlockCause.BUDGET_HELD`, política da fase 3) com o instante estimado de volta (fronteira da janela).
+`gastoIssue + emVoo × custoEsperado + custoEsperado ≤ teto − max(reserva × teto, gastoOrquestrador)`,
+onde `gastoOrquestrador` = `ORCHESTRATOR + TRIAGE` na janela. A reserva é um **piso mantido livre** para o orquestrador, não uma parte que ele já gastou e que se reserva de novo.
+- `custoEsperado` = **média** (não mediana) dos últimos 50 turnos de issue — a cauda é pesada (p90 ≈ 8× a mediana) e a mediana subprecificaria os turnos em voo.
+- Sem admissão, a pista ISSUE sai de `open` como já sai na pausa: **nenhum item é reivindicado e devolvido**. Itens STEER de resposta a decisão continuam sujeitos ao orçamento: a reserva é do orquestrador, não das tarefas.
+- Estado da tarefa: `WAITING_BUDGET` = o que hoje seria `QUEUED` **e** `QuotaStatusReader` diz que a pista está segurada; precedência logo depois de `WAITING_PROVIDER` (a recusa do provedor é a causa mais forte). Um aviso por grupo afetado (`BlockCause.BUDGET_HELD`, política da fase 3) com o instante estimado de volta.
 
-**Reserva (item 3).** `reserva = max(0,05, parteMedida)`, com `parteMedida` = gasto `ORCHESTRATOR + TRIAGE` sobre o total, nos últimos 7 dias, na unidade do orçamento, só com eventos que têm `role`. Até haver 7 dias de eventos com `role`, vale a medição desta fase (18,6% ponderado; ver "Unidade") como valor declarado de partida. Quando o medido cair abaixo de 5% (esperado depois da fase 3), a reserva fecha em 5% sem mudança de código — é exatamente a regra do dono.
+**Reserva (item 3).** `reserva = max(0,05, parteMedida)`, com `parteMedida` = `ORCHESTRATOR + TRIAGE` sobre o total, nos últimos 7 dias, na unidade do orçamento, só com eventos com `role`. Até haver 7 dias desses eventos, vale o valor de partida declarado desta medição (18,6% ponderado). Quando o medido cair abaixo de 5% (esperado depois da fase 3), a reserva fecha em 5% sem mudança de código — é a regra do dono.
 
-**Semanal.** O mesmo controle na janela semanal; ao cruzar 70% do teto semanal, `QuotaState.NEAR` na saúde do sistema (console e painel) e uma linha no registro. Sem mensagem no grupo por isso (o grupo só ouve quando tarefas forem seguradas — `BUDGET_HELD`).
+**Semanal.** O mesmo controle na janela semanal; ao cruzar 70% do teto semanal, `QuotaState.NEAR` na saúde (console e painel). Sem mensagem no grupo por isso; o grupo só ouve quando tarefas forem seguradas (`BUDGET_HELD`).
 
-**Recusa mesmo assim.** Se o provedor recusar antes do teto aprendido, o caminho de hoje (#69: adiar, pausar a conta, avisar, sondar no teto) segue igual, e a recusa corta o teto para a próxima vez.
+**Recusa mesmo assim.** Se o provedor recusar antes do teto aprendido, vale o caminho de hoje (#69: adiar, pausar a conta, avisar, sondar no teto) — **e ele pausa também o orquestrador**, porque a cota é da conta. O orçamento não promete o contrário: promete que, com o teto aprendido, a recusa fica rara e a próxima janela fecha a pista ISSUE mais cedo. O critério "orquestrador responde com a cota de tarefas esgotada" vale para a cota **das tarefas** (`teto − reserva`), não para a recusa do provedor.
 
-**Limite por modelo (fora do escopo, registrado):** os resets de 7 dias com outra pista respondendo (spec "pausa por pista", 12/11) sugerem limite semanal por modelo; a pausa por conta de hoje cala também o orquestrador nesse caso. O fato `limit_observed` grava `model` para medir isso; mudar a chave da pausa fica para quando houver dado.
+**Limite por modelo (fora do escopo, registrado):** os resets de 7 dias com outra pista respondendo (spec "pausa por pista", 12/11) sugerem limite semanal por modelo. O fato `limit_observed` grava `model` para medir isso; mudar a chave da pausa fica para quando houver dado.
 
 ### Item 4 — fila com prioridade
 
-Classes fixadas pelo objetivo, numa tabela total `CLAIM_RANK` em `agent/utils/ClaimRank.ts` (menor vai primeiro):
-1. item que leva a **resposta a uma decisão** (STEER gerado por `thread/usecases/AnswerStop` → `thread/handlers/ResumeIssueOnStopResolved`) — prioridade de **item**;
-2. tarefa `PriorityReason.CLIENT_BUG`;
-3. tarefa `IssuePriority.HIGH` (declarada em lote ou pelo orquestrador);
-4. `NORMAL`; 5. `LOW`.
+Classes fixadas pelo objetivo, numa tabela total `CLAIM_RANK` em `agent/utils/ClaimRank.ts` sobre (`MailboxClaimClass` do item, `IssuePriority`/`PriorityReason` da tarefa) (menor vai primeiro):
+1. item `DECISION_ANSWER` (o STEER que `thread/handlers/ResumeIssueOnStopResolved` enfileira passa a declarar a classe);
+2. tarefa `CLIENT_BUG`; 3. tarefa `HIGH`; 4. `NORMAL`; 5. `LOW`.
 
-- Coluna `agent_mailbox.rank` (inteiro, gravado no enqueue a partir da tabela; o enqueue já conhece o tipo do item e lê a issue). A ordem por destino continua FIFO: o candidato é sempre o item **mais antigo pronto do seu alvo** (`NOT EXISTS` de item mais antigo pronto do mesmo alvo), e os alvos são ordenados por `min(rank)` dos seus itens prontos, depois por `created_at`. Um STEER de prioridade nunca passa à frente de um item mais antigo da mesma tarefa.
-- Prioridade da tarefa: `ForkIssue` ganha `priority?: IssuePriority` e `priorityReason?: PriorityReason` (padrão `NORMAL/DEFAULT`); a ferramenta do lote declara por item; o orquestrador marca `CLIENT_BUG` quando o pedido descreve um defeito visto por cliente (prompt + teste de contrato da ferramenta).
-- **Empate entre iguais com a fila cheia: PERGUNTAR AO DONO** (abaixo). Até a resposta, o código grava a opção (a) como tabela trocável, sem `if`.
+- A classe do item é coluna (`agent_mailbox.claim_class`); a prioridade da tarefa vem de `agent_issue_attributes` por junção **no momento da reivindicação** (nada congelado no enqueue; o enqueue continua um insert simples). O `CASE` do rank é gerado da tabela, não escrito à mão.
+- Ordem do `claimNext`: (1) a ordem das pistas continua sendo a primeira chave (`CASE target_kind`); (2) o candidato é sempre o item **mais antigo pronto do seu alvo** (`NOT EXISTS` de item mais antigo pronto do mesmo alvo); (3) os alvos são ordenados pelo menor rank entre os seus itens prontos (função de janela por alvo); (4) depois `created_at`. Um item de prioridade nunca passa à frente de um item mais antigo da mesma tarefa.
+- Prioridade e tipo da tarefa: `ForkIssue` ganha `priority?`, `priorityReason?`, `workKind?` (padrões `NORMAL`/`DEFAULT`/`CHANGE`), grava em `agent_issue_attributes` na mesma transação do fork e manda no `IssueForkedEvent` → `issue.created`. Lote não muda prioridade de tarefa já criada: a prioridade declarada no lote vai no `ForkIssue` de cada item novo.
+- **Empate entre iguais com a fila cheia: PERGUNTAR AO DONO** (abaixo). Até a resposta, opção (a) (chegada), que é só a chave `created_at`. As opções (b) e (c) têm estado (vez de cada grupo, pesos) e viram um serviço próprio, não uma linha de tabela.
 
 ### Item 5 — recibo de lote
 
-- **Detecção sem modelo** (`thread/utils/BatchDetector.ts`, camada de regra da fase 2): mensagem com ≥ 3 itens numerados ou com marcador de lista vira candidata a lote, com N itens e o trecho de cada um. A mensagem segue para o orquestrador (um lote precisa de contexto para decidir destinos) com o lote anexado ao item: `"Lote L-31: 10 itens — registre o destino de cada um com RecordBatch"`.
-- **Ferramenta do orquestrador** `RecordBatch { batchCode, items: [{ n, destination: BatchItemDestination, priority? }] }` (controller no `thread`, `static mcpScopes = [McpScope.ORCHESTRATION]`). Invariante no agregado `Batch` (filho do `Thread`): **todo item 1..N tem exatamente um destino**; faltou ou sobrou ⇒ `BATCH_ITEMS_MISMATCH` (DomainError), e a ferramenta devolve quais faltam. `NEW_ISSUE`/`ATTACHED` referenciam issues existentes da mesma conversa (`BATCH_ISSUE_NOT_IN_THREAD`). O destino `ATTACHED` não é só registro: o use case enfileira o trecho como steer para a issue (a mesma porta do roteamento da fase 2).
-- **Recibo**: só depois do destino completo, uma mensagem determinística (sem modelo) no grupo, voz do orquestrador fora da política (como o recibo de criação): `"Lote L-31: 10 itens → 4 tarefas novas, 3 em tarefas existentes, 2 já no ar, 1 recusado (motivo). <link>"`. Nenhum recibo com item sem destino; se o turno terminar sem `RecordBatch` completo, o lote fica `INCOMPLETE` e o próximo turno do orquestrador na conversa recebe o lembrete (um, como o lembrete de declaração da fase 0); persistindo, aviso de bloqueio `STALLED` na conversa.
-- **Tela do lote**: console (`threads/$threadId/batches/$batchCode`) e painel (`/panel/g/<token>#L-31`), com cada item, destino e link da tarefa. Linha do tempo da tarefa: `BATCH_LINKED`.
-- Código `L-<n>` por conversa, contador no mesmo padrão do `IssueSequence` (serviço, não regra do agregado).
+- **Detecção sem modelo** (`thread/utils/BatchDetector.ts`, camada de regra da fase 2): mensagem com ≥ 3 itens numerados ou com marcador de lista vira candidata a lote, com N itens e o trecho de cada um. Lote **não passa pela triagem** (a triagem é sem estado e de uma mensagem; um lote precisa do orquestrador): vai direto ao orquestrador com o lote anexado ao item: `"Lote L-31: 10 itens — registre o destino de cada um com RecordBatch"`.
+- **Ferramenta do orquestrador** `RecordBatch { batchCode, items: [{ n, destination: BatchItemDestination }] }` (controller no `thread`, `static mcpScopes = [McpScope.ORCHESTRATION]`). Invariante no agregado `Batch`: **todo item 1..N tem exatamente um destino**; faltou ou sobrou ⇒ `BATCH_ITEMS_MISMATCH` (DomainError) e a ferramenta devolve quais faltam. `NEW_ISSUE`/`ATTACHED`/`NEEDS_DECISION` referenciam issues da mesma conversa, validadas pela porta `ForkedIssueReader` do `agent` (o fork é síncrono no `agent`; a linha de `issue_issues` nasce depois, por evento, e não serve para validar no mesmo turno) ⇒ `BATCH_ISSUE_NOT_IN_THREAD`. `ATTACHED` não é só registro: o use case enfileira o trecho como steer para a issue.
+- **Recibo**: só depois do destino completo, uma mensagem determinística (sem modelo) no grupo, voz do orquestrador fora da política (como o recibo de criação): `"Lote L-31: 10 itens → 4 tarefas novas, 3 em tarefas existentes, 2 já no ar, 1 recusado (motivo). <link>"`. Nenhum recibo com item sem destino; se o turno terminar com o lote `INCOMPLETE`, o próximo turno do orquestrador na conversa recebe um lembrete; persistindo, aviso de bloqueio `STALLED` da conversa.
+- **Tela do lote**: console (`threads/$threadId/batches/$batchCode`) e painel (`/panel/g/<token>#L-31`). Linha do tempo da tarefa: `BATCH_LINKED`.
+- Código `L-<n>` por conversa, contador num serviço (`thread/services/BatchSequence`), como `IssueSequence`.
 - Fora: o "plano antes de abrir" (B2 do brainstorm).
 
 ### Item 6 — baratear a tarefa (opções medidas)
@@ -150,60 +158,66 @@ Classes fixadas pelo objetivo, numa tabela total `CLAIM_RANK` em `agent/utils/Cl
 | c. "Pode publicar" sem acordar a sessão | 192 aprovações = ~13% dos turnos de issue | um turno de sessão grande por aprovação | **Perguntar** (o que é "publicar" por workspace) |
 | d. Diagnóstico/leitura em modelo mais barato | não derivável (tipo não é registrado) | — | **Fazer**, medindo depois pelo `IssueWorkKind` |
 
-**a. Troca de sessão com notas de passagem.** A issue passa a usar `contextBudget` (já existe para o orquestrador: `ORCHESTRATOR_CONTEXT_BUDGET`, `ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED`), com `ISSUE_CONTEXT_BUDGET = 120_000` declarado em `RunIssueTurn`. Quem escreve as notas:
-- **pela própria sessão (preferido):** quando `lastContextTokens` passa do limiar, o PRÓXIMO turno ainda retoma, e o prompt do turno pede que, ao terminar, a sessão chame a ferramenta nova `WriteHandoffNotes { notes }` (objetivo, estado, decisões tomadas, arquivos/branch, próximo passo). Custa só a saída das notas num turno que já ia acontecer;
-- **derivadas (reserva, sem modelo):** se a sessão não escreveu, as notas são montadas do estado durável — objetivo e título da issue, decisões e respostas da linha do tempo, stops abertos, artefatos e links (PRs), últimos PROGRESS, branch e `git status` do cwd.
-- As notas ficam em `agent_agent_sessions.handoff_notes`; a sessão nova começa com elas no prompt; o cursor (`lastMessageId`) continua o mesmo (a fila não muda); fato `agent.session.handed_off`.
-- O CLI ainda compacta sozinho perto do teto dele; a troca acontece muito antes (120 mil).
+**a. Troca de sessão com notas de passagem — dois limiares.** O guarda de hoje (`AgentSession.resumeDecision`) recusa retomar assim que `lastContextTokens > contextBudget`, então "o próximo turno ainda retoma e escreve as notas" só funciona com dois limiares declarados em `RunIssueTurn`:
+- `ISSUE_HANDOFF_ASK_AT = 100_000`: acima dele, o turno retoma normalmente e o prompt pede que, ao terminar, a sessão chame a ferramenta nova `WriteHandoffNotes { notes }` (objetivo, estado, decisões, arquivos/branch, próximo passo). Custa só a saída das notas num turno que já ia acontecer;
+- `ISSUE_CONTEXT_BUDGET = 120_000` (o `contextBudget` do guarda existente, como o `ORCHESTRATOR_CONTEXT_BUDGET`): acima dele, sessão nova. Com notas da sessão, elas entram no prompt; sem elas (a sessão pulou de < 100 mil para > 120 mil num turno, ou ignorou o pedido), entram as **derivadas** do estado durável — objetivo e título, decisões e respostas da linha do tempo, stops abertos, artefatos e links (PRs), últimos PROGRESS, branch e `git status` do cwd;
+- as notas ficam em `agent_agent_sessions.handoff_notes`; o cursor (`lastMessageId`) continua o mesmo; fato `agent.session.handed_off`.
+- O CLI compacta sozinho perto do teto dele; a troca acontece muito antes.
 
-**b. Recados juntos.** Ao reivindicar um item de issue, o dispatcher reivindica junto, no mesmo `write`, os STEER **prontos e mais novos do mesmo alvo** (até `MAX_COALESCED = 10`, exceto o steer "agora", que tem caminho próprio). O turno recebe os textos em ordem. Todo ponto que hoje trata "um item" passa a tratar "o grupo" — lista fechada, cada um com teste:
-- `complete` → todos; `holdItem` (pausa) → todos, tentativa devolvida; `waitForProvider`/`defer` → todos; `releaseInterrupted` → todos; `recordFailure` → a cabeça conta a tentativa e envenena; os seguidores voltam sem gastar tentativa;
-- `cueSteer` ☑️/✅ por item (cada recado roteado ganha o seu);
-- `lastMessageId` = id do **último** item do grupo (o guarda de retomada compara o cursor com o item consumido);
-- `releaseOrphanedClaims` no boot já solta todos (mesmo `claimed_boot`).
-- `MailboxRepository.claimNext` devolve `ClaimedMailboxBundle { head, followers[] }`; `MockMailboxRepository` acompanha.
+**b. Recados juntos.** Ao reivindicar um item de issue, o dispatcher reivindica junto, no mesmo `write`, os itens seguintes do mesmo alvo que formam um **prefixo contíguo** compatível: classe `STEER` e **mesma postura** da cabeça (postura é privilégio: um recado de quem não pode liberar nunca viaja com o de quem pode), até `MAX_COALESCED = 10`. O prefixo **para** no primeiro item que não é compatível (um `INTERRUPT`, um `DECISION_ANSWER`, um `REMINDER`, outra postura) — nunca o pula, para nenhum recado mais novo furar a fila de um mais velho. Lista fechada dos pontos que hoje tratam "um item", cada um com teste:
+- porta do repositório com operações sobre conjunto: `claimNext → ClaimedMailboxBundle { head, followers[] }`, `renewLease(ids)`, `complete(ids)`, `defer(ids)`, `fail(head, followers)`, `holdItems(ids)`, todas numa transação (um crash no meio não parte o grupo);
+- a reivindicação conta tentativa e carimba `first_claimed_at` em cada linha: cada seguidor carrega o seu `firstClaim` (para o ☑️ dele) e, em falha, só a cabeça gasta a tentativa (os seguidores têm a tentativa devolvida e voltam);
+- heartbeat renova todas as linhas do grupo;
+- `holdItem` (pausa), `waitForProvider`/`defer`, `releaseInterrupted`, `recordFailure`/envenenamento: sobre o grupo, com a regra de tentativa acima;
+- `cueSteer` ☑️/✅ por item;
+- entradas do `RunIssueTurn` que hoje são de um item: `posture` (igual em todo o grupo, pela regra acima), `answersEntryId`/`declarationReminder` (impossíveis num seguidor, pela classe), `firedByLoop` (o da cabeça; seguidores com loop param o prefixo), `turnKind`/prompt (os textos em ordem);
+- `IssueTurnAborter.begin` registra a entrada do **último** recado do grupo (um "agora" que chega depois corta o grupo inteiro);
+- `lastMessageId` e a chave de dedup do resultado (`RunIssueTurn`, `messageId`) = id do **último** item do grupo;
+- `releaseOrphanedClaims` no boot solta todos (mesmo `claimed_boot`).
 
-**c. "Pode publicar" determinístico — PERGUNTAR AO DONO** (abaixo). O codm não sabe o que é "publicar" em cada workspace (merge? deploy? comando?). O desenho fica pronto até a resposta: a decisão com efeito `PUBLISH` (fase 3) pode carregar um `PublishPlan` declarado pela issue; se o plano existir e a resposta for "aprovar", o daemon executa o plano pela janela de arrependimento (fase 2) sem turno de sessão e manda à sessão um recado "quando terminar".
+**c. "Pode publicar" determinístico — PERGUNTAR AO DONO** (abaixo). O codm não sabe o que é "publicar" em cada workspace. O desenho fica pronto até a resposta: a decisão com efeito `PUBLISH` (fase 3) pode carregar um `PublishPlan` declarado pela issue; se o plano existir e a resposta for "aprovar", o daemon executa o plano pela janela de arrependimento (fase 2) sem turno de sessão e manda à sessão um recado "quando terminar".
 
-**d. Modelo por tipo de trabalho.** `ForkIssue` ganha `workKind: IssueWorkKind` (padrão `CHANGE`). Tabela `MODEL_BY_WORK_KIND: Record<ProviderKind, Record<IssueWorkKind, AgentModelId | 'THREAD'>>` (`CLAUDE_CODE.DIAGNOSIS → SONNET`; `'THREAD'` = o modelo da conversa). O modelo é fixado no fork e nunca muda na vida da issue (mudar invalida a retomada: `MODEL_CHANGED`). `providerFor`/`modelFor` no dispatcher passam a perguntar à issue para itens ISSUE.
+**d. Modelo por tipo de trabalho.** Tabela `MODEL_BY_WORK_KIND: Record<ProviderKind, Record<IssueWorkKind, ModelChoice>>`, com `ModelChoice` união discriminada `{ kind: 'CONVERSATION' } | { kind: 'MODEL', model: AgentModelId }` (sem string sentinela; `DEFAULT` difere por CLI, então a tabela é por provedor). `CLAUDE_CODE.DIAGNOSIS → { MODEL, SONNET }`. O modelo é resolvido no fork e gravado em `agent_issue_attributes.model`; nunca muda na vida da issue (mudar invalida a retomada: `MODEL_CHANGED`). **Isto reverte uma decisão documentada** no dispatcher ("a issue herda o modelo da conversa, resolvido agora"): para tarefas novas, trocar o modelo da conversa deixa de valer para tarefas já abertas. Issues antigas (sem linha de atributos) continuam herdando.
 
 ### Item 7 — saúde do sistema
 
-- `GET /ui/system/health` (BFF `ui`, query use case `GetSystemHealth`, DTO `QuotaSnapshotSchema`): selo `QuotaState`, janela e semana (gasto, teto, reserva, reset), vagas (em uso, máximo, efetiva e por quê), fila (pendentes por pista, seguradas pelo orçamento), disco livre, daemon (desde quando). O dispatcher expõe o estado por uma porta de leitura (`QuotaStatusReader`), não pelo repositório de outro contexto.
+- `GET /ui/system/health` (BFF `ui`, query use case `GetSystemHealth`, DTO `QuotaSnapshotSchema`): selo, janela e semana, vagas com `limitedBy`, fila, disco, daemon. O dispatcher expõe o estado pela porta `QuotaStatusReader`.
 - Console: faixa de saúde no topo de "Tarefas" (componente no `-components/` da rota, SDK, SSE existente).
-- Painel na nuvem: o snapshot (`issue/usecases/PublishPanelSnapshot`) leva `health` (lido do `agent` por porta de leitura declarada) (sem números de conta, só percentuais e estados); "daemon sem contato há N min" já existe.
+- Painel na nuvem: o snapshot (`issue/usecases/PublishPanelSnapshot`) leva `PanelHealthSchema` (percentuais e estados, nunca gasto/teto absolutos); "daemon sem contato há N min" já existe.
 
 ## Migrações
 
-SQLite (uma, `0037`, `bun migrate:create` + `db:sync-go` + `db:check-go`; o teste de contagem de tabelas do core-go sobe de acordo):
-- `agent_mailbox.rank` integer NOT NULL DEFAULT 4 (NORMAL) e índice `(target_kind, rank, created_at) WHERE dead_at IS NULL AND consumed_at IS NULL`.
-- `issue_issues.priority` text NOT NULL DEFAULT `'NORMAL'`, `priority_reason` text NOT NULL DEFAULT `'DEFAULT'`, `work_kind` text NOT NULL DEFAULT `'CHANGE'`, `model` text (nullable: issues antigas usam o da conversa) — **sem CHECK** (precedente `output_mode`, fase 3: CHECK em tabela existente força reconstrução; o `z.enum` fecha na hidratação).
+SQLite (uma, `0037`, `bun migrate:create` + `db:sync-go` + `db:check-go`; contagem de tabelas do core-go 31 → 34, `store_test.go`):
+- `agent_mailbox.claim_class` text NOT NULL DEFAULT derivado do `kind` existente no `UPDATE` da própria migração (`WORK → WORK`, `STEER → STEER`, `ISSUE_RESULT → RESULT`, `OPERATOR_MESSAGE → OPERATOR`), **sem CHECK** (coluna nova em tabela existente; o `z.enum` fecha na hidratação). Índice `(target_kind, target_id, created_at) WHERE dead_at IS NULL AND consumed_at IS NULL` se o plano de consulta pedir.
+- Tabela nova `agent_issue_attributes` (`issue_id` PK, `owner_id`, `priority`, `priority_reason`, `work_kind`, `model`, `created_at`) — CHECKs por `enumCheck`.
+- `issue_issues.priority`, `priority_reason`, `work_kind`, `model` (projeção para leitura) — nullable, sem CHECK.
 - `agent_agent_sessions.handoff_notes` text, `handoff_at` integer.
-- Tabelas novas `thread_batches` (`id`, `owner_id`, `thread_id`, `code`, `seq`, `source_entry_id`, `item_count`, `status`, `receipt_entry_id`, `created_at`, `updated_at`, `version`; único `(thread_id, seq)`) e `thread_batch_items` (`batch_id`, `n`, `excerpt`, `destination` json, `issue_id` nullable indexado; PK `(batch_id, n)`) — CHECKs derivados dos enums novos.
+- Tabelas novas `thread_batches` (`id`, `owner_id`, `thread_id`, `code`, `seq`, `source_entry_id`, `item_count`, `status`, `receipt_entry_id`, `created_at`, `updated_at`, `version`; único `(thread_id, seq)`) e `thread_batch_items` (`batch_id`, `n`, `excerpt`, `destination` json, `issue_id` nullable indexado; PK `(batch_id, n)`).
 
-Nuvem (pg, `0008`, `bun migrate:create:cloud`, aplicada antes do daemon): `panel_batches` (snapshot por grupo) e coluna `health` jsonb no estado do grupo. Sem dado de conta.
+Nuvem (pg, `0008`, aplicada antes do daemon): `panel_batches` (snapshot por grupo); coluna `health` jsonb no estado do grupo; **recriar `panel_issues_life_state_check`** (`pg/schema/panel.ts`, derivado de `IssueLifeState`) com `WAITING_BUDGET` — sem isso o painel recusa o estado novo.
 
 ## Testes
 
-- `QuotaBudget.test.ts` (puro): admissão nas duas janelas; reserva `max(5%, medido)`, incluindo medido < 5%; teto cai na recusa, sobe na folga, não sobe sem fim de janela; janela `UNKNOWN`; `custoEsperado` com turnos em voo.
-- **Simulação de aceite** (`tests/flows/fase4-quota-replay.test.ts`, modo `mock`, relógio injetado): replay de uma fixture **anonimizada** derivada desta medição — só deslocamentos de tempo, papel e os quatro baldes, e os instantes de recusa (`tests/fixtures/quota/usage-2026-11.json`, sem ids, sem texto). Assertivas: (1) o agendador deixa de admitir ISSUE **antes** de cada instante de recusa da fixture; (2) com a pista ISSUE segurada, itens THREAD continuam sendo reivindicados e respondidos; (3) as horas seguradas são menores que as horas pausadas da fixture. Roda também com pesos só de saída.
-- `LibSqlMailboxDispatcher.slots.test.ts`: vagas efetivas = mínimo de máximo, máquina e orçamento; THREAD nunca segurada.
-- `LibSqlMailboxRepository.rank.test.ts`: decisão respondida passa à frente; FIFO dentro do alvo mesmo com rank maior num item mais novo; empate pela regra vigente.
-- `LibSqlMailboxDispatcher.coalesce.test.ts`: três recados viram um turno; pausa, adiamento, corte "agora", falha e envenenamento sobre um grupo; ☑️/✅ por item; cursor = último item.
-- `RunIssueTurn.handoff.test.ts` (aceite "preserva o fio"): sessão acima de 120 mil ⇒ turno pede notas; turno seguinte abre sessão nova com notas, objetivo, decisões abertas e recados pendentes no prompt; sem notas da sessão, as derivadas entram; fato `handed_off`.
-- `Batch.test.ts` + `RecordBatch.test.ts` (aceite "10 itens, 10 destinos"): 10 itens ⇒ 10 destinos gravados; 9 ⇒ `BATCH_ITEMS_MISMATCH` e nenhum recibo; `ATTACHED` enfileira o steer; recibo uma vez.
-- `BatchDetector.test.ts`: listas numeradas, marcadores, menos de 3 itens não é lote, frase com números não é lista.
-- `ForkIssue` / modelo: `DIAGNOSIS` roda no modelo da tabela; retomada não muda de modelo.
-- Contrato: `UsageRole` gravado em todo fato de uso (orquestrador, issue, triagem) — teste de arquitetura que falha se um produtor de `AgentUsageEvent` omitir `role`.
+- `QuotaBudget.test.ts` (puro): admissão nas duas janelas; piso da reserva (`max(reserva × teto, gastoOrquestrador)`), medido acima e abaixo de 5%; corte na recusa com turnos em voo; sonda para cima depois de N janelas sem recusa com demanda; volta à semente na troca de conta; `UNKNOWN` corta só 5 h; média com cauda.
+- **Simulação de aceite em laço fechado** (`tests/flows/fase4-quota-replay.test.ts`, relógio injetado): a fixture anonimizada (`tests/fixtures/quota/usage-2026-11.json` — só deslocamentos de tempo, papel, os baldes e os instantes de recusa; sem ids, sem texto) é reproduzida como **demanda** (itens que chegam), e só os turnos admitidos são cobrados (custo do turno tirado da fixture). Semente ajustada só em W45; as recusas de W46–W47 são o teste fora da amostra, modeladas como "o provedor recusa quando o gasto real da janela passa do limite implícito daquela recusa". Assertivas: (1) a pista ISSUE fecha antes de o gasto alcançar cada limite implícito; (2) com a pista ISSUE fechada pelo orçamento, itens THREAD continuam sendo reivindicados e respondidos; (3) caso extra: com o provedor recusando mesmo assim, a pausa da conta acontece (THREAD inclusive, comportamento declarado), o teto é cortado e a janela seguinte fecha a pista mais cedo; (4) as horas seguradas são menores que as horas pausadas da fixture. Roda também com pesos só de saída.
+- `LibSqlMailboxDispatcher.slots.test.ts`: vaga efetiva e `limitedBy`; THREAD nunca segurada.
+- `LibSqlMailboxRepository.rank.test.ts`: `DECISION_ANSWER` passa à frente; FIFO no alvo mesmo com rank melhor num item mais novo; ordem das pistas preservada; empate por chegada.
+- `LibSqlMailboxDispatcher.coalesce.test.ts`: três recados → um turno; prefixo para no "agora" e em postura diferente; pausa, adiamento, corte, falha (só a cabeça gasta) e envenenamento sobre o grupo; ☑️/✅ por item com o `firstClaim` de cada um; cursor e dedup = último item; crash no meio não parte o grupo.
+- `RunIssueTurn.handoff.test.ts` (aceite "preserva o fio"): acima de 100 mil o prompt pede notas; acima de 120 mil sessão nova com notas, objetivo, decisão aberta e recado pendente no primeiro prompt; sem notas, as derivadas; abaixo de 100 mil nada muda; fato `handed_off`.
+- `Batch.test.ts` + `RecordBatch.test.ts` (aceite "10 itens, 10 destinos"): 10 → 10 destinos gravados; 9 → `BATCH_ITEMS_MISMATCH`, nenhum recibo; issue de outra conversa → `BATCH_ISSUE_NOT_IN_THREAD`; issue recém-forkada no mesmo turno é aceita; `ATTACHED` → steer; recibo uma vez.
+- `BatchDetector.test.ts`: listas, marcadores, menos de 3 não é lote, frase com números não é lista; lote não vai à triagem.
+- Modelo: `DIAGNOSIS` roda no modelo da tabela; troca do modelo da conversa não muda issue aberta; issue antiga herda.
+- Arquitetura: todo produtor de `AgentUsageEvent` passa `role`; todo produtor de item da fila passa `claimClass` (fixtures negativas).
+- Migração 0037 aplicada pelo `LibSqlDriver` real sobre linhas semeadas (`claim_class` preenchido pelo `kind`); pg 0008 aceita `WAITING_BUDGET`.
 - e2e: faixa de saúde no console com estado `HOLDING` (fixture).
 
 ## Rollout
 
 - Ordem: pg 0008 na nuvem → daemon (SQLite 0037 no boot, testada numa cópia do banco real antes).
-- O orçamento começa em **modo observação** (`CODM_AGENT_QUOTA_ENFORCE=false`, env declarada no manifesto com consumidores): calcula, mostra na saúde e grava o que teria segurado, sem segurar. Liga depois de uma semana de eventos com `role` ou por decisão do dono.
+- O orçamento começa em **modo observação** (`CODM_AGENT_QUOTA_ENFORCE=false`, env declarada com consumidores): calcula, mostra na saúde e grava `agent.quota.held { enforced: false }`, sem segurar. Liga por decisão do dono (pergunta 4).
 - As vagas 5 e 6 só abrem com o portão de disco satisfeito.
-- Itens antigos entram com `rank` NORMAL; issues antigas, `CHANGE` e modelo da conversa.
-- Reverter: `CODM_AGENT_QUOTA_ENFORCE=false` e `TURN_LANES[ISSUE].slots` volta a 4.
+- Itens antigos entram com a classe derivada do `kind`; issues antigas sem atributos herdam modelo da conversa e prioridade `NORMAL`.
+- Reverter sem build: `CODM_AGENT_QUOTA_ENFORCE=false`, `CODM_AGENT_ISSUE_SLOTS_MAX=4`.
 
 ## Como medi (antes)
 
@@ -235,6 +249,22 @@ Máquina: `sysctl hw.memsize hw.ncpu`, `df -h /System/Volumes/Data`, `memory_pre
 - Mudar a chave da pausa para provedor × modelo (só com dado do fato novo).
 - Plano antes de abrir lote (B2).
 - Passar de 6 vagas.
+
+## Revisão (skill `spec-review`, 2026-11-19)
+
+Revisão independente (agente sem contexto, só o spec e o código). Veredito inicial: **não pronto** (2 críticos, 7 moderados). Aplicado:
+- **Crítico — admissão por provedor antes do `claimNext` é impossível** (o provedor só é conhecido depois da reivindicação; por isso `pausedUntil` é global): orçamento passou a ser global da conta.
+- **Crítico — com o orçamento ligado o teto só desce** (a folga nunca acontece; recusa subconta turnos em voo; conta trocada sem identidade nos fatos; fronteira de janela perdida no reinício): sonda para cima declarada, corte com projeção dos turnos em voo, volta à semente na evidência de conta trocada, fronteira de janela gravada no fato de uso.
+- Recados juntos: porta com operações sobre conjunto e transacional, prefixo contíguo que para no "agora"/postura diferente, `firstClaim` e tentativa por item, entradas de item único do `RunIssueTurn`, aborter e dedup pelo último item.
+- Prioridade: o enqueue não lê a issue e o `agent` não lê `issue` em execução — classe do item virou campo declarado obrigatório (`MailboxClaimClass`, fim da leitura do prefixo `resume:`) e a prioridade da tarefa mora numa tabela do `agent` escrita no fork, lida por junção na reivindicação; `RecordBatch` não muda prioridade; a validação de destino do lote usa o fork (síncrono), não a linha de `issue_issues` (assíncrona).
+- Troca de sessão: o guarda recusa retomar acima do orçamento — dois limiares (100 mil pede notas, 120 mil troca).
+- `WAITING_BUDGET` derivado de `QUEUED` + `QuotaStatusReader`, com precedência.
+- pg 0008 recria `panel_issues_life_state_check`; lista das tabelas totais tocadas.
+- Simulação em laço fechado, semente fora da amostra, caso de recusa mesmo assim.
+- Triagem grava uso por um gravador do `agent` dentro do serviço.
+- Baixos: piso da reserva sem contar o orquestrador duas vezes; média em vez de mediana; balde de raciocínio nos pesos; `ModelChoice` discriminado; reversão da herança de modelo assumida; conjuntos fechados viraram enums; DTO do painel sem números absolutos; `limitedBy` nas vagas; arestas novas no mapa de contextos; opções de empate com estado; lote fora da triagem; máximo de vagas por env (reverter sem build).
+
+Perguntas abertas da revisão, respondidas no desenho: a reserva é um piso livre (não uma parte); o grupo de recados só junta mesma postura; admissão global aceita para instalação com dois CLIs (custo registrado); `Batch` é agregado próprio; o modo observação grava `agent.quota.held { enforced: false }`.
 
 ## Perguntar ao dono
 
