@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { IssueLifeState, IssueStatus, IssueTimelineItemKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus, IssueTimelineItemKind, PublishRunOutcome } from '@codm/contracts-typescript/wire/enums'
 import type { IssueTimelineItem } from '@shared/schemas'
 import { SyncPanel } from './SyncPanel'
 import { GetPanelBoard } from './GetPanelBoard'
@@ -94,6 +94,26 @@ describe('panel — sync, public reads, rotation', () => {
 		expect(crossGroup).toEqual(expect.objectContaining({ name: 'PANEL_NOT_FOUND' }))
 		expect(unknown).toEqual(expect.objectContaining({ name: 'PANEL_NOT_FOUND' }))
 		expect((await testBed.resolve(GetPanelBoard).execute({ token })).issues.map(row => row.issueId)).toEqual([ISSUE])
+	})
+
+	it('fase 4 (pg 0008) — a WAITING_BUDGET issue and the new timeline kinds are accepted and read back', async () => {
+		const timeline: IssueTimelineItem[] = [
+			TURN,
+			{ kind: IssueTimelineItemKind.BATCH_LINKED, id: 'b-1:2', at: '2026-11-13T10:01:00.000Z', batchCode: 'L-3', n: 2 },
+			{
+				kind: IssueTimelineItemKind.PUBLISH_RAN,
+				id: 'evt-2',
+				at: '2026-11-13T10:02:00.000Z',
+				outcome: PublishRunOutcome.SUCCEEDED,
+				exitCode: 0,
+				durationMs: 4200,
+			},
+		]
+		await sync(OWNER, [{ threadId: GROUP, name: 'A' }], [issue({ lifeState: IssueLifeState.WAITING_BUDGET, timeline })])
+		const token = await tokenOf(OWNER, GROUP)
+		expect((await testBed.resolve(GetPanelBoard).execute({ token })).issues[0]?.lifeState).toBe(IssueLifeState.WAITING_BUDGET)
+		const detail = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
+		expect(detail.timeline).toEqual(timeline)
 	})
 
 	it('a late retry never overwrites a newer snapshot', async () => {
