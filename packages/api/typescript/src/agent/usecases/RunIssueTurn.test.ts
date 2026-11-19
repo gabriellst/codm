@@ -12,6 +12,9 @@ import {
 	ProviderStatus,
 	StopKind,
 	PermissionPosture,
+	AgentModelId,
+	ProviderLimitWindow,
+	UsageRole,
 } from '@codm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
@@ -29,6 +32,8 @@ import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { AgentUsageEvent } from '../events/AgentUsageEvent'
+import { AgentProviderLimitEvent } from '../events/AgentProviderLimitEvent'
+import { ProviderLimitStatus } from '../enums/ProviderLimitStatus'
 import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, type TransportStopKind } from '../enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
@@ -340,28 +345,110 @@ describe('RunIssueTurn use case', () => {
 	 * every layer above dropped it (`shared_events` had 0 rows of it), so "what did this issue cost" could
 	 * only be answered by re-reading the CLI's transcripts by hand.
 	 */
-	it('persists the run usage as agent.turn.usage, stamped with this issue and owner', async () => {
+	it('persists the run usage as agent.turn.usage, stamped with this issue and owner — and WHO spent it', async () => {
 		const usage = { inputTokens: 3, outputTokens: 512, cacheCreationInputTokens: 4_000, cacheReadInputTokens: 120_000 }
+		const resetsAt = new Date('2026-11-19T15:00:00.000Z')
 		class UsageRunner extends AgentRunner {
 			async *run<OutputSchema extends ZodType | undefined = undefined>(
 				_request: AgentRunRequest<OutputSchema>,
 			): AsyncIterable<AgentRuntimeEvent> {
-				// Unstamped, as the real runner mints it — the use case is the layer that knows whose it is.
-				yield { type: 'fact', fact: new AgentUsageEvent({ payload: usage }) }
-				yield { type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-usage', failed: false } }
+				// The buckets ride the terminal record, as the real runner carries them (fase 4, S1) — the use case
+				// is the layer that knows whose they are.
+				yield {
+					type: 'finished',
+					result: {
+						outcome: AgentRunOutcome.COMPLETED,
+						replyText: 'ok',
+						sessionId: 'sess-usage',
+						failed: false,
+						usage,
+						providerLimits: [{ window: ProviderLimitWindow.FIVE_HOUR, status: ProviderLimitStatus.ALLOWED, resetsAt }],
+						limitWindows: [{ window: ProviderLimitWindow.FIVE_HOUR, resetsAt }],
+					},
+				}
 			}
 			async shutdown(): Promise<void> {}
 		}
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new UsageRunner()))
 		const issueId = testId('run-issue-turn', 'issue-usage')
 
-		await testBed.resolve(RunIssueTurn).execute(baseInput(issueId))
+		await testBed.resolve(RunIssueTurn).execute({ ...baseInput(issueId), model: AgentModelId.SONNET })
 
 		const recorded = await testBed.resolve(DomainEventRepository).findByType(AgentUsageEvent)
 		expect(recorded).toHaveLength(1)
 		expect(recorded[0]?.entityId).toBe(issueId)
 		expect(recorded[0]?.ownerId).toBe(ownerId)
-		expect(recorded[0]?.payload).toEqual(usage)
+		expect(recorded[0]?.payload).toEqual({
+			...usage,
+			role: UsageRole.ISSUE,
+			provider: ProviderKind.CLAUDE_CODE,
+			model: AgentModelId.SONNET,
+			windows: [{ window: ProviderLimitWindow.FIVE_HOUR, resetsAt: resetsAt.toISOString() }],
+		})
+		// An ALLOWED verdict only contributes its boundary — no limit fact.
+		expect(await testBed.resolve(DomainEventRepository).findByType(AgentProviderLimitEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * FASE 4 (S1) — a REFUSAL of the provider becomes a fact with its window, the run's role, provider and model:
+	 * the fact the learned ceiling is cut from. A WARNING is recorded too; neither needs usage to be reported.
+	 *
+	 * Falsifier: record only when usage is present and the refused case (no usage) finds no fact.
+	 */
+	it('a refusal or a warning of the provider is recorded as agent.provider.limit_observed, with the window', async () => {
+		const resetsAt = new Date('2026-11-19T15:00:00.000Z')
+		class LimitedRunner extends AgentRunner {
+			constructor(private readonly status: ProviderLimitStatus) {
+				super()
+			}
+			async *run<OutputSchema extends ZodType | undefined = undefined>(
+				_request: AgentRunRequest<OutputSchema>,
+			): AsyncIterable<AgentRuntimeEvent> {
+				yield {
+					type: 'finished',
+					result:
+						this.status === ProviderLimitStatus.REJECTED
+							? {
+									outcome: AgentRunOutcome.STOPPED,
+									replyText: '',
+									sessionId: 'sess-limit',
+									failed: false,
+									stop: { kind: StopKind.SERVER_ERROR, detail: 'limit', retryAfter: resetsAt.getTime() },
+									providerLimits: [{ window: ProviderLimitWindow.WEEKLY, status: this.status, resetsAt }],
+								}
+							: {
+									outcome: AgentRunOutcome.COMPLETED,
+									replyText: 'ok',
+									sessionId: 'sess-limit',
+									failed: false,
+									usage: { inputTokens: 1, outputTokens: 1, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
+									providerLimits: [{ window: ProviderLimitWindow.FIVE_HOUR, status: this.status }],
+								},
+				}
+			}
+			async shutdown(): Promise<void> {}
+		}
+		const events = testBed.resolve(DomainEventRepository)
+
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new LimitedRunner(ProviderLimitStatus.REJECTED)))
+		const refused = testId('run-issue-turn', 'issue-refused')
+		await testBed.resolve(RunIssueTurn).execute(baseInput(refused))
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new LimitedRunner(ProviderLimitStatus.WARNING)))
+		const warned = testId('run-issue-turn', 'issue-warned')
+		await testBed.resolve(RunIssueTurn).execute(baseInput(warned))
+
+		const limits = await events.findByType(AgentProviderLimitEvent)
+		expect(limits.find(fact => fact.entityId === refused)?.payload).toEqual({
+			provider: ProviderKind.CLAUDE_CODE,
+			model: AgentModelId.DEFAULT,
+			role: UsageRole.ISSUE,
+			window: ProviderLimitWindow.WEEKLY,
+			status: ProviderLimitStatus.REJECTED,
+			resetsAt: resetsAt.toISOString(),
+		})
+		expect(limits.find(fact => fact.entityId === warned)?.payload).toEqual(
+			expect.objectContaining({ window: ProviderLimitWindow.FIVE_HOUR, status: ProviderLimitStatus.WARNING }),
+		)
 	})
 
 	it('records the context the run measured, on the first turn and on the next', async () => {

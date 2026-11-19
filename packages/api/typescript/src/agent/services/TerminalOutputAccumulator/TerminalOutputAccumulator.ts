@@ -1,8 +1,7 @@
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
-import { AgentUsageEvent } from '../../events/AgentUsageEvent'
-import type { AgentFrame } from '../../types/AgentFrame'
-import type { AgentRunResult, AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
+import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
+import type { AgentRunResult, AgentRuntimeEvent, LimitWindowBoundary, ObservedProviderLimit } from '../../types/AgentRuntimeEvent'
 import type { TerminalSseFrame } from '../AgentStreamRegistry'
 
 /**
@@ -40,16 +39,15 @@ export interface TerminalAccumulatorContext {
  * identity by design (AC-1.11: identity rides inside the opaque MCP run token). Stamping and
  * persisting them belongs to the layer that holds the envelope, which is the base `Agent` of Fase 5.
  * Dropping them HERE, with that said out loud, is the honest state of this phase; folding them into
- * the transcript would invent identity the seam refuses to carry. The one exception is the run's
- * USAGE, which is KEPT (never stamped, never persisted here) and read back through `usage`, so the use
- * case holding the identity can write `agent.turn.usage` — until 04/11 nothing did, and the ledger had
- * zero rows of it.
+ * the transcript would invent identity the seam refuses to carry. The run's USAGE is not a fact at all
+ * since fase 4: it rides the terminal record (`AgentRunResult.usage`) and is read back through `usage`, with
+ * what the provider said about its limits (`providerLimit`, `limitWindows`), so the use case holding the
+ * identity writes `agent.turn.usage` with the role, the provider and the model.
  *
  * Testable in isolation — zero subprocess/DI dependencies.
  */
 export class TerminalOutputAccumulator {
 	private result: AgentRunResult | undefined
-	private runUsage: AgentUsageEvent['payload'] | undefined
 
 	constructor(private readonly ctx: TerminalAccumulatorContext) {}
 
@@ -58,9 +56,7 @@ export class TerminalOutputAccumulator {
 			case 'frame':
 				return this.transport(event.frame)
 			case 'fact':
-				// Never transported. The run's USAGE is kept — only kept — so the use case, which holds the
-				// identity this unstamped fact lacks, can stamp and persist it (see the class docstring).
-				if (event.fact instanceof AgentUsageEvent) this.runUsage = event.fact.payload
+				// Never transported (see the class docstring).
 				return null
 			case 'finished':
 				this.result = event.result
@@ -83,9 +79,19 @@ export class TerminalOutputAccumulator {
 		return this.result?.contextTokens
 	}
 
-	/** The run's token accounting, when the provider reported one — the payload of `agent.turn.usage`. */
-	get usage(): AgentUsageEvent['payload'] | undefined {
-		return this.runUsage
+	/** The run's token accounting, when the provider reported one — the buckets of `agent.turn.usage`. */
+	get usage(): AgentTurnUsage | undefined {
+		return this.result?.usage
+	}
+
+	/** The last usage-limit verdict on each window the provider named during the run (fase 4, S1). */
+	get providerLimits(): readonly ObservedProviderLimit[] {
+		return this.result?.providerLimits ?? []
+	}
+
+	/** The usage-window boundaries the provider reported during the run (fase 4, S1). */
+	get limitWindows(): readonly LimitWindowBoundary[] {
+		return this.result?.limitWindows ?? []
 	}
 
 	outcome(): TerminalOutcome {

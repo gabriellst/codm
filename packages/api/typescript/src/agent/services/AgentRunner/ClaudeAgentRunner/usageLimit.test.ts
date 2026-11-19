@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { InMemoryAgentIdentityService, MockLoggingService } from '@codm/core-typescript'
-import { PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { PermissionPosture, ProviderLimitWindow, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { ProviderLimitStatus } from '../../../enums/ProviderLimitStatus'
 import { AgentMessageRole, AgentName } from '../../../enums'
 import type { AgentRunResult, AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
 import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
@@ -106,5 +107,60 @@ describe('a turn the provider refused for its usage limit', () => {
 		])
 		expect(result.stop).toBeUndefined()
 		expect(result.contextTokens).toBe(52_002)
+	})
+
+	/**
+	 * FASE 4 (S1) — a WARNING ran the turn: it is reported on the terminal record (the budget cuts its ceiling from
+	 * it), and it NEVER becomes a retry instant — a warned turn that ended in an error retries whenever, like before.
+	 *
+	 * Falsifier: attach `retryAfter` on any non-ALLOWED verdict and this goes red.
+	 */
+	it('a WARNING is reported on the record and never pauses: no retryAfter', async () => {
+		const result = await runOn([
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed_warning', resetsAt: 1793397000, rateLimitType: 'seven_day' } },
+			ERROR_RESULT,
+		])
+		expect(result.stop?.retryAfter).toBeUndefined()
+		expect(result.providerLimits).toEqual([
+			{ window: ProviderLimitWindow.WEEKLY, status: ProviderLimitStatus.WARNING, resetsAt: new Date('2026-10-30T21:50:00.000Z') },
+		])
+	})
+
+	/**
+	 * PER WINDOW (fase 4, S1): a refusal of the 5-hour window is not erased by a later `allowed` line about the weekly
+	 * one — the run is still refused (retryAfter = the 5-hour reset) and the refusal is still reported for its window.
+	 *
+	 * Falsifier: keep only the last line's verdict and both assertions go red.
+	 */
+	it('a refusal of one window survives a later allowed line about another', async () => {
+		const result = await runOn([
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1793397000, rateLimitType: 'five_hour' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: 1793800000, rateLimitType: 'seven_day' } },
+			ERROR_RESULT,
+		])
+		expect(result.stop?.retryAfter).toBe(Date.parse('2026-10-30T21:50:00.000Z'))
+		expect(result.providerLimits?.find(limit => limit.window === ProviderLimitWindow.FIVE_HOUR)?.status).toBe(ProviderLimitStatus.REJECTED)
+		expect(result.providerLimits?.find(limit => limit.window === ProviderLimitWindow.WEEKLY)?.status).toBe(ProviderLimitStatus.ALLOWED)
+	})
+
+	it('the record carries the run usage, the last verdict and the boundary of EVERY window named — allowed lines too', async () => {
+		const result = await runOn([
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: 1793397000, rateLimitType: 'five_hour' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: 1793800000, rateLimitType: 'seven_day' } },
+			{
+				type: 'result',
+				subtype: 'success',
+				result: 'ok',
+				session_id: 'sess-limit',
+				stop_reason: 'end_turn',
+				usage: { input_tokens: 2, output_tokens: 10, cache_creation_input_tokens: 9188, cache_read_input_tokens: 15273 },
+			},
+		])
+		expect(result.usage).toEqual({ inputTokens: 2, outputTokens: 10, cacheCreationInputTokens: 9188, cacheReadInputTokens: 15273 })
+		expect(result.providerLimits?.map(limit => limit.status)).toEqual([ProviderLimitStatus.ALLOWED, ProviderLimitStatus.ALLOWED])
+		expect(result.limitWindows).toEqual([
+			{ window: ProviderLimitWindow.FIVE_HOUR, resetsAt: new Date(1793397000 * 1000) },
+			{ window: ProviderLimitWindow.WEEKLY, resetsAt: new Date(1793800000 * 1000) },
+		])
 	})
 })

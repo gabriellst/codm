@@ -11,6 +11,9 @@ import {
 	StopResolution,
 	PermissionPosture,
 	TranscriptKind,
+	AgentModelId,
+	ProviderLimitWindow,
+	UsageRole,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -22,6 +25,8 @@ import { AgentRunner } from '../services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { AgentRunOutcome } from '../enums'
 import { AgentUsageEvent } from '../events/AgentUsageEvent'
+import { AgentProviderLimitEvent } from '../events/AgentProviderLimitEvent'
+import { ProviderLimitStatus } from '../enums/ProviderLimitStatus'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../types/AgentRuntimeEvent'
 import { RunOrchestratorTurn } from './RunOrchestratorTurn'
@@ -426,7 +431,6 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 				async *run<OutputSchema extends ZodType | undefined = undefined>(
 					_request: AgentRunRequest<OutputSchema>,
 				): AsyncIterable<AgentRuntimeEvent> {
-					yield { type: 'fact', fact: new AgentUsageEvent({ payload: usage }) }
 					yield {
 						type: 'finished',
 						result: this.stop
@@ -436,8 +440,10 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 									sessionId: 'sess-u',
 									failed: false,
 									stop: { kind: StopKind.PERMISSION_DENIED, detail: 'blocked' },
+									usage,
+									providerLimits: [{ window: ProviderLimitWindow.FIVE_HOUR, status: ProviderLimitStatus.REJECTED }],
 								}
-							: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-u', failed: false },
+							: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-u', failed: false, usage },
 					}
 				}
 				async shutdown(): Promise<void> {}
@@ -453,7 +459,18 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 				)
 				expect(recorded).toHaveLength(1)
 				expect(recorded[0]?.ownerId).toBe(MOCK_CLOUD_OWNER_ID)
-				expect(recorded[0]?.payload).toEqual(usage)
+				// WHO spent it (fase 4, S1): the orchestrator, on the thread's provider and model.
+				expect(recorded[0]?.payload).toEqual({
+					...usage,
+					role: UsageRole.ORCHESTRATOR,
+					provider: ProviderKind.CLAUDE_CODE,
+					model: AgentModelId.DEFAULT,
+				})
+				// …and the refusal of the stopped run, as a limit fact with the orchestrator's role.
+				const limits = (await testBed.resolve(DomainEventRepository).findByType(AgentProviderLimitEvent)).filter(
+					e => e.entityId === thread.id.value,
+				)
+				expect(limits.map(e => e.payload.role)).toEqual(stop ? [UsageRole.ORCHESTRATOR] : [])
 			}
 		})
 

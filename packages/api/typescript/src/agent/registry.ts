@@ -26,6 +26,7 @@ import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } 
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
 import { WorktreeSightings } from './services/WorktreeSightings'
+import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -134,6 +135,14 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: GitWorktreeProbe, mock: MockGitWorktreeProbe, integration: MockGitWorktreeProbe, real: SystemGitWorktreeProbe },
 	// The hook's worktree sightings (fase 4, item 1): one in-memory instance per process, like the kill switch above.
 	{ token: WorktreeSightings, mock: WorktreeSightings, integration: WorktreeSightings, real: WorktreeSightings },
+	// What a triage run spent (fase 4, S1): `agent.turn.usage` with role TRIAGE, in its own unit of work. The same
+	// in every env — the env split lives in the database driver under it.
+	{
+		token: TriageUsageRecorder,
+		mock: FactTriageUsageRecorder,
+		integration: FactTriageUsageRecorder,
+		real: FactTriageUsageRecorder,
+	},
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

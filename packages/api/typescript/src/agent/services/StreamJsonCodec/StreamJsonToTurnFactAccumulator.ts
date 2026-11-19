@@ -1,7 +1,7 @@
 import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
 import { isCodmTool } from '../../mcp/wire'
-import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
-import type { AgentFrame } from '../../types/AgentFrame'
+import { AgentMessageEvent, AgentToolCallEvent, type AgentTurnFact } from '../../events'
+import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
 
 export interface TurnFactAccumulatorOptions {
 	/**
@@ -57,11 +57,12 @@ function asInput(value: unknown): Record<string, unknown> {
  * sub-agent's work is summarized in the PARENT's own `tool_use`/`tool_result` pair, which is scoped
  * to `null` and therefore does mint.
  *
- * ### Rule 8 — usage is minted ONCE, from the terminal aggregate
- * There is no `usage` frame. `AgentUsageEvent` is minted from the `result` frame's already-aggregated
- * four buckets; folding the per-assistant `message.usage` copies would count the same tokens twice.
- * A defensive guard makes a second `result` frame (which the corpus never shows) a no-op rather than
- * a second event.
+ * ### Rule 8 — usage is KEPT ONCE, from the terminal aggregate (and is no longer a fact here)
+ * There is no `usage` frame. The run's usage is the `result` frame's already-aggregated buckets; folding the
+ * per-assistant `message.usage` copies would count the same tokens twice. A defensive guard keeps the FIRST
+ * `result` frame's (the corpus never shows a second). Since fase 4 it is read back through `usage` and carried on
+ * the runner's terminal record (`AgentRunResult.usage`): the fact `agent.turn.usage` needs WHO spent it (role,
+ * provider, model), which only the turn that runs the agent knows — so that turn is its one producer.
  *
  * ### `AgentMessageEvent` cardinality — one per text BLOCK, minted mid-turn
  * `messageId` is the provider's message id, and the schema calls it the dedup key against PARTIAL
@@ -75,7 +76,12 @@ function asInput(value: unknown): Record<string, unknown> {
 export class StreamJsonToTurnFactAccumulator {
 	private readonly inflight = new Map<string, InflightToolCall>()
 	private readonly now: () => Date
-	private usageMinted = false
+	private runUsage: AgentTurnUsage | undefined
+
+	/** The run's usage — the terminal `result` frame's aggregate, once one arrived. See Rule 8. */
+	get usage(): AgentTurnUsage | undefined {
+		return this.runUsage
+	}
 
 	constructor(private readonly options: TurnFactAccumulatorOptions) {
 		this.now = options.now ?? (() => new Date())
@@ -128,13 +134,9 @@ export class StreamJsonToTurnFactAccumulator {
 			}
 
 			case 'result': {
-				if (this.usageMinted) return null
-				this.usageMinted = true
-				return new AgentUsageEvent({
-					entityId: this.options.entityId,
-					ownerId: this.options.ownerId,
-					payload: frame.usage,
-				})
+				// The run's usage is kept, not minted (see Rule 8) — the first terminal aggregate wins.
+				this.runUsage ??= frame.usage
+				return null
 			}
 
 			// TRANSPORT-only by construction: partial deltas would double-count the consolidated text,

@@ -7,6 +7,8 @@ import { TriageAgent, TriageOutputSchema } from '../../agents/TriageAgent'
 import { TriageDecision } from '../../enums'
 import { AgentRunnerFactory } from '../AgentRunnerFactory'
 import { ProviderDetector } from '../ProviderDetector'
+import { TriageUsageRecorder } from '../TriageUsageRecorder'
+import type { AgentRunResult } from '../../types/AgentRuntimeEvent'
 import {
 	InboundTriage,
 	TRIAGE_HOLD_MS,
@@ -45,6 +47,7 @@ export class ModelInboundTriage extends InboundTriage {
 		private readonly detector: ProviderDetector,
 		private readonly cloudSession: CloudSession,
 		private readonly logging: LoggingService,
+		private readonly usage: TriageUsageRecorder,
 	) {
 		super()
 	}
@@ -58,6 +61,24 @@ export class ModelInboundTriage extends InboundTriage {
 			fallback,
 		})
 
+		// WHAT THE RUN SPENT (fase 4, S1) — recorded as `role: TRIAGE` the moment the run finishes, whatever its verdict
+		// (a run that failed validation spent its tokens all the same). Awaited before answering when the run finished
+		// in time; a run the budget abandoned records whenever it ends, in the background.
+		let recording: Promise<void> | undefined
+		const account = (provider: InboundTriageRequest['provider'], model: ReturnType<typeof smallModelFor>) => (result: AgentRunResult) => {
+			recording = this.usage
+				.record({ ownerId: request.ownerId, threadId: request.threadId, provider, model, result })
+				.catch((error: unknown) => {
+					this.logging.warn({
+						content: {
+							message: 'triage usage not recorded',
+							threadId: request.threadId,
+							reason: error instanceof Error ? error.message : String(error),
+						},
+					})
+				})
+		}
+
 		try {
 			// The dispatcher's login gate does not cover this path, so it is asked here: an install that is
 			// not entitled spawns no CLI — the orchestrator's item simply waits for the login like every other.
@@ -65,6 +86,7 @@ export class ModelInboundTriage extends InboundTriage {
 			const detection = await this.detector.resolve(request.provider)
 			if (!detection || detection.status !== ProviderStatus.DETECTED) return toOrchestrator('provider not detected')
 			const runner = this.runners.for(request.provider)
+			const model = smallModelFor(request.provider)
 
 			const output = await this.withTimeout(signal =>
 				this.agent.triage(
@@ -80,11 +102,11 @@ export class ModelInboundTriage extends InboundTriage {
 						openIssues: request.openIssues,
 						recent: request.recent,
 						now: request.now,
-						model: smallModelFor(request.provider),
+						model,
 						binaryPath: detection.binaryPath,
 						caps: detection.caps,
 					},
-					{ signal },
+					{ signal, onFinished: account(request.provider, model) },
 				),
 			)
 			if (output === undefined) return toOrchestrator(`timeout after ${this.timeoutMs} ms`)
@@ -101,6 +123,8 @@ export class ModelInboundTriage extends InboundTriage {
 			const reason = error instanceof Error ? error.message : String(error)
 			this.logging.info({ content: { message: 'triage failed — the orchestrator answers', threadId: request.threadId, reason } })
 			return toOrchestrator(`failed: ${reason}`)
+		} finally {
+			await recording
 		}
 	}
 

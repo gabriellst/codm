@@ -1,8 +1,10 @@
+import { ProviderLimitWindow } from '@codm/contracts-typescript/wire/enums'
 import { describe, expect, it } from 'bun:test'
 import { AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { TerminalOutputAccumulator } from './TerminalOutputAccumulator'
 import { AgentMessageRole, AgentRunOutcome, type TransportStopKind } from '../../enums'
-import { AgentMessageEvent, AgentUsageEvent } from '../../events'
+import { AgentMessageEvent } from '../../events'
+import { ProviderLimitStatus } from '../../enums/ProviderLimitStatus'
 import type { AgentFrame } from '../../types/AgentFrame'
 import type { AgentRunResult, AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
 
@@ -86,17 +88,29 @@ describe('TerminalOutputAccumulator (two-stream split over AgentRuntimeEvent)', 
 		expect(acc.feed({ type: 'fact', fact })).toBeNull()
 	})
 
-	it('keeps the run usage for the layer that holds identity — and still transports nothing for it', () => {
+	it('reads the run usage and the limit verdict off the terminal record — and transports nothing for them', () => {
 		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
 		const usage = { inputTokens: 2, outputTokens: 40, cacheCreationInputTokens: 9_188, cacheReadInputTokens: 15_273 }
+		const resetsAt = new Date('2026-11-19T15:00:00.000Z')
 		expect(acc.usage).toBeUndefined()
+		expect(acc.limitWindows).toEqual([])
 
-		expect(acc.feed({ type: 'fact', fact: new AgentUsageEvent({ payload: usage }) })).toBeNull()
 		expect(
 			acc.feed({ type: 'fact', fact: new AgentMessageEvent({ payload: { messageId: 'm', role: AgentMessageRole.ASSISTANT, text: 'x' } }) }),
 		).toBeNull()
+		expect(
+			acc.feed(
+				finished({
+					usage,
+					providerLimits: [{ window: ProviderLimitWindow.FIVE_HOUR, status: ProviderLimitStatus.WARNING, resetsAt }],
+					limitWindows: [{ window: ProviderLimitWindow.FIVE_HOUR, resetsAt }],
+				}),
+			),
+		).toBeNull()
 
 		expect(acc.usage).toEqual(usage)
+		expect(acc.providerLimits.map(limit => limit.status)).toEqual([ProviderLimitStatus.WARNING])
+		expect(acc.limitWindows).toEqual([{ window: ProviderLimitWindow.FIVE_HOUR, resetsAt }])
 	})
 
 	it('marks the run exited on the terminal event and exposes the reported session id', () => {

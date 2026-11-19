@@ -12,7 +12,7 @@ import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentRunResult, AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
 import type { ProviderBinarySpec } from '../../../types/ProviderBinarySpec'
 import type { ProviderCapabilities } from '../../../types/ProviderCapabilities'
-import { StreamJsonCodec, StreamJsonToTurnFactAccumulator, type RateLimitRecord, type TerminalResultRecord } from '../../StreamJsonCodec'
+import { RateLimitObservations, StreamJsonCodec, StreamJsonToTurnFactAccumulator, type TerminalResultRecord } from '../../StreamJsonCodec'
 import { AgentRunner } from '../AgentRunner'
 import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } from './AgentProcess'
 // The server key is single-sourced in `mcp/wire.ts` — a LEAF module — because the runner, the MCP
@@ -437,8 +437,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		let sessionId: string | null = null
 		/** The LAST main-agent call's prompt size — see `DecodedLine.contextTokens`. */
 		let contextTokens: number | undefined
-		/** The LAST usage-limit verdict the CLI reported — see `DecodedLine.rateLimit`. */
-		let rateLimit: RateLimitRecord | undefined
+		/** The usage-limit verdicts the CLI reported — the last one, and every window boundary (`DecodedLine.rateLimit`). */
+		const limits = new RateLimitObservations()
 		let stdinClosed = false
 		let watchdogFired = false
 		/**
@@ -539,7 +539,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 				let sawFrame = false
 				for (const decoded of codec.push(settled.value)) {
 					if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
-					if (decoded.rateLimit) rateLimit = decoded.rateLimit
+					limits.observe(decoded.rateLimit)
 					// A compaction is about to go silent for as long as the summary takes: the announcement
 					// renews the clock like a frame does. Nothing else that is not a frame does — a retry
 					// line repeating forever must still be bounded by the watchdog.
@@ -566,7 +566,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 			for (const decoded of codec.flush()) {
 				if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
-				if (decoded.rateLimit) rateLimit = decoded.rateLimit
+				limits.observe(decoded.rateLimit)
 				for (const frame of decoded.frames) {
 					if (frame.kind === 'tool_result' && frame.summary.includes(REGRET_WINDOW_REASON_PREFIX)) regretRefused.push(frame.toolUseId)
 					yield { type: 'frame', frame }
@@ -593,18 +593,26 @@ export class ClaudeAgentRunner extends AgentRunner {
 			// Orphan tool calls become FAILED here — the turn is over and they never reported a result.
 			for (const fact of accumulator.flush()) yield { type: 'fact', fact }
 
+			const windows = limits.windows
 			yield {
 				type: 'finished',
-				result: this.buildResult(request, {
-					terminal: terminal && withoutRegretRefusals(terminal, regretRefused),
-					sessionId,
-					contextTokens,
-					rateLimit,
-					exitCode,
-					watchdogFired,
-					diedMidStream,
-					stderr: stderrChunks.join(''),
-				}),
+				result: {
+					...this.buildResult(request, {
+						terminal: terminal && withoutRegretRefusals(terminal, regretRefused),
+						sessionId,
+						contextTokens,
+						retryAfter: limits.retryAfter,
+						exitCode,
+						watchdogFired,
+						diedMidStream,
+						stderr: stderrChunks.join(''),
+					}),
+					// WHAT THE RUN SPENT and what the provider said about its windows (fase 4, S1) — carried on the
+					// terminal record for the turn that knows whose run it was to stamp.
+					...(accumulator.usage && { usage: accumulator.usage }),
+					...(limits.limits.length > 0 && { providerLimits: limits.limits }),
+					...(windows.length > 0 && { limitWindows: windows }),
+				},
 			}
 		} finally {
 			request.signal?.removeEventListener('abort', onAbort)
@@ -638,7 +646,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			terminal?: TerminalResultRecord
 			sessionId: string | null
 			contextTokens?: number
-			rateLimit?: RateLimitRecord
+			/** When a refused run can first be retried — see `RateLimitObservations.retryAfter`. */
+			retryAfter?: Date
 			exitCode: number
 			watchdogFired: boolean
 			/** The child was reaped while its stdout was still open — see the field in `run`. */
@@ -652,7 +661,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		// ends that turn as an ordinary error result. What makes it different is the instant the window
 		// resets — the only retry that can succeed — and it is attached here, from the structured
 		// verdict, never from the error's prose.
-		const resetsAt = observed.rateLimit?.rejected ? observed.rateLimit.resetsAt : null
+		// Only a REFUSAL carries a retry instant: a WARNING (fase 4) ran the turn and must never pause anything.
+		const resetsAt = observed.retryAfter
 		const stop = classified && resetsAt ? { ...classified, retryAfter: resetsAt.getTime() } : classified
 		const contextTokens = observed.contextTokens
 

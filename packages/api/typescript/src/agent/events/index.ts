@@ -18,9 +18,10 @@ export { AgentMessageEvent, AgentMessageEventSchema } from './AgentMessageEvent'
 export { AgentToolCallEvent, AgentToolCallEventSchema } from './AgentToolCallEvent'
 export { AgentUsageEvent, AgentUsageEventSchema } from './AgentUsageEvent'
 
+export { AgentProviderLimitEvent, AgentProviderLimitEventSchema } from './AgentProviderLimitEvent'
+
 import type { AgentMessageEvent } from './AgentMessageEvent'
 import type { AgentToolCallEvent } from './AgentToolCallEvent'
-import type { AgentUsageEvent } from './AgentUsageEvent'
 
 /**
  * Everything the accumulator can consolidate out of one turn's transport frames.
@@ -33,8 +34,13 @@ import type { AgentUsageEvent } from './AgentUsageEvent'
  * artifact recorded). Those are the THIRD category — they arrive as MCP tool calls, are persisted by
  * the use case that serves the call, and reuse the event classes that already exist. Adding them
  * here would be the double-publish §4.3 rule 3 exists to prevent.
+ *
+ * Nor the run's USAGE, since fase 4 (S1). It used to be minted here unstamped and minted AGAIN by the use case
+ * that knew whose turn it was; now the runner carries the buckets on its terminal record
+ * (`AgentRunResult.usage`) and `agent.turn.usage` has exactly one producer per role — the turn that knows the
+ * role, the provider and the model (`RunIssueTurn`, `RunOrchestratorTurn`, `TriageUsageRecorder`).
  */
-export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent | AgentUsageEvent
+export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent
 export { IssueForkedEvent, IssueForkedEventSchema } from './IssueForkedEvent'
 export { OrchestratorRepliedEvent, OrchestratorRepliedEventSchema } from './OrchestratorRepliedEvent'
 export { RegretWindowClosedEvent, RegretWindowClosedEventSchema } from './RegretWindowClosedEvent'

@@ -11,6 +11,7 @@ import {
 	PermissionPosture,
 	ProviderKind,
 	ProviderStatus,
+	UsageRole,
 } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_PARTICIPANT_ID } from '@thread/objects'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
@@ -26,7 +27,9 @@ import { AgentSession } from '../entities/AgentSession'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
-import { AgentUsageEvent } from '../events/AgentUsageEvent'
+import type { AgentTurnUsage } from '../types/AgentFrame'
+import type { LimitWindowBoundary, ObservedProviderLimit } from '../types/AgentRuntimeEvent'
+import { usageFactsOf } from '../utils/usageFacts'
 import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { ISSUE_SIGNAL_TEXT_MAX } from './RequestFeedback'
 import type { AgentApplicationErrors } from '../errors'
@@ -155,7 +158,11 @@ interface RunObservations {
 	/** The session's context after the run, when the provider measured it. */
 	contextTokens: number | undefined
 	/** The run's token accounting, when the provider reported one. */
-	usage: AgentUsageEvent['payload'] | undefined
+	usage: AgentTurnUsage | undefined
+	/** The last usage-limit verdict on each window the provider named (fase 4, S1). */
+	providerLimits: readonly ObservedProviderLimit[]
+	/** The usage-window boundaries the provider reported (fase 4, S1). */
+	limitWindows: readonly LimitWindowBoundary[]
 }
 
 /**
@@ -280,12 +287,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			if (sessionId) {
 				await this.withTransaction(tx, async tx => {
 					await this.upsertSessionRecord(input, sessionId, reported?.contextTokens, tx)
-					if (reported?.usage) {
-						await this.domainEventRepository.save(
-							new AgentUsageEvent({ entityId: input.issueId, ownerId: input.ownerId, payload: reported.usage }),
-							tx,
-						)
-					}
+					if (reported) for (const fact of this.spendFacts(input, reported)) await this.domainEventRepository.save(fact, tx)
 				})
 			}
 			this.logging.info({
@@ -305,14 +307,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		await this.withTransaction(tx, async tx => {
 			await this.persistOutcome(input, observed.outcome, stopId, tx)
 			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, observed.contextTokens, tx)
-			// STAMPED HERE, the layer that knows whose turn it was: the runner mints this fact unstamped by
-			// design. Persisted for every outcome — a stopped turn spent its tokens all the same.
-			if (observed.usage) {
-				await this.domainEventRepository.save(
-					new AgentUsageEvent({ entityId: input.issueId, ownerId: input.ownerId, payload: observed.usage }),
-					tx,
-				)
-			}
+			// STAMPED HERE, the layer that knows whose turn it was (role ISSUE, provider, model): the runner only
+			// carries the buckets. Persisted for every outcome — a stopped turn spent its tokens all the same — and
+			// with it what the provider said about its limits (a refusal or a warning, fase 4).
+			for (const fact of this.spendFacts(input, observed)) await this.domainEventRepository.save(fact, tx)
 		})
 
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
@@ -431,7 +429,23 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			agentSessionId: accumulator.sessionId,
 			contextTokens: accumulator.contextTokens,
 			usage: accumulator.usage,
+			providerLimits: accumulator.providerLimits,
+			limitWindows: accumulator.limitWindows,
 		}
+	}
+
+	/** What this run cost, as facts: an ISSUE turn on this issue, on its provider and model (`usageFactsOf`). */
+	private spendFacts(input: this['input'], observed: RunObservations) {
+		return usageFactsOf({
+			entityId: input.issueId,
+			ownerId: input.ownerId,
+			role: UsageRole.ISSUE,
+			provider: input.provider,
+			model: input.model ?? AgentModelId.DEFAULT,
+			usage: observed.usage,
+			providerLimits: observed.providerLimits,
+			limitWindows: observed.limitWindows,
+		})
 	}
 
 	/**

@@ -2,7 +2,7 @@
  * The PURE fold: `AgentFrame` → `AgentTurnFact | null` (GOAL-agent-abstraction §4.3 rule 2).
  *
  * Covers AC-2.2 (sub-agent scoping, orphan `tool_use` → FAILED on `flush()`), AC-2.4 (the
- * anti-double-publish guard) and AC-2.7 (exactly ONE `AgentUsageEvent`, from the terminal aggregate,
+ * anti-double-publish guard) and AC-2.7 (exactly ONE usage aggregate — kept, since fase 4 — from the terminal frame,
  * carrying all four buckets).
  *
  * Nothing here starts a process, reads a file or reads a clock — the clock is injected. That is the
@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'bun:test'
 import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
-import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
+import { AgentMessageEvent, AgentToolCallEvent, type AgentTurnFact } from '../../events'
 import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
 import { StreamJsonToTurnFactAccumulator } from './StreamJsonToTurnFactAccumulator'
 import { wireToolName } from '../../mcp/wire'
@@ -243,8 +243,13 @@ describe('StreamJsonToTurnFactAccumulator — ANTI-DOUBLE-PUBLISH (AC-2.4, §4.3
 	})
 })
 
-describe('StreamJsonToTurnFactAccumulator — usage is minted ONCE and is not lossy (AC-2.7, §4.3 rule 8)', () => {
-	it('emits exactly ONE AgentUsageEvent, from the terminal aggregate, over a multi-assistant turn', () => {
+describe('StreamJsonToTurnFactAccumulator — usage is kept ONCE and is not lossy (AC-2.7, §4.3 rule 8)', () => {
+	/**
+	 * Fase 4 (S1): the usage is no longer a fact minted here — the role, provider and model it needs are known only
+	 * to the turn that runs the agent — so the accumulator KEEPS the terminal aggregate and the runner carries it on
+	 * `AgentRunResult.usage`. The four AC-2.7 properties still hold, asserted on what is kept.
+	 */
+	it('keeps exactly the terminal aggregate over a multi-assistant turn, and mints no usage fact', () => {
 		const accumulator = makeAccumulator()
 
 		// Several assistant messages, each of which carried its OWN `message.usage` on the wire. The
@@ -257,63 +262,45 @@ describe('StreamJsonToTurnFactAccumulator — usage is minted ONCE and is not lo
 			resultFrame(MEASURED_USAGE),
 		])
 
-		const usageFacts = facts.filter(f => f instanceof AgentUsageEvent)
-		expect(usageFacts).toHaveLength(1)
+		expect(facts.every(f => f instanceof AgentMessageEvent || f instanceof AgentToolCallEvent)).toBe(true)
+		expect(accumulator.usage).toEqual(MEASURED_USAGE)
 	})
 
-	it('carries all FOUR measured buckets through to the event — the assertion D4 would have failed', () => {
+	it('keeps all FOUR measured buckets — the assertion D4 would have failed', () => {
 		const accumulator = makeAccumulator()
+		fold(accumulator, [resultFrame(MEASURED_USAGE)])
 
-		const usage = fold(accumulator, [resultFrame(MEASURED_USAGE)]).find(f => f instanceof AgentUsageEvent)
-
-		// The Fase-1 event had only {inputTokens, outputTokens}. Against that contract this assertion
-		// fails, which is exactly why it is written this way: it proves the D4 repair landed end to
-		// end, in the fold, and not merely in the schema.
-		expect(usage?.payload).toEqual({ inputTokens: 2, outputTokens: 10, cacheCreationInputTokens: 9188, cacheReadInputTokens: 15273 })
-
+		expect(accumulator.usage).toEqual({ inputTokens: 2, outputTokens: 10, cacheCreationInputTokens: 9188, cacheReadInputTokens: 15273 })
 		// The correctness stake, stated as arithmetic: persisting `inputTokens` alone would record 2
 		// for the 24463 input tokens actually consumed — a cost quota wrong by ~4 orders of magnitude.
-		const p = usage?.payload as { inputTokens: number; cacheCreationInputTokens: number; cacheReadInputTokens: number }
-		expect(p.inputTokens + p.cacheCreationInputTokens + p.cacheReadInputTokens).toBe(24463)
+		const kept = accumulator.usage
+		expect((kept?.inputTokens ?? 0) + (kept?.cacheCreationInputTokens ?? 0) + (kept?.cacheReadInputTokens ?? 0)).toBe(24463)
 	})
 
-	it('does not mint a SECOND usage event if a second result frame ever arrives', () => {
+	it('keeps the FIRST aggregate if a second result frame ever arrives — no double count', () => {
 		const accumulator = makeAccumulator()
-
-		const facts = fold(accumulator, [resultFrame(MEASURED_USAGE), resultFrame(MEASURED_USAGE)])
-
-		// The corpus never shows two — `type === 'result'` is one-per-run by construction (D1). The
-		// guard is defensive: double-counting tokens must not be reachable by a wire surprise.
-		expect(facts.filter(f => f instanceof AgentUsageEvent)).toHaveLength(1)
+		fold(accumulator, [resultFrame(MEASURED_USAGE), resultFrame({ ...MEASURED_USAGE, outputTokens: 999 })])
+		// The corpus never shows two — `type === 'result'` is one-per-run by construction (D1).
+		expect(accumulator.usage).toEqual(MEASURED_USAGE)
 	})
 
 	it('records zeroes for a provider that does not cache, rather than treating them as unknown', () => {
 		const accumulator = makeAccumulator()
-
-		const usage = fold(accumulator, [
-			resultFrame({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 }),
-		]).find(f => f instanceof AgentUsageEvent)
-
-		// Arithmetically CORRECT, not missing: with no cache all input lands in `inputTokens` and the
-		// sum still holds. This is why the four fields are required rather than optional.
-		expect(usage?.payload).toEqual({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 })
+		fold(accumulator, [resultFrame({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 })])
+		expect(accumulator.usage).toEqual({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 })
 	})
 
 	it('mints outbox-bound domain events, not POJOs', () => {
 		const accumulator = makeAccumulator()
 		accumulator.apply(toolUse('toolu_1', 'Read'))
 
-		const facts = [
-			accumulator.apply(textFrame('m', 'hi')),
-			accumulator.apply(toolResult('toolu_1', true)),
-			accumulator.apply(resultFrame()),
-		]
+		const facts = [accumulator.apply(textFrame('m', 'hi')), accumulator.apply(toolResult('toolu_1', true))]
 
 		// Every member of the union is a BaseDomainEvent subclass — a POJO would reach the mediator
 		// with no class to be rehydrated into.
 		expect(facts[0]).toBeInstanceOf(AgentMessageEvent)
 		expect(facts[1]).toBeInstanceOf(AgentToolCallEvent)
-		expect(facts[2]).toBeInstanceOf(AgentUsageEvent)
+		expect(accumulator.apply(resultFrame())).toBeNull()
 		for (const fact of facts) expect(fact?.ownerId).toBe(OWNER)
 	})
 })

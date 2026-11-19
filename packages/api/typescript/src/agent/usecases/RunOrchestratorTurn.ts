@@ -22,6 +22,7 @@ import {
 	StopKind,
 	TranscriptKind,
 	type Language,
+	UsageRole,
 } from '@codm/contracts-typescript/wire/enums'
 import { modelsFor } from '@catalog'
 import { CloudSession } from '@shared/services/CloudSession'
@@ -42,7 +43,7 @@ import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MessageVia } from '../enums'
 import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
-import { AgentUsageEvent } from '../events/AgentUsageEvent'
+import { usageFactsOf } from '../utils/usageFacts'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
 import { retriesInPlace } from '../enums/TransportStopKind'
@@ -616,12 +617,22 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 
 		const outcome = accumulator.outcome()
 		// BEFORE the outcome branches, because a stopped turn returns early and spent its tokens all the same.
-		// Stamped here — the runner mints the fact unstamped by design; this is the layer that knows whose.
-		const usage = accumulator.usage
-		if (usage) {
-			await this.withTransaction(tx, tx =>
-				this.domainEventRepository.save(new AgentUsageEvent({ entityId: input.threadId, ownerId: input.ownerId, payload: usage }), tx),
-			)
+		// Stamped here, the layer that knows whose run it was (role ORCHESTRATOR, provider, model) — the runner only
+		// carries the buckets — with what the provider said about its limits (a refusal or a warning, fase 4).
+		const spend = usageFactsOf({
+			entityId: input.threadId,
+			ownerId: input.ownerId,
+			role: UsageRole.ORCHESTRATOR,
+			provider: input.provider,
+			model: input.model ?? AgentModelId.DEFAULT,
+			usage: accumulator.usage,
+			providerLimits: accumulator.providerLimits,
+			limitWindows: accumulator.limitWindows,
+		})
+		if (spend.length > 0) {
+			await this.withTransaction(tx, async tx => {
+				for (const fact of spend) await this.domainEventRepository.save(fact, tx)
+			})
 		}
 		// A stopped turn said nothing worth delivering. Logged rather than thrown: the dispatcher would
 		// treat a throw as a failed turn and retry it, and re-running a conversational turn produces a
