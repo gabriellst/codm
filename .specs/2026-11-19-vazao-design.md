@@ -276,6 +276,50 @@ select (entity_id in (select id from issue_issues)) as is_issue, count(*), sum(j
 Ponderação usada: entrada 1, escrita de cache 1,25, leitura de cache 0,1, saída 5 (proporção de preço público; suposição).
 Máquina: `sysctl hw.memsize hw.ncpu`, `df -h /System/Volumes/Data`, `memory_pressure`. Forma do `rate_limit_info`: contagem de chaves nas transcrições locais do CLI.
 
+## Como medi (depois)
+
+Medido no código desta fase (S10, 19/11), sem banco vivo: só o que os testes imprimem sobre a fixture anonimizada (`tests/fixtures/quota/usage-2026-11.json`, a mesma do "antes") e os testes de aceite. O que só a instalação real responde está nas consultas abaixo — **não há número "depois" de produção ainda**.
+
+**Critério de aceite da fase** (`tests/flows/fase4-acceptance.test.ts`, os quatro juntos num test bed `integration`, dispatcher real, orçamento LIGADO no teste):
+- *Segura tarefa nova antes de estourar a janela, com eventos reais:* nas **6** recusas de 5 h fora da amostra (W46–W47) cuja janela inteira está na fixture, com o gasto real da semana até **1 min antes** de cada recusa reproduzido no ledger, o dispatcher **não reivindica** a tarefa nova e responde a mensagem da conversa (6/6). A semente de W45 aplicada à fixture: 5 h = 11,3×10⁶, semana = 2,65×10⁸ (ponderado); em cada caso o orçamento negava por pelo menos uma das duas janelas (o log do teste diz qual).
+- *Orquestrador continua respondendo com a cota de tarefas esgotada:* o item THREAD é reivindicado e respondido nos mesmos 6 casos; no replay, 2.703 turnos do orquestrador cobrados com a pista de tarefas segurada (ponderado).
+- *Recibo de lote com 10 itens registra 10 destinos:* 10 destinos, lote `RECORDED`, uma entrega no grupo.
+- *Troca de sessão acima do limiar preserva o fio:* sessão nova (sem `--resume`) com as notas e o recado pendente no primeiro prompt; fato `handed_off` com as duas sessões.
+
+**Replay em laço fechado** (`fase4-quota-replay.test.ts`, 13,9 dias, demanda da fixture, só turnos admitidos cobrados):
+
+| | antes (medido na instalação) | sem orçamento (replay) | com orçamento, semente W45 (replay) |
+|---|---|---|---|
+| Recusas fora da amostra (W46–W47), ponderado | — | 6 de 8 | **0 de 8** |
+| Recusas fora da amostra, só saída | — | 8 de 8 | 1 de 8 |
+| Horas pausadas pelo provedor (modelo do replay), ponderado / só saída | 73,5 h (limite inferior) | 9,3 h / 15,3 h | 2,3 h / 4,2 h |
+| Horas com tarefa segurada pelo orçamento, ponderado / só saída | — | — | **323,4 h / 323,8 h** |
+
+**O que a medição contradiz.** O spec previa "horas seguradas < horas pausadas" (Testes, item 4) e, só com pesos de saída, "nenhuma recusa fora da amostra". Os dois falham com a semente de W45: ela é o MENOR limite implícito de uma semana em que os limites variaram ~6×, e a sonda sobe só 10% a cada duas janelas seguradas — o orçamento segura muito mais do que o provedor pausou. Esses critérios **continuam como `it.failing`** no replay, do jeito que o spec os escreveu (ficam vermelhos no dia em que passarem: semente ou sonda melhores vêm com o arquivo atualizado, nunca remodelados para passar). Por isso o orçamento **continua em observação** (`CODM_AGENT_QUOTA_ENFORCE=false`): ligar segurando 4× as horas que o provedor pausava pioraria a vazão. A decisão de ligar é do dono, com os fatos `agent.quota.held { enforced: false }` da semana de observação.
+
+**Só medível depois da instalação** (cópia `sqlite3 -readonly`, só agregados, scripts fora do repo):
+```sql
+-- horas que o orçamento TERIA segurado (observação) × horas pausadas pelo provedor, por semana ISO
+--   held: pares agent.quota.held → agent.quota.released (mesmo window), payload.enforced = false
+select strftime('%Y-W%W', occurred_at/1000, 'unixepoch') wk, name, json_extract(payload,'$.window') w, count(*)
+  from shared_events where name in ('agent.quota.held','agent.quota.released') group by 1,2,3;
+--   pausadas: agent.provider.limit_observed com status REJECTED, intervalo até resetsAt, união por semana
+-- parte medida do orquestrador DEPOIS da fase 3 (a reserva = max(5%, medido))
+select json_extract(payload,'$.role') role, count(*), sum(json_extract(payload,'$.outputTokens'))
+  from shared_events where name='agent.turn.usage' group by 1;
+-- custo e turnos por tarefa concluída, por tipo de trabalho (S7: o modelo fica no fato de uso)
+--   soma dos agent.turn.usage com role=ISSUE por entity_id, junto de agent_issue_attributes.work_kind
+-- espera na fila pelo first_claimed_at (vazio na versão medida antes)
+select claim_class, count(*), avg(first_claimed_at - created_at)/60000.0 min_avg
+  from agent_mailbox where target_kind='ISSUE' and first_claimed_at is not null group by 1;
+-- vagas: quantas vezes o limitedBy foi MACHINE/BUDGET (QuotaStatusReader → saúde) e turnos em voo por janela
+-- recados juntos: turnos com mais de um item (itens consumidos no mesmo instante, mesmo alvo)
+-- "pode publicar": agent.publish.ran por outcome, e aprovações APPROVE que ainda acordaram a sessão
+select json_extract(payload,'$.outcome'), count(*) from shared_events where name='agent.publish.ran' group by 1;
+-- troca de sessão: agent.session.handed_off por notesSource; contexto ao fim do último turno (agent_agent_sessions)
+```
+Vazão real (tarefas concluídas por dia, horas de turno de issue, pausa por limite com o aviso novo que diz janela e reset) só existe com a semana de observação instalada; o "antes" desta seção é o termo de comparação.
+
 ## Riscos
 
 - Teto aprendido instável se a tabela de pesos errar a mistura de baldes ou se o plano da conta mudar; mitigado pelo modo observação, pela sonda para cima, pela volta à semente na troca de conta e pela recusa como corte.
