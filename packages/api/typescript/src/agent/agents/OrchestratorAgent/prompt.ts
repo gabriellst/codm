@@ -1,5 +1,13 @@
 import { injectable } from 'tsyringe-neo'
-import { ContactKind, Language, MailboxItemKind, MessageType, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	ContactKind,
+	IssuePriority,
+	Language,
+	MailboxItemKind,
+	MessageType,
+	PermissionPosture,
+	PriorityReason,
+} from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	toolNameOf,
@@ -394,6 +402,13 @@ export class OrchestratorPromptBuilder {
 			'Acknowledge in that same turn — name the key and say you will report back. One line. Then keep talking; the ' +
 				'work runs on its own, and you will be handed the result when it lands. Whenever you mention an issue in the ' +
 				'conversation, name it by that key, so people can answer about it by key.',
+			'',
+			// Fase 4 (S4): the queue claims by what the task is born with — the orchestrator is the one who declares it.
+			`Tasks wait their turn in a queue, and you decide where a new one stands. Set priorityReason ${PriorityReason.CLIENT_BUG} ` +
+				'only when a client is hitting a bug right now — it goes ahead of everything else, so never for an internal ' +
+				`wish or a nice-to-have. Set priority ${IssuePriority.HIGH} (with priorityReason ${PriorityReason.DECLARED}) when ` +
+				`someone says it is urgent or blocks them; ${IssuePriority.LOW} when they say it can wait. Otherwise leave both ` +
+				'out — most work is normal, and equal tasks run in the order they were asked.',
 			'',
 			'  operator: crie uma issue específica para isso e vamos resolver',
 			'  you: abri a APP-42 (toggle de dark mode) — te aviso quando tiver resultado',

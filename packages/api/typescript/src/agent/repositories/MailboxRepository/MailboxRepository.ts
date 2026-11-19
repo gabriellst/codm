@@ -121,6 +121,12 @@ export abstract class MailboxRepository {
 	 * conversation queued behind coding-agent turns waited for them — measured 2026-10-30, operator
 	 * messages sat at 👀 for minutes while four issue turns held every slot. Absent ⇒ every kind,
 	 * oldest first (the shape every caller outside the dispatcher wants).
+	 *
+	 * INSIDE a lane, targets go by RANK (fase 4, S4 — `CLAIM_RANK`): a decision's answer, then a client's bug, then the
+	 * task's declared priority, read from `agent_issue_attributes` at claim time; equal ranks by arrival (`created_at`,
+	 * then `id`, uuid v7 — the owner's decision of 19/11). A target ranks by the best of its ready items but always hands
+	 * its OLDEST one, so a priority never jumps an older item of its own task — and a target with anything leased (a
+	 * turn, a hold, a pause) is skipped whole, so nothing jumps a paused task's item either.
 	 */
 	abstract claimNext(
 		claimedBy: string,

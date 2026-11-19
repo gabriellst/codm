@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
-import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction, z } from '@codm/core-typescript'
-import { agentMailbox } from '@codm/contracts/db'
+import { DAEMON_BOOT, Id, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction, z } from '@codm/core-typescript'
+import { agentIssueAttributes, agentMailbox } from '@codm/contracts/db'
 import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
@@ -10,6 +10,8 @@ import {
 	type EnqueueMailboxItem,
 	type HoldSettlement,
 } from './MailboxRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
+import { claimRankSql } from '../../utils/ClaimRank'
 
 /** Runnable = not consumed, not poisoned. */
 const runnable = () => and(isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt))
@@ -57,7 +59,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			dbc
 				.insert(agentMailbox)
 				.values({
-					id: crypto.randomUUID(),
+					// uuid v7, monotonic: the claim's LAST tie-break is `id`, so it must be arrival order too (fase 4, S4).
+					id: Id.value(),
 					ownerId: item.ownerId,
 					targetKind: item.targetKind,
 					targetId: item.targetId,
@@ -99,18 +102,20 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		tx?: LibSqlTransaction,
 	): Promise<ClaimedMailboxItem | undefined> {
 		if (lanes?.length === 0) return undefined
-		// The lane's POSITION is its rank: the first lane with a claimable item wins, oldest first inside
-		// it. One statement, so the choice and the claim below stay in the same write transaction.
+		// THE ORDER (fase 4, S4), key by key: (1) the lane's POSITION — the first lane with a claimable item wins;
+		// (2) the target's RANK — the best `CLAIM_RANK` among its ready items, the task's priority read from the agent's
+		// own `agent_issue_attributes` AT CLAIM TIME (nothing frozen at enqueue); (3) arrival — `created_at`, then `id`
+		// (uuid v7), so two items of the same millisecond never depend on the query plan. One statement, so the choice and
+		// the claim below stay in the same write transaction.
 		const inLanes = lanes ? inArray(agentMailbox.targetKind, [...lanes]) : undefined
-		const order = lanes
+		const laneOrder = lanes
 			? [
 					sql`CASE ${agentMailbox.targetKind} ${sql.join(
 						lanes.map((kind, rank) => sql`WHEN ${kind} THEN ${rank}`),
 						sql` `,
 					)} END`,
-					asc(agentMailbox.createdAt),
 				]
-			: [asc(agentMailbox.createdAt)]
+			: []
 
 		const row = await this.write(tx, async dbc => {
 			const now = new Date()
@@ -124,11 +129,38 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					    AND busy.lease_until IS NOT NULL AND busy.lease_until >= ${now.getTime()}`,
 				)
 
+			// THE CANDIDATE IS ALWAYS ITS TARGET'S OLDEST RUNNABLE ITEM — `(created_at, id)` as one key, so two items of
+			// the same millisecond cannot both qualify. A priority never jumps an older item of its own task: a target
+			// is ranked, its items never are.
+			const older = dbc
+				.select({ one: sql`1` })
+				.from(sql`${agentMailbox} AS older`)
+				.where(
+					sql`older.target_kind = ${agentMailbox.targetKind} AND older.target_id = ${agentMailbox.targetId}
+					    AND older.consumed_at IS NULL AND older.dead_at IS NULL
+					    AND (older.created_at < ${agentMailbox.createdAt}
+					         OR (older.created_at = ${agentMailbox.createdAt} AND older.id < ${agentMailbox.id}))`,
+				)
+
+			// The target's rank: the best of its READY items (a target with nothing leased — `busy` — has every runnable
+			// item ready). A task with no attributes row, and every THREAD target, reads as the birth defaults.
+			const targetRank = sql`(SELECT MIN(${claimRankSql(
+				sql`ready.claim_class`,
+				sql`COALESCE(attrs.priority_reason, ${ISSUE_ATTRIBUTE_DEFAULTS.priorityReason})`,
+				sql`COALESCE(attrs.priority, ${ISSUE_ATTRIBUTE_DEFAULTS.priority})`,
+			)})
+				FROM ${agentMailbox} AS ready
+				LEFT JOIN ${agentIssueAttributes} AS attrs
+				  ON ready.target_kind = ${MailboxTargetKind.ISSUE} AND attrs.issue_id = ready.target_id
+				WHERE ready.target_kind = ${agentMailbox.targetKind} AND ready.target_id = ${agentMailbox.targetId}
+				  AND ready.consumed_at IS NULL AND ready.dead_at IS NULL
+				  AND (ready.lease_until IS NULL OR ready.lease_until < ${now.getTime()}))`
+
 			const [candidate] = await dbc
 				.select({ id: agentMailbox.id, firstClaimedAt: agentMailbox.firstClaimedAt })
 				.from(agentMailbox)
-				.where(and(runnable(), unleased(now), notExists(busy), inLanes))
-				.orderBy(...order)
+				.where(and(runnable(), unleased(now), notExists(busy), notExists(older), inLanes))
+				.orderBy(...laneOrder, targetRank, asc(agentMailbox.createdAt), asc(agentMailbox.id))
 				.limit(1)
 			if (!candidate) return undefined
 

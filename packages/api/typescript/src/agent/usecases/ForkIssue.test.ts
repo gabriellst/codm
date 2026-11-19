@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
+import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, testId } from '@test/support'
 import { DomainEventRepository, LibSqlDatabaseDriver, type BaseError } from '@codm/core-typescript'
 import {
@@ -8,6 +9,7 @@ import {
 	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
+	McpScope,
 	PermissionPosture,
 	PriorityReason,
 	ProviderKind,
@@ -19,6 +21,8 @@ import { IssueAttributesRepository } from '../repositories/IssueAttributesReposi
 import { IssueSequence } from '../services/IssueSequence'
 import { ForkIssue, type ForkIssueInputSchema } from './ForkIssue'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
+import { ForkIssueController } from '../controllers/ForkIssue'
+import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import type Z from 'zod'
 
 type ForkIssueInput = Z.input<typeof ForkIssueInputSchema>
@@ -278,5 +282,62 @@ describe('ForkIssue — the task is born with its attributes, in the fork transa
 		expect(failure).toBeInstanceOf(Error)
 		// Nothing of the fork survives — the attributes row rolled back with the fact and the work item.
 		expect(await testBed.probe().snapshot(['events', 'outbox', 'agentIssueAttributes'])).toEqual(before)
+	})
+})
+
+/**
+ * FASE 4, S4 — the TOOL's contract with priority: what the orchestrator declares on `ForkIssue` (the MCP body) is what
+ * the queue claims by. Two tasks forked in order, the later one declared `HIGH`: the later one's first turn is claimed
+ * first. Through the controller, so the declared body (`ForkIssueInputSchema.pick`) is part of what is pinned.
+ *
+ * Falsifier: drop `priority` from the controller's body pick, or the rank from `claimNext`, and the first task runs first.
+ */
+describe('ForkIssue tool — the declared priority decides the claim', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+	const RAW = new Request('http://localhost/fork-priority')
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const forkVia = (threadId: string, body: { goal: string; priority?: IssuePriority; priorityReason?: PriorityReason }) =>
+		testBed.resolve(ForkIssueController).handle({
+			url: RAW.url,
+			raw: RAW,
+			ctx: {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				agentIdentity: {
+					ownerId: MOCK_CLOUD_OWNER_ID,
+					threadId,
+					entryId: uuidv7(),
+					scope: McpScope.orchestration,
+					posture: PermissionPosture.AUTO,
+				},
+			},
+			params: { threadId },
+			body,
+		})
+
+	it('a later HIGH task is claimed before an earlier normal one', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const normal = await forkVia(thread.id.value, { goal: 'ajusta o texto do rodapé' })
+		await Bun.sleep(2)
+		const urgent = await forkVia(thread.id.value, {
+			goal: 'o login caiu para todo mundo',
+			priority: IssuePriority.HIGH,
+			priorityReason: PriorityReason.DECLARED,
+		})
+
+		const mailbox = testBed.resolve(MailboxRepository)
+		expect((await mailbox.claimNext('fork-priority', 60_000))?.targetId).toBe(urgent.data?.issueId)
+		expect((await mailbox.claimNext('fork-priority', 60_000))?.targetId).toBe(normal.data?.issueId)
 	})
 })

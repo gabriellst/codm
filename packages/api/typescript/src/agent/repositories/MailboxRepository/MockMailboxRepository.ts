@@ -8,6 +8,9 @@ import {
 	type EnqueueMailboxItem,
 	type HoldSettlement,
 } from './MailboxRepository'
+import { IssueAttributesRepository } from '../IssueAttributesRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
+import { claimRankOf } from '../../utils/ClaimRank'
 
 interface Row extends EnqueueMailboxItem {
 	id: string
@@ -49,16 +52,36 @@ export class MockMailboxRepository extends MailboxRepository {
 		return true
 	}
 
+	constructor(private readonly attributes: IssueAttributesRepository) {
+		super()
+	}
+
 	async claimNext(claimedBy: string, leaseMs: number, lanes?: readonly MailboxTargetKind[]): Promise<ClaimedMailboxItem | undefined> {
 		const now = Date.now()
 		const runnable = (r: Row) => !r.consumed && !r.dead
 		const leased = (r: Row) => r.leaseUntil !== undefined && r.leaseUntil >= now
 		// Same rule as the SQL twin: a lane's position is its rank, and a kind outside `lanes` is not claimable.
-		const rank = (r: Row) => (lanes ? lanes.indexOf(r.targetKind) : 0)
-		const busy = new Set(this.rows.filter(r => runnable(r) && leased(r)).map(r => `${r.targetKind}:${r.targetId}`))
-		const row = this.rows
-			.filter(r => runnable(r) && !leased(r) && !busy.has(`${r.targetKind}:${r.targetId}`) && rank(r) >= 0)
-			.sort((a, b) => rank(a) - rank(b) || a.seq - b.seq)[0]
+		const lane = (r: Row) => (lanes ? lanes.indexOf(r.targetKind) : 0)
+		const targetOf = (r: Row) => `${r.targetKind}:${r.targetId}`
+		const busy = new Set(this.rows.filter(r => runnable(r) && leased(r)).map(targetOf))
+		const ready = this.rows.filter(r => runnable(r) && !leased(r) && !busy.has(targetOf(r)) && lane(r) >= 0)
+		// The target's rank: the best of its ready items, the task's priority read NOW (fase 4, S4).
+		const targetRank = new Map<string, number>()
+		for (const r of ready) {
+			const attributes = r.targetKind === MailboxTargetKind.ISSUE ? await this.attributes.findByIssueId(r.targetId) : undefined
+			const rank = claimRankOf(
+				r.claimClass,
+				attributes?.priorityReason ?? ISSUE_ATTRIBUTE_DEFAULTS.priorityReason,
+				attributes?.priority ?? ISSUE_ATTRIBUTE_DEFAULTS.priority,
+			)
+			targetRank.set(targetOf(r), Math.min(rank, targetRank.get(targetOf(r)) ?? rank))
+		}
+		// Each target's OLDEST runnable item is its only candidate — `seq` is arrival.
+		const oldest = new Map<string, Row>()
+		for (const r of [...ready].sort((a, b) => a.seq - b.seq)) if (!oldest.has(targetOf(r))) oldest.set(targetOf(r), r)
+		const row = [...oldest.values()].sort(
+			(a, b) => lane(a) - lane(b) || (targetRank.get(targetOf(a)) ?? 0) - (targetRank.get(targetOf(b)) ?? 0) || a.seq - b.seq,
+		)[0]
 		if (!row) return undefined
 		row.attempts += 1
 		const firstClaim = row.firstClaimedAt === undefined
