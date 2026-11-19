@@ -78,6 +78,10 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 						// O orçamento de contexto decide a partir desta coluna. Fora do `set`, só o insert gravava
 						// e o orçamento nunca disparava em sessão que cresceu depois do primeiro turno.
 						lastContextTokens: data.lastContextTokens,
+						// The notes are written mid-turn (`WriteHandoffNotes`) and cleared when the handoff completes —
+						// both through `save`, so both columns follow the entity.
+						handoffNotes: data.handoffNotes,
+						handoffAt: data.handoffAt,
 						lastTurnAt: data.lastTurnAt,
 						updatedAt: new Date(),
 						version: data.version,
@@ -110,6 +114,8 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 			// SQL NULL ⇄ absent. The schema models "no cursor recorded yet" as an optional field, not as
 			// a nullable one — MISSING_CURSOR is the domain's word for it, and `null` would be a second.
 			lastMessageId: row.lastMessageId ?? undefined,
+			handoffNotes: row.handoffNotes ?? undefined,
+			handoffAt: row.handoffAt ?? undefined,
 			lastTurnAt: row.lastTurnAt,
 		})
 		return new AgentSession({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
@@ -127,6 +133,8 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 			agentSessionId: entity.agentSessionId,
 			model: entity.model,
 			lastMessageId: entity.lastMessageId ?? null,
+			handoffNotes: entity.handoffNotes ?? null,
+			handoffAt: entity.handoffAt ?? null,
 			lastTurnAt: entity.lastTurnAt,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

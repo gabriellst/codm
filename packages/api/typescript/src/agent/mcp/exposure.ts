@@ -226,6 +226,8 @@ export {
 	// which is the entire reason the prose list exists rather than the prompt builder importing it.
 	ResolveStopController,
 	SteerIssueTurnController,
+	// Fase 4, item 6a — named by `IssueWorkPromptBuilder`'s handoff ask, once the session is past the ask threshold.
+	WriteHandoffNotesController,
 	// Named by `standingInstructions()` — the paragraph that lets the operator record a rule for the
 	// conversation without leaving it. Same context and same license as `ResolveStopController` above.
 	ConfigurePromptController,

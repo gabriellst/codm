@@ -8,6 +8,14 @@ export interface GitWorktree {
 	locked: boolean
 }
 
+/** Where a working tree stands (fase 4, item 6a — the derived handoff notes): its branch and what changed. */
+export interface GitWorkingState {
+	/** The checked-out branch; absent on a detached HEAD. */
+	branch?: string
+	/** `git status --porcelain` lines (`XY path`), in git's order. */
+	changes: readonly string[]
+}
+
 /**
  * What the daemon asks git about worktrees (fase 4, item 1) — a QUERY, never a convention: a task's worktree is the
  * one git lists for the workspace, not a folder whose name looks like one (`.claude/worktrees/<x>`).
@@ -33,6 +41,27 @@ export abstract class GitWorktreeProbe {
 	 * or locked tree, and the branch is kept (its commits stay in the repository). `true` only when git removed it.
 	 */
 	abstract remove(mainWorktreePath: string, worktreePath: string): Promise<boolean>
+
+	/**
+	 * The branch and the changes of the working tree at `cwd` (`git status --porcelain --branch`) — what a fresh session
+	 * needs to know about the tree it continues in. `undefined` when git cannot say.
+	 */
+	abstract workingState(cwd: string): Promise<GitWorkingState | undefined>
+}
+
+/**
+ * Parse `git status --porcelain --branch`: the `## ` header names the branch (`main...origin/main [ahead 1]`,
+ * `No commits yet on main`, `HEAD (no branch)` when detached); every other line is a change.
+ */
+export function parseWorkingState(porcelain: string): GitWorkingState {
+	const lines = porcelain.split('\n').filter(line => line.length > 0)
+	const header = lines.find(line => line.startsWith('## '))?.slice('## '.length)
+	const changes = lines.filter(line => !line.startsWith('## '))
+	if (!header || header.startsWith('HEAD (no branch)')) return { changes }
+	const unborn = 'No commits yet on '
+	const named = header.startsWith(unborn) ? header.slice(unborn.length) : header
+	const branch = named.split('...')[0]?.split(' ')[0]
+	return branch ? { branch, changes } : { changes }
 }
 
 /**

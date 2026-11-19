@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { execFile } from 'node:child_process'
-import { GitWorktreeProbe, parseWorktreeList, type GitWorktree } from './GitWorktreeProbe'
+import { GitWorktreeProbe, parseWorkingState, parseWorktreeList, type GitWorkingState, type GitWorktree } from './GitWorktreeProbe'
 
 /** A git question that takes longer than this is not answered — and an unanswered question registers nothing. */
 const GIT_PROBE_TIMEOUT_MS = 5_000
@@ -41,5 +41,11 @@ export class SystemGitWorktreeProbe extends GitWorktreeProbe {
 	async remove(mainWorktreePath: string, worktreePath: string): Promise<boolean> {
 		// No `--force`, ever: git refuses a tree with changes, untracked files or a lock — the last line of defence.
 		return (await git(mainWorktreePath, ['worktree', 'remove', worktreePath], GIT_TREE_TIMEOUT_MS)) !== undefined
+	}
+
+	async workingState(cwd: string): Promise<GitWorkingState | undefined> {
+		// The short timeout: this runs before a turn spawns, and a tree git cannot read in seconds is described without it.
+		const out = await git(cwd, ['status', '--porcelain', '--branch'])
+		return out === undefined ? undefined : parseWorkingState(out)
 	}
 }

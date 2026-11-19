@@ -337,10 +337,6 @@ describe('RunIssueTurn use case', () => {
 	})
 
 	/**
-	 * A issue não tem orçamento (quem limita o contexto dela é a janela de auto-compact do CLI), mas a
-	 * medição é o que mostra quanto cada sessão pesa. Vale nos dois caminhos do upsert.
-	 */
-	/**
 	 * THE RUN'S TOKENS REACH THE LEDGER, stamped with the issue. Until 04/11 the runner minted this fact and
 	 * every layer above dropped it (`shared_events` had 0 rows of it), so "what did this issue cost" could
 	 * only be answered by re-reading the CLI's transcripts by hand.

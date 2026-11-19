@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { SystemGitWorktreeProbe } from './SystemGitWorktreeProbe'
-import { parseWorktreeList } from './GitWorktreeProbe'
+import { parseWorkingState, parseWorktreeList } from './GitWorktreeProbe'
 
 /**
  * The real probe against a real git repository in a temporary folder (fase 4, item 1): the top of a `cwd` deep in a
@@ -55,5 +55,19 @@ describe('SystemGitWorktreeProbe — what git itself answers', () => {
 			{ path: '/c', main: false, locked: true },
 			{ path: '/d', main: false, locked: false },
 		])
+	})
+
+	it('the working state of a worktree names its branch and its changes (fase 4, handoff notes)', async () => {
+		writeFileSync(join(worktree, 'new.txt'), 'x')
+		expect(await new SystemGitWorktreeProbe().workingState(worktree)).toEqual({ branch: 'task', changes: ['?? new.txt'] })
+	})
+
+	it('the status parser reads the branch header — tracking, unborn, detached — and every other line as a change', () => {
+		expect(parseWorkingState('## main...origin/main [ahead 1]\n M a.ts\n?? b.ts\n')).toEqual({
+			branch: 'main',
+			changes: [' M a.ts', '?? b.ts'],
+		})
+		expect(parseWorkingState('## No commits yet on main\n')).toEqual({ branch: 'main', changes: [] })
+		expect(parseWorkingState('## HEAD (no branch)\n M a.ts\n')).toEqual({ changes: [' M a.ts'] })
 	})
 })

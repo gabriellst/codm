@@ -182,4 +182,47 @@ describe('AgentSession entity', () => {
 			expect(session.resumeDecision(ctx).resume).toBe(true)
 		})
 	})
+
+	/** Fase 4, item 6a — the handoff notes belong to the session that wrote them, and leave with its handoff. */
+	describe('handoff notes', () => {
+		it('recordHandoff() replaces the notes and stamps when; completeHandoff() clears the ones the handoff consumed', () => {
+			const session = AgentSession.create(base)
+			const before = new Date(Date.now() - 60_000)
+			session.recordHandoff('first', before)
+			session.recordHandoff('latest', before)
+			expect(session.handoffNotes).toBe('latest')
+			expect(session.handoffAt).toEqual(before)
+
+			session.completeHandoff(new Date())
+			expect(session.handoffNotes).toBeUndefined()
+			expect(session.handoffAt).toBeUndefined()
+		})
+
+		it("completeHandoff() keeps notes written AFTER the handoff was decided — those are the new session's", () => {
+			const session = AgentSession.create(base)
+			const decidedAt = new Date(Date.now() - 60_000)
+			session.recordHandoff('written by the new session', new Date())
+			session.completeHandoff(decidedAt)
+			expect(session.handoffNotes).toBe('written by the new session')
+		})
+
+		it('recordTurn() never clears the notes, even when the CLI reports another session id', () => {
+			const session = AgentSession.create(base)
+			session.recordHandoff('notes')
+			session.recordTurn({
+				agentSessionId: testId('agent-session-entity', 'other'),
+				model: base.model,
+				cwd: base.cwd,
+				lastMessageId: CURSOR,
+			})
+			expect(session.handoffNotes).toBe('notes')
+		})
+
+		it('the ask and the budget read the same measure: contextAbove() is strict, absent counts as zero', () => {
+			const measured = AgentSession.create({ ...base, contextTokens: 100_000 })
+			expect(measured.contextAbove(100_000)).toBe(false)
+			expect(measured.contextAbove(99_999)).toBe(true)
+			expect(AgentSession.create(base).contextAbove(0)).toBe(false)
+		})
+	})
 })

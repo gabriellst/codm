@@ -27,14 +27,41 @@ import { AgentSession } from '../entities/AgentSession'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { AgentSessionHandedOffEvent } from '../events/AgentSessionHandedOffEvent'
+import { HandoffNotes } from '../services/HandoffNotes'
 import type { AgentTurnUsage } from '../types/AgentFrame'
 import type { LimitWindowBoundary, ObservedProviderLimit } from '../types/AgentRuntimeEvent'
 import { usageFactsOf } from '../utils/usageFacts'
 import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { ISSUE_SIGNAL_TEXT_MAX } from './RequestFeedback'
 import type { AgentApplicationErrors } from '../errors'
-import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia, TurnAbortReason } from '../enums'
+import {
+	ResumeInvalidationReason,
+	AgentRunOutcome,
+	FactSource,
+	HandoffNotesSource,
+	HandoffStep,
+	MessageVia,
+	TurnAbortReason,
+} from '../enums'
 import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
+
+/**
+ * THE TWO HANDOFF THRESHOLDS (fase 4, item 6a), in tokens of the session's measured context (`lastContextTokens`).
+ * Measured 19/11: 75% of the issue sessions ended above 120k (median 163k), and every call of a resumed turn re-reads
+ * the whole session — so a long task paid 4–8× per call what a fresh session with notes costs.
+ *
+ *  - `ISSUE_HANDOFF_ASK_AT` — past it, the turn still RESUMES, and its prompt asks the session to write its handoff
+ *    notes (`WriteHandoffNotes`) before ending the turn. Costs only the notes' output, on a turn that was happening.
+ *  - `ISSUE_CONTEXT_BUDGET` — past it, the turn opens a FRESH session seeded with those notes (or only the derived
+ *    ones, when the session jumped the band in one turn or ignored the ask). It is the `contextBudget` of the resume
+ *    guard (`AgentSession.resumeDecision`), the issue's counterpart of `ORCHESTRATOR_CONTEXT_BUDGET`.
+ *
+ * Both are decided BEFORE the spawn, at the turn boundary — never mid-turn, so no tool call is ever cut by a handoff.
+ * The CLI's own auto-compaction sits far above both.
+ */
+export const ISSUE_HANDOFF_ASK_AT = 100_000
+export const ISSUE_CONTEXT_BUDGET = 120_000
 
 export const RunIssueTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -173,9 +200,30 @@ interface RunObservations {
  * open a new one under an id we mint (`--session-id <id>`). Never neither — a turn with no session
  * identity at all is a turn whose successor cannot resume it.
  */
-interface SessionPlan {
-	resumed: boolean
-	id: string
+type SessionPlan =
+	| {
+			resumed: true
+			id: string
+			/** The session is past `ISSUE_HANDOFF_ASK_AT`: the prompt asks for its handoff notes. */
+			askNotes: boolean
+	  }
+	| {
+			resumed: false
+			id: string
+			/** Present when the session is fresh BECAUSE the old one was past the budget — the seed and the audit trail. */
+			handoff?: SessionHandoff
+	  }
+
+/** A handoff decided at the turn boundary: what seeds the fresh session, and what the fact records. */
+interface SessionHandoff {
+	fromAgentSessionId: string
+	fromContextTokens: number
+	/** The notes the old session wrote, when it did. */
+	sessionNotes?: string
+	/** The task's durable state (`HandoffNotes`) — always present. */
+	derived: string
+	/** The turn's start: notes written AFTER it (by the new session itself) are not the ones this handoff consumed. */
+	decidedAt: Date
 }
 
 /**
@@ -249,6 +297,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		private readonly mailbox: MailboxRepository,
 		private readonly logging: LoggingService,
 		private readonly aborter: IssueTurnAborter,
+		private readonly handoffNotes: HandoffNotes,
 	) {
 		super()
 	}
@@ -289,7 +338,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			const sessionId = reported?.agentSessionId ?? null
 			if (sessionId) {
 				await this.withTransaction(tx, async tx => {
-					await this.upsertSessionRecord(input, sessionId, reported?.contextTokens, tx)
+					// The session the cut turn opened is the one the steer resumes — so a handoff it made is complete.
+					await this.upsertSessionRecord(input, sessionId, reported?.contextTokens, tx, this.handoffOf(session))
 					if (reported) for (const fact of this.spendFacts(input, reported)) await this.domainEventRepository.save(fact, tx)
 				})
 			}
@@ -307,9 +357,16 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 
 		// FACT — the run's conclusion.
 		const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
+		const retried = observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind)
+		const handoff = this.handoffOf(session)
 		await this.withTransaction(tx, async tx => {
 			await this.persistOutcome(input, observed.outcome, stopId, tx)
-			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, observed.contextTokens, tx)
+			// A HANDOFF TURN THE DISPATCHER WILL RETRY leaves the row where it was: the fresh session may never have read
+			// its seed, and pointing the row at it would make the retry resume a session that knows nothing of the task.
+			// Left alone, the row is still past the budget with its notes, and the retry hands off again from them.
+			if (!(handoff && retried)) {
+				await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, observed.contextTokens, tx, handoff)
+			}
 			// STAMPED HERE, the layer that knows whose turn it was (role ISSUE, provider, model): the runner only
 			// carries the buckets. Persisted for every outcome — a stopped turn spent its tokens all the same — and
 			// with it what the provider said about its limits (a refusal or a warning, fase 4).
@@ -319,7 +376,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
 		// it says to RECORD (PERMISSION_DENIED) was already minted by `persistOutcome` and consumes the item.
 		const transportStop =
-			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind)
+			retried && observed.outcome.kind === 'STOPPED'
 				? { detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
 				: undefined
 
@@ -341,6 +398,17 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	/** The report of a turn an "agora" steer cut — see `interrupted` on the output schema. */
 	private interrupted(input: this['input'], sessionKept: boolean): this['output'] {
 		return { issueId: input.issueId, outcome: AgentRunOutcome.STOPPED, spoke: false, interrupted: { sessionKept } }
+	}
+
+	private handoffOf(session: SessionPlan): SessionHandoff | undefined {
+		return session.resumed ? undefined : session.handoff
+	}
+
+	/** What the prompt carries about the handoff — the ask on a large resumed session, the seed on a fresh one. */
+	private handoffInput(session: SessionPlan) {
+		if (session.resumed) return session.askNotes ? { kind: HandoffStep.ASK as const } : undefined
+		if (!session.handoff) return undefined
+		return { kind: HandoffStep.SEED as const, sessionNotes: session.handoff.sessionNotes, derived: session.handoff.derived }
 	}
 
 	/**
@@ -420,6 +488,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				binaryPath: detection.binaryPath,
 				caps: detection.caps,
 				posture: input.posture,
+				handoff: this.handoffInput(session),
 			},
 			{ signal },
 		)) {
@@ -594,11 +663,30 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			model: input.model ?? AgentModelId.DEFAULT,
 			cwd: input.workspacePath,
 			cursor: input.priorMessageId,
+			contextBudget: ISSUE_CONTEXT_BUDGET,
 		})
-		if (decision.resume) return { resumed: true, id: decision.id }
+		if (decision.resume) return { resumed: true, id: decision.id, askNotes: existing.contextAbove(ISSUE_HANDOFF_ASK_AT) }
 
 		this.logResumeInvalidated(input, existing.agentSessionId, decision.reason)
-		return { resumed: false, id: uuidv7() }
+		if (decision.reason !== ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED) return { resumed: false, id: uuidv7() }
+		// THE HANDOFF (fase 4, item 6a): the old session is past the budget — a fresh one starts from its notes and the
+		// task's durable state. Every other reason keeps its old meaning (the premise broke; the turn simply runs fresh).
+		return {
+			resumed: false,
+			id: uuidv7(),
+			handoff: {
+				fromAgentSessionId: existing.agentSessionId,
+				fromContextTokens: existing.lastContextTokens ?? 0,
+				sessionNotes: existing.handoffNotes,
+				derived: await this.handoffNotes.derive({
+					issueId: input.issueId,
+					threadId: input.threadId,
+					title: input.title,
+					cwd: input.workspacePath,
+				}),
+				decidedAt: new Date(),
+			},
+		}
 	}
 
 	/**
@@ -637,13 +725,33 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		agentSessionId: string,
 		contextTokens: number | undefined,
 		tx: Transaction,
+		handoff?: SessionHandoff,
 	): Promise<void> {
 		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findByIssueId(input.issueId, tx)
 		if (existing) {
-			// The measurement is recorded, never budgeted: an issue mid-task would lose its working memory
-			// to a fresh session, so what bounds its context is the CLI's own auto-compact window.
+			// The measurement is what the next turn's ask and budget are decided from (`ISSUE_HANDOFF_ASK_AT`,
+			// `ISSUE_CONTEXT_BUDGET`) — replaced with the session this turn ran in.
 			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId, contextTokens })
+			if (handoff) {
+				// The handoff COMPLETES with the row: the fresh session is recorded, the notes it consumed are cleared, and
+				// the fact keeps both session ids — the row only holds the new one.
+				existing.completeHandoff(handoff.decidedAt)
+				await this.domainEventRepository.save(
+					new AgentSessionHandedOffEvent({
+						entityId: input.issueId,
+						ownerId: input.ownerId,
+						payload: {
+							issueId: input.issueId,
+							fromContextTokens: handoff.fromContextTokens,
+							notesSource: handoff.sessionNotes ? HandoffNotesSource.SESSION : HandoffNotesSource.DERIVED,
+							fromAgentSessionId: handoff.fromAgentSessionId,
+							toAgentSessionId: agentSessionId,
+						},
+					}),
+					tx,
+				)
+			}
 			await this.sessions.save(existing, tx)
 			return
 		}

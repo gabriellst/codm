@@ -26,6 +26,7 @@ export {
 	AgentQuotaReleasedEvent,
 	AgentQuotaReleasedEventSchema,
 } from './AgentQuotaHeldEvent'
+export { AgentSessionHandedOffEvent, AgentSessionHandedOffEventSchema } from './AgentSessionHandedOffEvent'
 
 import type { AgentMessageEvent } from './AgentMessageEvent'
 import type { AgentToolCallEvent } from './AgentToolCallEvent'

@@ -25,6 +25,7 @@ import {
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
+import { HandoffNotes, LibSqlHandoffNotes, MockHandoffNotes } from './services/HandoffNotes'
 import { WorktreeSightings } from './services/WorktreeSightings'
 import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
 import { LibSqlQuotaLedgerReader, MockQuotaLedgerReader, QuotaLedgerReader } from './services/QuotaBudget'
@@ -138,6 +139,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// What git says about a workspace's worktrees (fase 4, item 1). Scripted in `mock` AND `integration`: no test
 	// spawns git through the container; only `real` asks the real one.
 	{ token: GitWorktreeProbe, mock: MockGitWorktreeProbe, integration: MockGitWorktreeProbe, real: SystemGitWorktreeProbe },
+	// The derived handoff notes (fase 4, item 6a): the task's durable state, read from the store wherever there is a
+	// database (git through the probe above, so `integration` stays scripted); the title alone in `mock`.
+	{ token: HandoffNotes, mock: MockHandoffNotes, integration: LibSqlHandoffNotes, real: LibSqlHandoffNotes },
 	// The hook's worktree sightings (fase 4, item 1): one in-memory instance per process, like the kill switch above.
 	{ token: WorktreeSightings, mock: WorktreeSightings, integration: WorktreeSightings, real: WorktreeSightings },
 	// What a triage run spent (fase 4, S1): `agent.turn.usage` with role TRIAGE, in its own unit of work. The same

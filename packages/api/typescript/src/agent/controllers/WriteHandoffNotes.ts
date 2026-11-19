@@ -1,18 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
-import type { ApplicationErrors } from '../errors'
-
-/** The longest handoff notes a session may write. */
-export const HANDOFF_NOTES_MAX = 8000
+import { WriteHandoffNotes, WriteHandoffNotesInputSchema, WriteHandoffNotesOutputSchema } from '../usecases/WriteHandoffNotes'
 
 export const WriteHandoffNotesControllerInputSchema = z
 	.object({
 		ctx: IssueDoorCtxSchema,
 		params: IssueDoorParamsSchema,
-		body: z.object({ notes: z.string().trim().min(1).max(HANDOFF_NOTES_MAX) }),
+		body: WriteHandoffNotesInputSchema.pick({ notes: true }),
 	})
 	.example([
 		{
@@ -24,16 +21,12 @@ export const WriteHandoffNotesControllerInputSchema = z
 			},
 		},
 	])
-export const WriteHandoffNotesControllerOutputSchema = z.void()
+export const WriteHandoffNotesControllerOutputSchema = WriteHandoffNotesOutputSchema
 
 /**
  * The issue's session writes its HANDOFF NOTES (fase 4, item 6a) when asked — its context grew past the ask
  * threshold — so the next turn can start a fresh session from them instead of re-reading everything: goal,
- * state, decisions, files and branch, next step.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use case
- * lands in S6. Until then it refuses with `THROUGHPUT_NOT_READY` — never a 2xx that would tell the session its
- * notes were kept.
+ * state, decisions, files and branch, next step. Declared in S0b, wired in S6 (`WriteHandoffNotes` use case).
  */
 @injectable()
 export class WriteHandoffNotesController extends Controller<
@@ -49,7 +42,16 @@ export class WriteHandoffNotesController extends Controller<
 	readonly inputSchema = WriteHandoffNotesControllerInputSchema
 	readonly outputSchema = WriteHandoffNotesControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('THROUGHPUT_NOT_READY', 'WriteHandoffNotes lands in fase 4, slice S6')
+	constructor(private useCase: WriteHandoffNotes) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+			notes: request.body.notes,
+		})
+		return { status: HttpStatusCode.ACCEPTED }
 	}
 }
