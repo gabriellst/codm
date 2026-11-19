@@ -27,6 +27,7 @@ import { AttributesForkedIssueReader, ForkedIssueReader } from './services/Forke
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
 import { WorktreeSightings } from './services/WorktreeSightings'
 import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
+import { LibSqlQuotaLedgerReader, MockQuotaLedgerReader, QuotaLedgerReader } from './services/QuotaBudget'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -142,6 +143,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		mock: FactTriageUsageRecorder,
 		integration: FactTriageUsageRecorder,
 		real: FactTriageUsageRecorder,
+	},
+	// The quota budget's facts (fase 4, S2) — read from `shared_events` wherever there is a database; scripted in `mock`.
+	{
+		token: QuotaLedgerReader,
+		mock: MockQuotaLedgerReader,
+		integration: LibSqlQuotaLedgerReader,
+		real: LibSqlQuotaLedgerReader,
 	},
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do

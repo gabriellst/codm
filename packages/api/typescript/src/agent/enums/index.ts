@@ -18,3 +18,4 @@ export * from './TriageDecision'
 // Fase 4 ("vazão") — what the provider said about a usage window, and where a fresh session's notes came from.
 export * from './ProviderLimitStatus'
 export * from './HandoffNotesSource'
+export * from './UsageBucket'
