@@ -46,6 +46,18 @@ const loopOf = (payload: unknown): string | undefined => {
 	return parsed.success ? parsed.data.firedByLoop : undefined
 }
 
+/**
+ * WHO a routed steer answers (`channelOrigin.senderExternalId`, written by `RoutedSteer`) — absent for a console/loop
+ * steer. A grouped turn replies to its LAST routed steer, so every routed steer in it must come from the SAME person:
+ * that keeps "a reply to whoever wrote stays in the group" (fase 3, owner decision) true — three messages in a row from
+ * one person are one turn and one answer; a message from someone else leads the next turn and gets its own.
+ */
+const ReplyAuthorPayloadSchema = z.object({ channelOrigin: z.object({ senderExternalId: z.string().min(1) }) })
+const replyAuthorOf = (payload: unknown): string | undefined => {
+	const parsed = ReplyAuthorPayloadSchema.safeParse(payload)
+	return parsed.success ? parsed.data.channelOrigin.senderExternalId : undefined
+}
+
 /** What the claim knows about a queued item when it decides who rides along. */
 export interface CoalescingCandidate {
 	claimClass: MailboxClaimClass
@@ -57,7 +69,9 @@ export interface CoalescingCandidate {
  * THE CONTIGUOUS PREFIX that rides with `head` (fase 4, item 6b) — `next` are the target's following runnable items in
  * arrival order. A follower is a `STEER` with the head's POSTURE (posture is privilege: a steer from someone who cannot
  * release never travels with one from someone who can) and the head's LOOP ORIGIN (the turn speaks as one author: a
- * loop's nudge and a person's message are never one turn). The prefix STOPS at the first item that does not fit —
+ * loop's nudge and a person's message are never one turn), and ONE REPLY AUTHOR per turn (the turn answers its last
+ * routed steer; a routed steer from another person leads the next turn, so nobody who wrote goes unanswered). The
+ * prefix STOPS at the first item that does not fit —
  * never skips it — and at `MAX_COALESCED` items in all. A head whose class does not lead carries nobody.
  *
  * @returns how many of `next` ride along (a prefix length).
@@ -65,10 +79,14 @@ export interface CoalescingCandidate {
 export function coalescedPrefix(head: CoalescingCandidate, next: readonly CoalescingCandidate[]): number {
 	if (!LEADS_STEER_GROUP[head.claimClass]) return 0
 	const headLoop = loopOf(head.payload)
+	let author = replyAuthorOf(head.payload)
 	let riding = 0
 	for (const item of next) {
 		if (riding >= MAX_COALESCED - 1) break
 		if (!JOINS_STEER_GROUP[item.claimClass] || item.posture !== head.posture || loopOf(item.payload) !== headLoop) break
+		const itemAuthor = replyAuthorOf(item.payload)
+		if (itemAuthor !== undefined && author !== undefined && itemAuthor !== author) break
+		author ??= itemAuthor
 		riding += 1
 	}
 	return riding
