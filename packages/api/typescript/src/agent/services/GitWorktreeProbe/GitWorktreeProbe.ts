@@ -4,6 +4,8 @@ export interface GitWorktree {
 	path: string
 	/** The repository's MAIN worktree — listed first by git; never a task's worktree. */
 	main: boolean
+	/** `git worktree lock`ed (`locked` or `locked <reason>`) — somebody asked git to keep it; never removed. */
+	locked: boolean
 }
 
 /**
@@ -19,17 +21,33 @@ export abstract class GitWorktreeProbe {
 
 	/** The worktrees of the repository at `repositoryPath` (`git worktree list --porcelain`), the main one first. */
 	abstract worktrees(repositoryPath: string): Promise<readonly GitWorktree[] | undefined>
+
+	/**
+	 * Whether the working tree at `worktreePath` has NOTHING to lose — `git status --porcelain --untracked-files=all`
+	 * prints nothing: no change, staged or not, and no untracked file. `undefined` when git cannot say.
+	 */
+	abstract isClean(worktreePath: string): Promise<boolean | undefined>
+
+	/**
+	 * `git worktree remove <worktreePath>` from the main worktree — WITHOUT `--force`, so git itself refuses a dirty
+	 * or locked tree, and the branch is kept (its commits stay in the repository). `true` only when git removed it.
+	 */
+	abstract remove(mainWorktreePath: string, worktreePath: string): Promise<boolean>
 }
 
 /**
  * Parse `git worktree list --porcelain`: blocks separated by a blank line, each opening with `worktree <path>`. The
- * first block is the main worktree (git's documented order). Lines this reader does not need (`HEAD`, `branch`,
- * `locked`, `prunable`, `bare`) are ignored here; the janitor (S3) reads `locked` from the same output.
+ * first block is the main worktree (git's documented order). `locked` (bare, or followed by a reason) marks a locked
+ * worktree; the lines this reader does not need (`HEAD`, `branch`, `prunable`, `bare`) are ignored.
  */
 export function parseWorktreeList(porcelain: string): GitWorktree[] {
-	const paths = porcelain
-		.split('\n')
-		.filter(line => line.startsWith('worktree '))
-		.map(line => line.slice('worktree '.length))
-	return paths.map((path, index) => ({ path, main: index === 0 }))
+	const blocks = porcelain
+		.split(/\n\s*\n/)
+		.map(block => block.split('\n').filter(line => line.length > 0))
+		.filter(lines => lines[0]?.startsWith('worktree '))
+	return blocks.map((lines, index) => ({
+		path: lines[0]!.slice('worktree '.length),
+		main: index === 0,
+		locked: lines.some(line => line === 'locked' || line.startsWith('locked ')),
+	}))
 }

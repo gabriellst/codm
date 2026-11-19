@@ -185,6 +185,25 @@ export class QuotaBudget {
 		}
 	}
 
+	/**
+	 * When `window` is expected to admit one more issue turn again: the reset the provider reported, else the instant
+	 * enough of the tasks' spend slides out of it. `undefined` when no slide frees enough (the ceiling itself is short).
+	 */
+	reopensAt(window: BudgetWindow, { inFlight, now, ledger }: { inFlight: number; now: number; ledger: QuotaLedger }): number | undefined {
+		const account = this.accounts(now, ledger)[window]
+		if (account.resetsAt !== undefined) return account.resetsAt
+		const expected = this.expectedTurnCost(now, ledger)
+		let excess = account.issueSpent + (inFlight + 1) * expected - (account.ceiling - account.reserveFloor)
+		if (excess <= 0) return now
+		const from = now - WINDOW_LENGTH_MS[window]
+		for (const fact of ledger.usage) {
+			if (fact.at < from || fact.at > now || RESERVED_ROLES[fact.role]) continue
+			excess -= fact.cost
+			if (excess <= 0) return fact.at + WINDOW_LENGTH_MS[window]
+		}
+		return undefined
+	}
+
 	/** The mean cost of the last `EXPECTED_COST_SAMPLE` issue turns that spent anything, up to `now` (0 with none). */
 	expectedTurnCost(now: number, ledger: QuotaLedger): number {
 		const recent = ledger.usage.filter(fact => fact.at <= now && !RESERVED_ROLES[fact.role] && fact.cost > 0).slice(-EXPECTED_COST_SAMPLE)

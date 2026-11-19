@@ -77,6 +77,15 @@ export class IssueAttributes extends BaseEntity<typeof IssueAttributesSchema> {
 		this.worktreeSeenAt = seenAt
 	}
 
+	/**
+	 * The registered worktree was removed by the janitor (fase 4, item 1 — `IssueWorktreeJanitor`): nothing of this
+	 * task is on disk any more, so nothing is left to remove. The removal itself is the `agent.worktree.removed` fact.
+	 */
+	forgetWorktree(): void {
+		this.worktreePath = undefined
+		this.worktreeSeenAt = undefined
+	}
+
 	/** The task completed or was archived at `closedAt`. A task reopened and closed again moves it forward. */
 	close(closedAt: Date): void {
 		this.closedAt = closedAt

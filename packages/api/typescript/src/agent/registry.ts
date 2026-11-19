@@ -28,6 +28,10 @@ import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from '
 import { WorktreeSightings } from './services/WorktreeSightings'
 import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
 import { LibSqlQuotaLedgerReader, MockQuotaLedgerReader, QuotaLedgerReader } from './services/QuotaBudget'
+import { IssueWorktreeJanitor } from './services/IssueWorktreeJanitor'
+import { FixedMachineCapacity, MachineCapacity, SystemMachineCapacity } from './services/MachineCapacity'
+import { InMemoryQuotaStatus, QuotaStatusReader } from './services/QuotaStatusReader'
+import { ThroughputGate } from './services/ThroughputGate'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -144,6 +148,23 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: FactTriageUsageRecorder,
 		real: FactTriageUsageRecorder,
 	},
+	// The worktree janitor (fase 4, item 1). One class everywhere: what it may touch is decided by the git probe bound
+	// above, and the scripted probe never judges a tree clean nor removes one — only `real` can delete a folder.
+	{ token: IssueWorktreeJanitor, mock: IssueWorktreeJanitor, integration: IssueWorktreeJanitor, real: IssueWorktreeJanitor },
+	// The machine under the task slots (fase 4, item 1): the data volume's free disk in `real`; a roomy fixed machine in
+	// the test environments (scriptable), so no suite depends on the disk it runs on.
+	{ token: MachineCapacity, mock: FixedMachineCapacity, integration: FixedMachineCapacity, real: SystemMachineCapacity },
+	// The quota's live status (fase 4, S3): one in-memory board per process — the dispatcher's gate writes it, `issue`
+	// (WAITING_BUDGET) and `ui` (health) read it through the read port, which resolves to the same instance.
+	{ token: InMemoryQuotaStatus, mock: InMemoryQuotaStatus, integration: InMemoryQuotaStatus, real: InMemoryQuotaStatus },
+	{
+		token: QuotaStatusReader,
+		mock: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+		integration: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+		real: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+	},
+	// The task lane's gate (fase 4, S3): max × machine × budget, asked by the dispatcher before every claim.
+	{ token: ThroughputGate, mock: ThroughputGate, integration: ThroughputGate, real: ThroughputGate },
 	// The quota budget's facts (fase 4, S2) — read from `shared_events` wherever there is a database; scripted in `mock`.
 	{
 		token: QuotaLedgerReader,

@@ -8,6 +8,7 @@ import { ProviderLimitStatus } from '../../enums/ProviderLimitStatus'
 import { AgentUsageEvent } from '../../events/AgentUsageEvent'
 import { AgentProviderLimitEvent } from '../../events/AgentProviderLimitEvent'
 import { AgentRunStartedEvent } from '../../events/AgentRunStartedEvent'
+import { AgentQuotaHeldEvent, AgentQuotaReleasedEvent } from '../../events/AgentQuotaHeldEvent'
 import { costOf, weightsFor } from '../../utils/UsageCost'
 import { QuotaLedgerReader } from './QuotaLedgerReader'
 
@@ -100,5 +101,16 @@ describe('LibSqlQuotaLedgerReader', () => {
 		expect(ledger.usage).toEqual([])
 		// the first role-stamped fact of the store is known regardless of the horizon — the reserve needs a week of it
 		expect(ledger.firstRoleFactAt).toBeDefined()
+	})
+
+	it('reads the budget’s holds and releases — observation ones included, the probe counts them', async () => {
+		const payload = { window: ProviderLimitWindow.FIVE_HOUR, spent: 10, ceiling: 9, reserve: 1, enforced: false }
+		await save(new AgentQuotaHeldEvent({ payload }))
+		await save(new AgentQuotaReleasedEvent({ payload }))
+		const ledger = await testBed.resolve(QuotaLedgerReader).read(new Date(Date.now() - 60_000))
+		expect(ledger.holds.map(hold => ({ holding: hold.holding, enforced: hold.enforced, window: hold.window }))).toEqual([
+			{ holding: true, enforced: false, window: ProviderLimitWindow.FIVE_HOUR },
+			{ holding: false, enforced: false, window: ProviderLimitWindow.FIVE_HOUR },
+		])
 	})
 })

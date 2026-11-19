@@ -39,6 +39,8 @@ const CHANNEL_PRODUCERS: Record<string, string> = {
 	'thread/usecases/SendDirectMessage.ts': 'THE OPERATOR / THE ORCHESTRATOR — a direct message from the console or an orchestration run.',
 	'thread/usecases/NotifyProviderPaused.ts':
 		'POLICY — the PROVIDER_LIMIT block notice; asks `ROUTING_BY_MODE[mode][BLOCK_NOTICE]` before sending.',
+	'thread/usecases/NotifyBudgetHeld.ts':
+		'POLICY — the BUDGET_HELD block notice (fase 4), only with the budget enforced; asks `ROUTING_BY_MODE[mode][BLOCK_NOTICE]` before sending.',
 	'thread/usecases/ExecutePanelAction.ts': 'ECHO — one line per action taken on the cloud panel (fase 2, item 6b).',
 	'thread/usecases/ApplyDueQuestionDefaults.ts':
 		'POLICY — the PROGRESS line "went on with the default" of a question (fase 3, item 1b), routed by `recordIssueSignal`.',

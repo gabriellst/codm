@@ -6,6 +6,7 @@ import { issues, threads } from '@codm/contracts/db'
 import type { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { PanelPublisher, type PanelIssueSnapshot } from '../services/PanelPublisher'
 import { lifeStateByIssue } from '../utils/issueLifeState'
+import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
 import { assembleIssueTimeline } from '../utils/issueTimeline'
 
@@ -46,6 +47,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly publisher: PanelPublisher,
 		private readonly logging: LoggingService,
+		private readonly quota: QuotaStatusReader,
 	) {
 		super()
 	}
@@ -70,6 +72,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 			lifeStateByIssue(
 				this.driver,
 				rows.map(row => ({ issueId: row.issueId, status: row.status as IssueStatus })),
+				this.quota.holdsIssueLane(),
 			),
 			providerWaitByIssue(this.driver),
 		])

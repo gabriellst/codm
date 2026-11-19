@@ -16,6 +16,23 @@ export class MockIssueAttributesRepository extends IssueAttributesRepository {
 		return row ? copyOf(row) : undefined
 	}
 
+	/** The table's half only — the mock has no queue to consult, so it answers by the closing and the sharing. */
+	async worktreeCandidates(closedBefore: Date): Promise<IssueAttributes[]> {
+		const rows = [...this.rows.values()]
+		return rows
+			.filter(row => row.worktreePath !== undefined && row.closedAt !== undefined && row.closedAt < closedBefore)
+			.filter(
+				row =>
+					!rows.some(
+						other =>
+							other.issueId !== row.issueId &&
+							other.worktreePath === row.worktreePath &&
+							(other.closedAt === undefined || other.closedAt >= closedBefore),
+					),
+			)
+			.map(copyOf)
+	}
+
 	async save(attributes: IssueAttributes): Promise<IssueAttributes> {
 		const existing = this.rows.get(attributes.issueId)
 		const next = copyOf(existing ?? attributes)

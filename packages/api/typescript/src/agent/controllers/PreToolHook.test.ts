@@ -190,8 +190,8 @@ describe('PreToolHookController — over HTTP, as the CLI calls it', () => {
 		const git = scriptedGit()
 		git.scriptTopLevel(`${worktree}/src`, worktree)
 		git.scriptWorktrees(path, [
-			{ path, main: true },
-			{ path: worktree, main: false },
+			{ path, main: true, locked: false },
+			{ path: worktree, main: false, locked: false },
 		])
 		const response = await callIn(`${worktree}/src`, token)
 		expect(await response.json()).toEqual({})

@@ -6,49 +6,94 @@ const item = (overrides: Partial<PendingItem> = {}): PendingItem => ({ running: 
 
 describe('lifeStateOf — where an issue stands, by rule', () => {
 	it('a completed issue is DONE whatever is left around it', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.COMPLETED, pending: [item({ running: true })], openStops: 1 })).toBe(
-			IssueLifeState.DONE,
-		)
+		expect(
+			lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.COMPLETED, pending: [item({ running: true })], openStops: 1 }),
+		).toBe(IssueLifeState.DONE)
 	})
 
 	it('a turn holding a lease is RUNNING — or REMINDED when that turn is the reminder', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [item({ running: true })], openStops: 0 })).toBe(
-			IssueLifeState.RUNNING,
-		)
 		expect(
-			lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [item({ running: true, reminder: true })], openStops: 0 }),
+			lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [item({ running: true })], openStops: 0 }),
+		).toBe(IssueLifeState.RUNNING)
+		expect(
+			lifeStateOf({
+				held: false,
+				budgetHeld: false,
+				status: IssueStatus.WORKING,
+				pending: [item({ running: true, reminder: true })],
+				openStops: 0,
+			}),
 		).toBe(IssueLifeState.REMINDED)
 	})
 
 	it('a deferred turn is WAITING_PROVIDER, even with a steer queued behind it', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [item({ deferred: true }), item()], openStops: 0 })).toBe(
-			IssueLifeState.WAITING_PROVIDER,
-		)
+		expect(
+			lifeStateOf({
+				held: false,
+				budgetHeld: false,
+				status: IssueStatus.WORKING,
+				pending: [item({ deferred: true }), item()],
+				openStops: 0,
+			}),
+		).toBe(IssueLifeState.WAITING_PROVIDER)
 	})
 
 	it('queued work is QUEUED; a queued reminder alone is REMINDED', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [item()], openStops: 0 })).toBe(IssueLifeState.QUEUED)
-		expect(lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [item({ reminder: true })], openStops: 0 })).toBe(
-			IssueLifeState.REMINDED,
+		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [item()], openStops: 0 })).toBe(
+			IssueLifeState.QUEUED,
 		)
+		expect(
+			lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [item({ reminder: true })], openStops: 0 }),
+		).toBe(IssueLifeState.REMINDED)
 	})
 
 	it('work beats a stop: a resolved stop that queued a steer is QUEUED, not WAITING_PERSON', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.NEEDS_INPUT, pending: [item()], openStops: 1 })).toBe(IssueLifeState.QUEUED)
+		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.NEEDS_INPUT, pending: [item()], openStops: 1 })).toBe(
+			IssueLifeState.QUEUED,
+		)
 	})
 
 	// Pausa como comando (fase 2, item 2). Falsifier: drop the `held` line from `lifeStateOf` and the held
 	// issue with a deferred item reads WAITING_PROVIDER ("esperando cota") — a usage limit nobody hit.
 	it('a held issue is PAUSED over a running, deferred or queued turn — but a completed one stays DONE', () => {
-		expect(lifeStateOf({ held: true, status: IssueStatus.WORKING, pending: [item({ deferred: true })], openStops: 0 })).toBe(
+		expect(
+			lifeStateOf({ held: true, budgetHeld: false, status: IssueStatus.WORKING, pending: [item({ deferred: true })], openStops: 0 }),
+		).toBe(IssueLifeState.PAUSED)
+		expect(lifeStateOf({ held: true, budgetHeld: false, status: IssueStatus.NEEDS_INPUT, pending: [item()], openStops: 1 })).toBe(
 			IssueLifeState.PAUSED,
 		)
-		expect(lifeStateOf({ held: true, status: IssueStatus.NEEDS_INPUT, pending: [item()], openStops: 1 })).toBe(IssueLifeState.PAUSED)
-		expect(lifeStateOf({ held: true, status: IssueStatus.COMPLETED, pending: [], openStops: 0 })).toBe(IssueLifeState.DONE)
+		expect(lifeStateOf({ held: true, budgetHeld: false, status: IssueStatus.COMPLETED, pending: [], openStops: 0 })).toBe(
+			IssueLifeState.DONE,
+		)
 	})
 
 	it('an open stop with nothing queued is WAITING_PERSON; nothing at all is STALLED', () => {
-		expect(lifeStateOf({ held: false, status: IssueStatus.NEEDS_INPUT, pending: [], openStops: 1 })).toBe(IssueLifeState.WAITING_PERSON)
-		expect(lifeStateOf({ held: false, status: IssueStatus.WORKING, pending: [], openStops: 0 })).toBe(IssueLifeState.STALLED)
+		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.NEEDS_INPUT, pending: [], openStops: 1 })).toBe(
+			IssueLifeState.WAITING_PERSON,
+		)
+		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [], openStops: 0 })).toBe(
+			IssueLifeState.STALLED,
+		)
+	})
+
+	// Fase 4 (S3). Falsifier: drop the `budgetHeld` line and a queued task under an enforced hold reads QUEUED — "na
+	// fila" while nothing will claim it; read it from the observation mode too and the board shows a hold that is not
+	// happening (the caller passes `holdsIssueLane()`, false in observation).
+	it('queued work under an ENFORCED budget hold is WAITING_BUDGET — after the provider, before the queue', () => {
+		expect(lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.WORKING, pending: [item()], openStops: 0 })).toBe(
+			IssueLifeState.WAITING_BUDGET,
+		)
+		expect(
+			lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.WORKING, pending: [item({ deferred: true })], openStops: 0 }),
+		).toBe(IssueLifeState.WAITING_PROVIDER)
+		expect(
+			lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.WORKING, pending: [item({ running: true })], openStops: 0 }),
+		).toBe(IssueLifeState.RUNNING)
+		expect(lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.NEEDS_INPUT, pending: [], openStops: 1 })).toBe(
+			IssueLifeState.WAITING_PERSON,
+		)
+		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [item()], openStops: 0 })).toBe(
+			IssueLifeState.QUEUED,
+		)
 	})
 })

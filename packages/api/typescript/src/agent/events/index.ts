@@ -19,6 +19,13 @@ export { AgentToolCallEvent, AgentToolCallEventSchema } from './AgentToolCallEve
 export { AgentUsageEvent, AgentUsageEventSchema } from './AgentUsageEvent'
 
 export { AgentProviderLimitEvent, AgentProviderLimitEventSchema } from './AgentProviderLimitEvent'
+export { AgentWorktreeRemovedEvent, AgentWorktreeRemovedEventSchema } from './AgentWorktreeRemovedEvent'
+export {
+	AgentQuotaHeldEvent,
+	AgentQuotaHeldEventSchema,
+	AgentQuotaReleasedEvent,
+	AgentQuotaReleasedEventSchema,
+} from './AgentQuotaHeldEvent'
 
 import type { AgentMessageEvent } from './AgentMessageEvent'
 import type { AgentToolCallEvent } from './AgentToolCallEvent'

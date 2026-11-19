@@ -4,10 +4,11 @@ import { LibSqlDatabaseDriver, z } from '@codm/core-typescript'
 import { events } from '@codm/contracts/db'
 import { AgentModelId, ProviderKind, UsageRole } from '@codm/contracts-typescript/wire/enums'
 import { AgentProviderLimitEvent, AgentProviderLimitEventSchema } from '../../events/AgentProviderLimitEvent'
+import { AgentQuotaHeldEvent, AgentQuotaHeldEventSchema, AgentQuotaReleasedEvent } from '../../events/AgentQuotaHeldEvent'
 import { AgentRunStartedEvent } from '../../events/AgentRunStartedEvent'
 import { AgentUsageEvent, AgentUsageEventSchema } from '../../events/AgentUsageEvent'
 import { costOf, weightsFor } from '../../utils/UsageCost'
-import type { QuotaLedger, QuotaLimitFact, QuotaRunStart, QuotaUsageFact } from './QuotaLedger'
+import type { QuotaHoldFact, QuotaLedger, QuotaLimitFact, QuotaRunStart, QuotaUsageFact } from './QuotaLedger'
 import { QuotaLedgerReader } from './QuotaLedgerReader'
 
 /** A usage fact the budget can price: role, provider and model present (every fase-4 producer stamps all three). */
@@ -17,9 +18,16 @@ const PricedUsageSchema = AgentUsageEventSchema.shape.payload.extend({
 	model: z.enum(AgentModelId),
 })
 const LimitPayloadSchema = AgentProviderLimitEventSchema.shape.payload
+const HoldPayloadSchema = AgentQuotaHeldEventSchema.shape.payload
 
 /** The fact names the ledger is made of — and so the only rows this reader asks the index for. */
-const LEDGER_FACTS = [AgentUsageEvent.name, AgentProviderLimitEvent.name, AgentRunStartedEvent.name] as const
+const LEDGER_FACTS = [
+	AgentUsageEvent.name,
+	AgentProviderLimitEvent.name,
+	AgentRunStartedEvent.name,
+	AgentQuotaHeldEvent.name,
+	AgentQuotaReleasedEvent.name,
+] as const
 
 /** Reads the ledger from `shared_events` — the same store every producer wrote the facts to. */
 @injectable()
@@ -35,7 +43,7 @@ export class LibSqlQuotaLedgerReader extends QuotaLedgerReader {
 				.select({ name: events.name, entityId: events.entityId, payload: events.payload, occurredAt: events.occurredAt })
 				.from(events)
 				.where(and(inArray(events.name, [...LEDGER_FACTS]), gte(events.occurredAt, since)))
-				.orderBy(asc(events.occurredAt)),
+				.orderBy(asc(events.occurredAt), asc(events.id)),
 			db
 				.select({ at: min(events.occurredAt) })
 				.from(events)
@@ -45,6 +53,7 @@ export class LibSqlQuotaLedgerReader extends QuotaLedgerReader {
 		const usage: QuotaUsageFact[] = []
 		const limits: QuotaLimitFact[] = []
 		const issueRunStarts: QuotaRunStart[] = []
+		const holds: QuotaHoldFact[] = []
 		for (const row of rows) {
 			const at = row.occurredAt.getTime()
 			const entityId = row.entityId ?? ''
@@ -68,12 +77,15 @@ export class LibSqlQuotaLedgerReader extends QuotaLedgerReader {
 					status: parsed.data.status,
 					...(parsed.data.resetsAt && { resetsAt: Date.parse(parsed.data.resetsAt) }),
 				})
-			} else {
+			} else if (row.name === AgentRunStartedEvent.name) {
 				issueRunStarts.push({ at, entityId })
+			} else {
+				const parsed = HoldPayloadSchema.safeParse(row.payload)
+				if (!parsed.success) continue
+				holds.push({ at, window: parsed.data.window, holding: row.name === AgentQuotaHeldEvent.name, enforced: parsed.data.enforced })
 			}
 		}
-		// The holds (`agent.quota.held`) join the ledger with the dispatcher's admission (slice S3).
 		const firstRoleFactAt = first?.at ? new Date(first.at).getTime() : undefined
-		return { usage, limits, holds: [], issueRunStarts, ...(firstRoleFactAt !== undefined && { firstRoleFactAt }) }
+		return { usage, limits, holds, issueRunStarts, ...(firstRoleFactAt !== undefined && { firstRoleFactAt }) }
 	}
 }

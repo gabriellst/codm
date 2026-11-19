@@ -6,6 +6,7 @@ import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
+import { NotifyBudgetHeld } from '@thread/usecases/NotifyBudgetHeld'
 import { RaiseStop } from '@thread/usecases/RaiseStop'
 import { SteerProgress } from '@thread/enums'
 import { cueRoutedSteer, RoutedSteerOriginSchema, type RoutedSteerOrigin } from '@thread/services/SteerCue'
@@ -13,6 +14,8 @@ import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository
 import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
 import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
+import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
+import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
 import { abortReasonOf, IssueTurnAborter } from '../IssueTurnAborter'
@@ -79,6 +82,14 @@ const POLL_BACKOFF_FACTOR = 2
  * a resume whose fact is late — and for a crash between the two.
  */
 const HOLD_RECHECK_MS = 30_000
+/** While the budget holds the task lane, how often the groups owed a notice are looked up again. */
+const BUDGET_NOTICE_RECHECK_MS = 30_000
+/**
+ * How long the budget must keep admitting before the BUDGET_HELD cause CLOSES (and a later hold is told again). A
+ * budget that fits one or two turns releases on every settled turn and holds again on the next claim; closing on
+ * that would re-announce the same hold all afternoon. One cause, one notice — until the lane has really reopened.
+ */
+const BUDGET_RELEASE_GRACE_MS = 30 * 60 * 1000
 
 /** The STEER payload's channel origin, parsed — absent, or not shaped like one, reads as "no origin". */
 const SteerOriginPayloadSchema = z.object({ channelOrigin: RoutedSteerOriginSchema })
@@ -122,7 +133,9 @@ const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safePars
  */
 const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: number }>> = {
 	[MailboxTargetKind.THREAD]: { slots: 3, priority: 0 },
-	[MailboxTargetKind.ISSUE]: { slots: 4, priority: 1 },
+	// Fase 4 (item 1): the task lane's MAXIMUM is configuration (`CODM_AGENT_ISSUE_SLOTS_MAX`, default 6); how many of
+	// them open on a loop is the `ThroughputGate`'s answer — the machine's disk gate and the quota budget.
+	[MailboxTargetKind.ISSUE]: { slots: ProductConfig.env.CODM_AGENT_ISSUE_SLOTS_MAX, priority: 1 },
 }
 
 /**
@@ -232,6 +245,14 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	private readonly limits = new Map<ProviderKind, ProviderLimit>()
 	/** Conversations already told about the CURRENT pause — cleared once its provider answers again (`creditAcceptedTurn`). */
 	private readonly noticed = new Set<string>()
+	/** Conversations already told the budget holds their tasks — cleared when the lane reopens (fase 4, `BUDGET_HELD`). */
+	private readonly budgetNoticed = new Set<string>()
+	private budgetNoticeAt = 0
+	/** Since when the budget admits again (epoch ms), or `undefined` while it holds. */
+	private budgetReleasedAt: number | undefined
+	/** See `BUDGET_NOTICE_RECHECK_MS` / `BUDGET_RELEASE_GRACE_MS`. Fields for the same reason as `leaseMs`. */
+	protected budgetNoticeRecheckMs = BUDGET_NOTICE_RECHECK_MS
+	protected budgetReleaseGraceMs = BUDGET_RELEASE_GRACE_MS
 	private draining: Promise<number> | null = null
 	/**
 	 * Whether the leases of dead boots have been released THIS run. The sweep is a boot-time repair,
@@ -286,6 +307,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// Entregue/lido no WhatsApp (fase 2, item 5) — appended for the same reason. The queue the ☑️ / ✅
 		// ride on: this is the only place that knows when a steer was handed over and when it was consumed.
 		private readonly commands: CommandQueue,
+		// Vazão (fase 4, S3) — appended like the rest. The gate answers how many task turns may run on each loop (max,
+		// machine, quota budget); the attributes name the conversation of a held task, for the budget's notice.
+		private readonly gate: ThroughputGate,
+		private readonly attributes: IssueAttributesRepository,
 	) {
 		super()
 	}
@@ -431,7 +456,20 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			const paused = Date.now() < this.pausedUntil
 			if (paused) await this.noticePausedConversations()
 
-			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < this.lanes[kind].slots)
+			// THE TASK LANE'S GATE (fase 4, S3), asked BEFORE `claimNext`, never after: a denied admission keeps the
+			// lane out of `open` the way the pause does — no item is claimed and given back. The THREAD lane never asks.
+			const issueLane = await this.gate.issueLane({
+				inFlight: running.get(MailboxTargetKind.ISSUE) ?? 0,
+				max: this.lanes[MailboxTargetKind.ISSUE].slots,
+				providerRefusing: paused,
+			})
+			await this.noticeBudgetHeld(issueLane.announce)
+			const capacity: Record<MailboxTargetKind, number> = {
+				[MailboxTargetKind.THREAD]: this.lanes[MailboxTargetKind.THREAD].slots,
+				[MailboxTargetKind.ISSUE]: issueLane.slots,
+			}
+
+			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < capacity[kind])
 			const item = open.length > 0 ? await this.mailbox.claimNext(this.workerId, this.leaseMs, open) : undefined
 
 			if (item) {
@@ -453,6 +491,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					.finally(() => {
 						inflight.delete(turn)
 						running.set(item.targetKind, (running.get(item.targetKind) ?? 1) - 1)
+						// its spend is a new fact: the budget re-reads its ledger on a coming loop
+						this.gate.turnSettled()
 					})
 				inflight.add(turn)
 				continue
@@ -839,6 +879,46 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			this.logging.error({
 				content: {
 					message: 'could not tell a conversation the queue is paused — the next drain retries',
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+		}
+	}
+
+	/**
+	 * TELL THE GROUPS WHOSE TASKS THE BUDGET HOLDS (fase 4, `BlockCause.BUDGET_HELD`) — once per conversation while the
+	 * hold lasts, and only when the gate says to announce (the budget ENFORCED: `ANNOUNCES_HOLD`; observation says
+	 * nothing). The cause closes when the lane has REALLY reopened — admitting for `BUDGET_RELEASE_GRACE_MS` — and only
+	 * then is a later hold told again. Best-effort, like the pause's notice: a failure is logged and retried.
+	 */
+	private async noticeBudgetHeld(announce: IssueLane['announce']): Promise<void> {
+		const now = Date.now()
+		if (!announce) {
+			this.budgetReleasedAt ??= now
+			if (now - this.budgetReleasedAt >= this.budgetReleaseGraceMs) {
+				this.budgetNoticed.clear()
+				this.budgetNoticeAt = 0
+			}
+			return
+		}
+		this.budgetReleasedAt = undefined
+		if (now - this.budgetNoticeAt < this.budgetNoticeRecheckMs) return
+		this.budgetNoticeAt = now
+		try {
+			const threadIds = new Set<string>()
+			for (const issueId of await this.mailbox.pendingTargets(MailboxTargetKind.ISSUE)) {
+				const attributes = await this.attributes.findByIssueId(issueId)
+				if (attributes) threadIds.add(attributes.threadId)
+			}
+			for (const threadId of threadIds) {
+				if (this.budgetNoticed.has(threadId)) continue
+				await this.handlerFor(NotifyBudgetHeld).execute({ threadId, until: announce.reopensAt })
+				this.budgetNoticed.add(threadId)
+			}
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not tell a conversation the budget holds its tasks — the next recheck retries',
 					error: error instanceof Error ? error.message : String(error),
 				},
 			})

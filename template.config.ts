@@ -660,6 +660,25 @@ export const REPO = {
 			doc: 'Ceiling on a provider usage-limit pause, ms — the mailbox retries the provider after at most this long',
 			advanced: true,
 		},
+		// Fase 4 (item 2): whether the quota budget HOLDS the task lane. Off by default — the owner's decision
+		// (19/11) is one week of observation first: the budget computes, records `agent.quota.held { enforced:
+		// false }` and shows in the health, and holds nothing.
+		CODM_AGENT_QUOTA_ENFORCE: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: 'false',
+			doc: 'Quota budget holds new task turns (true) or only observes and records what it would hold (false)',
+			advanced: true,
+		},
+		// Fase 4 (item 1): the most task turns in flight at once; the effective number is the minimum of this, the
+		// machine's disk gate and the quota budget. Reverting to 4 is configuration, not a build.
+		CODM_AGENT_ISSUE_SLOTS_MAX: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: '6',
+			doc: 'Maximum concurrent task (issue) turns, 1–6 — capped further by free disk and the quota budget',
+			advanced: true,
+		},
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
 		// The desktop console's OWN VITE_-mirrored twin of CODM_CLOUD_URL (SP2 Task T6): the browser

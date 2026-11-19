@@ -37,8 +37,8 @@ describe('SystemGitWorktreeProbe — what git itself answers', () => {
 
 	it('the list names the main worktree first, then the secondary one', async () => {
 		expect(await new SystemGitWorktreeProbe().worktrees(repository)).toEqual([
-			{ path: repository, main: true },
-			{ path: worktree, main: false },
+			{ path: repository, main: true, locked: false },
+			{ path: worktree, main: false, locked: false },
 		])
 	})
 
@@ -46,11 +46,14 @@ describe('SystemGitWorktreeProbe — what git itself answers', () => {
 		expect(await new SystemGitWorktreeProbe().topLevel(root)).toBeUndefined()
 	})
 
-	it('the porcelain parser reads only the `worktree` lines, main first', () => {
-		const porcelain = 'worktree /a\nHEAD 1\nbranch refs/heads/main\n\nworktree /b\nHEAD 2\nlocked\n\n'
+	it('the porcelain parser reads each block: its path, main first, and a lock with or without a reason', () => {
+		const porcelain =
+			'worktree /a\nHEAD 1\nbranch refs/heads/main\n\nworktree /b\nHEAD 2\nlocked\n\nworktree /c\nHEAD 3\nlocked kept for review\n\nworktree /d\nHEAD 4\n'
 		expect(parseWorktreeList(porcelain)).toEqual([
-			{ path: '/a', main: true },
-			{ path: '/b', main: false },
+			{ path: '/a', main: true, locked: false },
+			{ path: '/b', main: false, locked: true },
+			{ path: '/c', main: false, locked: true },
+			{ path: '/d', main: false, locked: false },
 		])
 	})
 })

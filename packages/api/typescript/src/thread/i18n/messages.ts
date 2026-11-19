@@ -341,6 +341,15 @@ const PT_MESSAGES = {
 	providerPausedNotice: (p: ProviderPausedParams) =>
 		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}.`,
 	/**
+	 * O aviso de que o orçamento de cota segurou as tarefas novas (fase 4, `BlockCause.BUDGET_HELD`) — um por
+	 * conversa enquanto a pista de tarefas está segurada, só com o orçamento LIGADO (em observação nada é dito). O
+	 * orquestrador continua respondendo: é isso que a reserva compra. A hora é a estimativa de volta do orçamento.
+	 */
+	budgetHeldNotice: (p: { until?: Date; now: Date }) =>
+		p.until
+			? `Segurei as tarefas novas para não estourar a cota da conta — continuo respondendo aqui, e elas voltam a rodar ${whenPt(p.until, p.now)}.`
+			: 'Segurei as tarefas novas para não estourar a cota da conta — continuo respondendo aqui, e elas voltam a rodar quando a cota folgar.',
+	/**
 	 * O código que confirma, no painel da nuvem, quem a pessoa é (fase 2, item 6a). Vai por DM só para
 	 * ela; nunca entra no transcript nem na fila de comandos.
 	 */
@@ -398,6 +407,10 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
 		providerPausedNotice: p =>
 			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
+		budgetHeldNotice: p =>
+			p.until
+				? `I held new tasks so the account's quota is not exhausted — I keep answering here, and they run again ${whenEn(p.until, p.now)}.`
+				: "I held new tasks so the account's quota is not exhausted — I keep answering here, and they run again when the quota frees up.",
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),

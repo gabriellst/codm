@@ -39,7 +39,7 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 			note: 'LibSqlMailboxDispatcher reads CloudSession (services surface) BEFORE claimNext — the login gate (SP2 Task T7, AC-4/AC-5): no live device-token session, no turn starts; items wait, no attempts spent. The daemon-local login policy lives in auth (the mirror image of BetterAuth, its cloud-profile counterpart — see auth/registry.ts), and the dispatcher is the sole write-side consumer of the gate it exposes.',
 		},
 		thread: {
-			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there). As perguntas da issue (fase 3, item 1): the issue's tools (AskDecision, AskQuestion and the legacy doors that alias to them) build the ask through the thread's StopAsk value object (objects surface) ON the tool call, so a malformed ask is refused to the model instead of dead-lettered by the consumer; the legacy doors read the conversation's language (ThreadRepository) for the few words they write themselves (THREAD_MESSAGES, i18n surface: an approval's yes/no labels, the question of a NEEDS_INPUT declared without a summary). Entregue/lido no WhatsApp (fase 2, item 5): the dispatcher hangs ☑️/✅ on the channel message a STEER was routed from through cueRoutedSteer (services surface) — it is the one place that knows when an item is first handed over and when it is consumed, while the command, payload and emojis stay thread's.",
+			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there). As perguntas da issue (fase 3, item 1): the issue's tools (AskDecision, AskQuestion and the legacy doors that alias to them) build the ask through the thread's StopAsk value object (objects surface) ON the tool call, so a malformed ask is refused to the model instead of dead-lettered by the consumer; the legacy doors read the conversation's language (ThreadRepository) for the few words they write themselves (THREAD_MESSAGES, i18n surface: an approval's yes/no labels, the question of a NEEDS_INPUT declared without a summary). Entregue/lido no WhatsApp (fase 2, item 5): the dispatcher hangs ☑️/✅ on the channel message a STEER was routed from through cueRoutedSteer (services surface) — it is the one place that knows when an item is first handed over and when it is consumed, while the command, payload and emojis stay thread's. Vazão (fase 4, S3): when the quota budget holds the task lane for real, the dispatcher tells each conversation with a held task through NotifyBudgetHeld (usecases surface, the sibling of NotifyProviderPaused) — the BUDGET_HELD block notice, its text and its routing stay thread's.",
 		},
 		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
 	},
@@ -53,7 +53,7 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	},
 	issue: {
 		agent: {
-			note: 'Pausa como comando (fase 2, item 2): the issue owns the pause fact and its two in-context handlers command the agent turn runtime — AbortIssueTurnOnPause kills the running turn through IssueTurnAborter (services surface), ReleaseIssueWorkOnResume releases the held items through MailboxRepository (repositories surface; the mailbox is a queue, the stance thread/handlers/ResumeIssueOnStopResolved already takes). The pause itself is the issues.paused flag; these only make it immediate.',
+			note: 'Pausa como comando (fase 2, item 2): the issue owns the pause fact and its two in-context handlers command the agent turn runtime — AbortIssueTurnOnPause kills the running turn through IssueTurnAborter (services surface), ReleaseIssueWorkOnResume releases the held items through MailboxRepository (repositories surface; the mailbox is a queue, the stance thread/handlers/ResumeIssueOnStopResolved already takes). The pause itself is the issues.paused flag; these only make it immediate. Vazão (fase 4, S3): the life state reads QuotaStatusReader (services surface) — whether the quota budget holds the task lane FOR REAL (enforced) — so queued work under a hold is WAITING_BUDGET on the board, the console and the panel; in observation it answers false and nothing changes.',
 		},
 	},
 	owner: {
@@ -77,7 +77,9 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	},
 	ui: {
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
-		agent: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
+		agent: {
+			note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe). Vazão (fase 4): the console health (GetSystemHealth, real in S9) reads QuotaStatusReader (services surface) — the budget, the task slots with limitedBy and the queue the dispatcher last saw.',
+		},
 		thread: {
 			note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
 		},
@@ -101,7 +103,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'agent',
 		schema: 'shared',
-		note: 'The same reader NOT EXISTS-correlates each candidate issue against the outbox table to rule out a pending-but-not-yet-dispatched turn: an issue can be WORKING with its mailbox already drained while its outbox entry (the fact that re-enqueues the next turn) is still unprocessed, and reading only the mailbox would misclassify that issue as stalled.',
+		note: 'The same reader NOT EXISTS-correlates each candidate issue against the outbox table to rule out a pending-but-not-yet-dispatched turn: an issue can be WORKING with its mailbox already drained while its outbox entry (the fact that re-enqueues the next turn) is still unprocessed, and reading only the mailbox would misclassify that issue as stalled. Vazão (fase 4, S2): LibSqlQuotaLedgerReader reads the agent OWN facts back from the events table (agent.turn.usage with a role, agent.provider.limit_observed, agent.run.started, agent.quota.held/released) by name and instant — the store every producer wrote them to; the quota budget is derived from them, nothing is stored apart.',
 	},
 	{
 		consumer: 'issue',

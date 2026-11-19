@@ -15,6 +15,7 @@ import {
 import type { ApplicationErrors } from '../errors'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
+import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 
 /** A STEER item's payload carries the message as `text` (`SteerIssueTurn`); anything else reads as empty. */
 const SteerPayloadSchema = z.object({ text: z.string() })
@@ -80,7 +81,10 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 	readonly inputSchema = GetIssueDetailInputSchema
 	readonly outputSchema = GetIssueDetailOutputSchema
 
-	constructor(private readonly driver: LibSqlDatabaseDriver) {
+	constructor(
+		private readonly driver: LibSqlDatabaseDriver,
+		private readonly quota: QuotaStatusReader,
+	) {
 		super()
 	}
 
@@ -103,7 +107,11 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
-		const life = await lifeStateByIssue(this.driver, [{ issueId: issue.id, status: issue.status as IssueStatus }])
+		const life = await lifeStateByIssue(
+			this.driver,
+			[{ issueId: issue.id, status: issue.status as IssueStatus }],
+			this.quota.holdsIssueLane(),
+		)
 		const steerRows = await this.driver.db
 			.select()
 			.from(agentMailbox)

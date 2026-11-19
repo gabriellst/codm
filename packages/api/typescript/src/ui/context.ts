@@ -11,7 +11,8 @@ export default {
 	namespace: null,
 	consumes: {
 		owner: 'BFF read model: owner listing/active-owner via repositories.',
-		agent: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).',
+		agent:
+			'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe). Vazão (fase 4): the console health (GetSystemHealth, real in S9) reads QuotaStatusReader (services surface) — the budget, the task slots with limitedBy and the queue the dispatcher last saw.',
 		thread:
 			'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
 		issue:

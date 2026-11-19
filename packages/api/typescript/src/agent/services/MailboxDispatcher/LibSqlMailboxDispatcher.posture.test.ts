@@ -22,6 +22,8 @@ import { AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest } from '../../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
 import { LibSqlMailboxDispatcher } from './LibSqlMailboxDispatcher'
+import { ThroughputGate } from '../ThroughputGate'
+import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 
 /** Captures the request the AGENT assembled, so what reaches the seam is what gets asserted. */
 class CapturingRunner extends AgentRunner {
@@ -120,6 +122,8 @@ describe('a turn runs with the posture of the item it consumed', () => {
 				testBed.resolve(IssueHold),
 				testBed.resolve(IssueTurnAborter),
 				testBed.resolve(CommandQueue),
+				testBed.resolve(ThroughputGate),
+				testBed.resolve(IssueAttributesRepository),
 			).bind(spyContainer)
 			await dispatcher.drain()
 

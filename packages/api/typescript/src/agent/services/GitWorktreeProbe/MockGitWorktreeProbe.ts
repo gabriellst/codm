@@ -28,4 +28,14 @@ export class MockGitWorktreeProbe extends GitWorktreeProbe {
 	async worktrees(repositoryPath: string): Promise<readonly GitWorktree[] | undefined> {
 		return this.lists.get(repositoryPath)
 	}
+
+	/** Never scripted: git "cannot say", so nothing scripted here is ever judged clean. */
+	async isClean(): Promise<boolean | undefined> {
+		return undefined
+	}
+
+	/** Never removes anything — the scripted environments must not be able to delete a folder. */
+	async remove(): Promise<boolean> {
+		return false
+	}
 }

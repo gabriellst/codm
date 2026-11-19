@@ -51,8 +51,8 @@ describe('RecordIssueWorktree — only a secondary worktree of the workspace is 
 		)
 		const worktree = `${path}/.wt/task`
 		scriptedGit().scriptWorktrees(path, [
-			{ path, main: true },
-			{ path: worktree, main: false },
+			{ path, main: true, locked: false },
+			{ path: worktree, main: false, locked: false },
 		])
 		return { issueId, threadId: thread.id.value, path, worktree }
 	}

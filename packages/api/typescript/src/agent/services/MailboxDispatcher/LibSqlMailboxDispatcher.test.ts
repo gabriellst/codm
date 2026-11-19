@@ -23,6 +23,9 @@ import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/M
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
 import { LibSqlMailboxDispatcher, type TurnReport } from './LibSqlMailboxDispatcher'
+import { ThroughputGate } from '../ThroughputGate'
+import { ProductConfig } from '@shared/config/ProductConfig'
+import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -327,14 +330,15 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	 * AS PISTAS (2026-10-30): uma conversa nunca espera turno de código.
 	 *
 	 * Medido em produção: quatro turnos de issue (4–16 min cada) ocupavam o pool único de 4 slots e as
-	 * mensagens dos grupos ficavam no 👀 por minutos. Aqui, cinco issues travadas e UMA conversa que
-	 * chega depois: a conversa tem que começar enquanto as issues seguem presas, e as issues não podem
-	 * passar de quatro ao mesmo tempo.
+	 * mensagens dos grupos ficavam no 👀 por minutos. Aqui, uma issue a mais que o máximo da pista, travadas, e UMA
+	 * conversa que chega depois: a conversa tem que começar enquanto as issues seguem presas, e as issues não podem
+	 * passar do máximo ao mesmo tempo (`CODM_AGENT_ISSUE_SLOTS_MAX`, fase 4 — eram quatro fixas).
 	 *
 	 * O falsificador é exato: volte a um pool único de 4 (as duas pistas compartilhando os slots) e a
 	 * conversa nunca começa — `threadStarted` fica falso e este teste fica vermelho.
 	 */
-	it('uma conversa começa mesmo com a pista de issues cheia — e as issues não passam de quatro', async () => {
+	it('uma conversa começa mesmo com a pista de issues cheia — e as issues não passam do máximo', async () => {
+		const issueMax = ProductConfig.env.CODM_AGENT_ISSUE_SLOTS_MAX
 		const ownerId = 'owner-lanes'
 		let releaseIssues = (): void => {}
 		const gate = new Promise<void>(resolve => {
@@ -360,7 +364,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		const dispatcher = testBed.resolve(LaneDispatcher)
 		const mailbox = testBed.resolve(MailboxRepository)
-		for (let n = 0; n < 5; n++) {
+		for (let n = 0; n <= issueMax; n++) {
 			const issueId = uuidv7()
 			await mailbox.enqueue({
 				ownerId,
@@ -376,7 +380,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await dispatcher.start()
 		try {
-			expect(await until(async () => issuesInFlight === 4, 2_000)).toBe(true)
+			expect(await until(async () => issuesInFlight === issueMax, 2_000)).toBe(true)
 			await mailbox.enqueue({
 				ownerId,
 				targetKind: MailboxTargetKind.THREAD,
@@ -388,7 +392,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				dedupKey: 'lane-thread-message',
 			})
 			expect(await until(async () => threadStarted, 2_000)).toBe(true)
-			expect(issuesPeak).toBe(4)
+			expect(issuesPeak).toBe(issueMax)
 		} finally {
 			releaseIssues()
 			await dispatcher.stop()
@@ -433,6 +437,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		const message = (threadId: string, dedupKey: string) =>
@@ -681,6 +687,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await operatorMessage(thread.id.value, 'limite-semanal')
@@ -731,6 +739,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -786,6 +796,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -869,6 +881,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -953,6 +967,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -1023,6 +1039,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -1258,6 +1276,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1320,6 +1340,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1375,6 +1397,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		const realClaimNext = mailbox.claimNext.bind(mailbox)

@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNotNull, lt, sql } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
-import { agentIssueAttributes } from '@codm/contracts/db'
+import { agentIssueAttributes, agentMailbox } from '@codm/contracts/db'
+import { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { IssueAttributes } from '../../entities/IssueAttributes'
 import { IssueAttributesRepository } from './IssueAttributesRepository'
 
@@ -28,6 +29,25 @@ export class LibSqlIssueAttributesRepository extends IssueAttributesRepository {
 		const dbc = tx ?? this.driver.db
 		const [row] = await dbc.select().from(agentIssueAttributes).where(eq(agentIssueAttributes.issueId, issueId)).limit(1)
 		return row ? toDomain(row) : undefined
+	}
+
+	async worktreeCandidates(closedBefore: Date, tx?: LibSqlTransaction): Promise<IssueAttributes[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(agentIssueAttributes)
+			.where(
+				and(
+					isNotNull(agentIssueAttributes.worktreePath),
+					lt(agentIssueAttributes.closedAt, closedBefore),
+					sql`NOT EXISTS (SELECT 1 FROM ${agentMailbox} WHERE ${agentMailbox.targetKind} = ${MailboxTargetKind.ISSUE} AND ${agentMailbox.targetId} = ${agentIssueAttributes.issueId} AND ${agentMailbox.createdAt} > ${agentIssueAttributes.closedAt})`,
+					// every OTHER task registered on the same worktree must be eligible too: closed before the cutoff and not
+					// reopened since. The inner tables are aliased so the outer columns (qualified by the table name) stay
+					// the correlated ones.
+					sql`NOT EXISTS (SELECT 1 FROM agent_issue_attributes AS sharer WHERE sharer.worktree_path = ${agentIssueAttributes.worktreePath} AND sharer.issue_id <> ${agentIssueAttributes.issueId} AND (sharer.closed_at IS NULL OR sharer.closed_at >= ${closedBefore.getTime()} OR EXISTS (SELECT 1 FROM agent_mailbox AS later WHERE later.target_kind = ${MailboxTargetKind.ISSUE} AND later.target_id = sharer.issue_id AND later.created_at > sharer.closed_at)))`,
+				),
+			)
+		return rows.map(toDomain)
 	}
 
 	async save(attributes: IssueAttributes, tx?: LibSqlTransaction): Promise<IssueAttributes> {
