@@ -589,6 +589,18 @@ pub struct IssueCreatedPayload {
 	pub origin_entry_id: String,
 	/// Which CLI will work the issue — the THREAD's choice, resolved by the agent runtime at fork time. It rides the event because the issue context materialises the row from this fact alone and cannot read a thread: no `issue -> thread` edge is declared, and the row cannot be created without it.
 	pub provider: ProviderKind,
+	/// Fase 4 — the priority the task was born with (the agent runtime owns it; the issue context keeps a read copy). Optional: facts from daemons before fase 4 do not carry it, and the Go side only carries it.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub priority: Option<IssuePriority>,
+	/// Fase 4 — why the task has that priority (CLIENT_BUG is claimed first).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub priority_reason: Option<PriorityReason>,
+	/// Fase 4 — what the task does; chooses the model it runs on.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub work_kind: Option<IssueWorkKind>,
+	/// Fase 4 — the model fixed for the task at birth; absent when it inherits the conversation's model.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub model: Option<AgentModelId>,
 }
 
 /// `integration.issue.created` in the canonical transport envelope.

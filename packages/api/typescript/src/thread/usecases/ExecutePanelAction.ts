@@ -3,6 +3,7 @@ import { Handler, z, BaseError, CommandQueue, tryCatchAsync } from '@codm/core-t
 import type { Transaction } from '@codm/core-typescript'
 import {
 	IssueControlSource,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	MessageAuthor,
@@ -245,6 +246,7 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: action.issueId,
 				kind: MailboxItemKind.STEER,
+				claimClass: MailboxClaimClass.STEER,
 				posture: act.thread.postureOf(act.member.participantId),
 				payload: {
 					issueId: action.issueId,

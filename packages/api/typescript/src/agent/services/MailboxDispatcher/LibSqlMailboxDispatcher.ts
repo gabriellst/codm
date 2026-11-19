@@ -1,20 +1,26 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { CommandQueue, LoggingService, type PollingService, z } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
+import { NotifyBudgetHeld } from '@thread/usecases/NotifyBudgetHeld'
 import { RaiseStop } from '@thread/usecases/RaiseStop'
 import { SteerProgress } from '@thread/enums'
 import { cueRoutedSteer, RoutedSteerOriginSchema, type RoutedSteerOrigin } from '@thread/services/SteerCue'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
-import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
+import { MailboxRepository, type ClaimedMailboxBundle, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
+import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
+import { issueTurnModel } from '../../utils/ModelByWorkKind'
+import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
+import { RunPublishCommand } from '../../usecases/RunPublishCommand'
+import { ResumeIssuePayloadSchema } from '@thread/objects'
 import { abortReasonOf, IssueTurnAborter } from '../IssueTurnAborter'
 import { TurnAbortReason } from '../../enums/TurnAbortReason'
 import { MailboxDispatcher } from './MailboxDispatcher'
@@ -79,6 +85,14 @@ const POLL_BACKOFF_FACTOR = 2
  * a resume whose fact is late — and for a crash between the two.
  */
 const HOLD_RECHECK_MS = 30_000
+/** While the budget holds the task lane, how often the groups owed a notice are looked up again. */
+const BUDGET_NOTICE_RECHECK_MS = 30_000
+/**
+ * How long the budget must keep admitting before the BUDGET_HELD cause CLOSES (and a later hold is told again). A
+ * budget that fits one or two turns releases on every settled turn and holds again on the next claim; closing on
+ * that would re-announce the same hold all afternoon. One cause, one notice — until the lane has really reopened.
+ */
+const BUDGET_RELEASE_GRACE_MS = 30 * 60 * 1000
 
 /** The STEER payload's channel origin, parsed — absent, or not shaped like one, reads as "no origin". */
 const SteerOriginPayloadSchema = z.object({ channelOrigin: RoutedSteerOriginSchema })
@@ -96,6 +110,51 @@ const steerEntryOf = (payload: unknown): string | undefined => {
 /** Whether a STEER is the automatic declaration reminder (`declarationReminder: true` on its payload). */
 const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
 const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safeParse(payload).success
+
+/** A STEER's text (`text` on its payload) — empty when absent, as the single-steer turn always read it. */
+/**
+ * `sessionOnly` (fase 4, item 6c): what the turn's PROMPT carries and the timeline never renders — a failed publish's
+ * output tail, which may print a credential (the timeline goes to the cloud panel; it reads `text` alone).
+ */
+const SteerTextPayloadSchema = z.object({ text: z.string(), sessionOnly: z.string().optional() })
+const steerTextOf = (members: readonly ClaimedMailboxItem[]): string =>
+	members
+		.map(member => {
+			const parsed = SteerTextPayloadSchema.safeParse(member.payload)
+			return parsed.success
+				? [parsed.data.text, parsed.data.sessionOnly ?? '']
+						.map(part => part.trim())
+						.filter(Boolean)
+						.join('\n\n')
+				: ''
+		})
+		.filter(text => text.length > 0)
+		.join('\n\n')
+
+/**
+ * Which item classes may trigger the workspace's publish command (fase 4, item 6c) — total over `MailboxClaimClass`:
+ * only the answer to a decision the task was waiting on. Whether THAT answer authorizes publishing is the agent's
+ * `PUBLISH_AUTHORIZED_BY`, asked by `RunPublishCommand`.
+ */
+const PUBLISH_TRIGGER: Readonly<Record<MailboxClaimClass, boolean>> = {
+	[MailboxClaimClass.DECISION_ANSWER]: true,
+	[MailboxClaimClass.INTERRUPT]: false,
+	[MailboxClaimClass.STEER]: false,
+	[MailboxClaimClass.WORK]: false,
+	[MailboxClaimClass.REMINDER]: false,
+	[MailboxClaimClass.RESULT]: false,
+	[MailboxClaimClass.OPERATOR]: false,
+}
+
+/** Every item a turn carries — the head first, then the steers that rode with it, in arrival order (fase 4, 6b). */
+const membersOf = (bundle: ClaimedMailboxBundle): readonly ClaimedMailboxItem[] => [bundle.head, ...bundle.followers]
+const idsOf = (bundle: ClaimedMailboxBundle): readonly string[] => membersOf(bundle).map(member => member.id)
+/** The transcript entries of the routed steers a turn carries, in arrival order — none for any other item. */
+const steerEntriesOf = (members: readonly ClaimedMailboxItem[]): string[] =>
+	members.flatMap(member => {
+		const entry = member.kind === MailboxItemKind.STEER ? steerEntryOf(member.payload) : undefined
+		return entry ? [entry] : []
+	})
 
 /**
  * THE LANES — how many turns of each TARGET KIND may be in flight at once, and which kind is claimed
@@ -122,7 +181,9 @@ const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safePars
  */
 const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: number }>> = {
 	[MailboxTargetKind.THREAD]: { slots: 3, priority: 0 },
-	[MailboxTargetKind.ISSUE]: { slots: 4, priority: 1 },
+	// Fase 4 (item 1): the task lane's MAXIMUM is configuration (`CODM_AGENT_ISSUE_SLOTS_MAX`, default 6); how many of
+	// them open on a loop is the `ThroughputGate`'s answer — the machine's disk gate and the quota budget.
+	[MailboxTargetKind.ISSUE]: { slots: ProductConfig.env.CODM_AGENT_ISSUE_SLOTS_MAX, priority: 1 },
 }
 
 /**
@@ -161,9 +222,10 @@ export type TurnReport =
 			dropped?: never
 			held?: never
 			interrupted?: never
+			published?: never
 	  }
-	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never; interrupted?: never }
-	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; interrupted?: never }
+	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never; interrupted?: never; published?: never }
+	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; interrupted?: never; published?: never }
 	| {
 			interrupted: { sessionKept: boolean }
 			spoke: false
@@ -171,7 +233,13 @@ export type TurnReport =
 			provider?: never
 			transportStop?: never
 			held?: never
+			published?: never
 	  }
+	/**
+	 * The workspace's publish command ran in place of the session turn (fase 4, item 6c) — the item is done. Not a
+	 * provider turn: it proves nothing about the account (no credit to a pause) and spends no quota.
+	 */
+	| { published: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; held?: never; interrupted?: never }
 
 /** The thread as the repository hands it over — derived from the seam, as `RunOrchestratorTurn` does. */
 type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
@@ -232,6 +300,14 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	private readonly limits = new Map<ProviderKind, ProviderLimit>()
 	/** Conversations already told about the CURRENT pause — cleared once its provider answers again (`creditAcceptedTurn`). */
 	private readonly noticed = new Set<string>()
+	/** Conversations already told the budget holds their tasks — cleared when the lane reopens (fase 4, `BUDGET_HELD`). */
+	private readonly budgetNoticed = new Set<string>()
+	private budgetNoticeAt = 0
+	/** Since when the budget admits again (epoch ms), or `undefined` while it holds. */
+	private budgetReleasedAt: number | undefined
+	/** See `BUDGET_NOTICE_RECHECK_MS` / `BUDGET_RELEASE_GRACE_MS`. Fields for the same reason as `leaseMs`. */
+	protected budgetNoticeRecheckMs = BUDGET_NOTICE_RECHECK_MS
+	protected budgetReleaseGraceMs = BUDGET_RELEASE_GRACE_MS
 	private draining: Promise<number> | null = null
 	/**
 	 * Whether the leases of dead boots have been released THIS run. The sweep is a boot-time repair,
@@ -286,6 +362,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// Entregue/lido no WhatsApp (fase 2, item 5) — appended for the same reason. The queue the ☑️ / ✅
 		// ride on: this is the only place that knows when a steer was handed over and when it was consumed.
 		private readonly commands: CommandQueue,
+		// Vazão (fase 4, S3) — appended like the rest. The gate answers how many task turns may run on each loop (max,
+		// machine, quota budget); the attributes name the conversation of a held task, for the budget's notice.
+		private readonly gate: ThroughputGate,
+		private readonly attributes: IssueAttributesRepository,
 	) {
 		super()
 	}
@@ -431,16 +511,31 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			const paused = Date.now() < this.pausedUntil
 			if (paused) await this.noticePausedConversations()
 
-			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < this.lanes[kind].slots)
-			const item = open.length > 0 ? await this.mailbox.claimNext(this.workerId, this.leaseMs, open) : undefined
+			// THE TASK LANE'S GATE (fase 4, S3), asked BEFORE `claimNext`, never after: a denied admission keeps the
+			// lane out of `open` the way the pause does — no item is claimed and given back. The THREAD lane never asks.
+			const issueLane = await this.gate.issueLane({
+				inFlight: running.get(MailboxTargetKind.ISSUE) ?? 0,
+				max: this.lanes[MailboxTargetKind.ISSUE].slots,
+				providerRefusing: paused,
+			})
+			await this.noticeBudgetHeld(issueLane.announce)
+			const capacity: Record<MailboxTargetKind, number> = {
+				[MailboxTargetKind.THREAD]: this.lanes[MailboxTargetKind.THREAD].slots,
+				[MailboxTargetKind.ISSUE]: issueLane.slots,
+			}
 
-			if (item) {
+			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < capacity[kind])
+			// The claim hands a TURN: the item, and the steers of the same task that ride with it (fase 4, item 6b).
+			const bundle = open.length > 0 ? await this.mailbox.claimBundle(this.workerId, this.leaseMs, open) : undefined
+
+			if (bundle) {
+				const item = bundle.head
 				handled++
 				running.set(item.targetKind, (running.get(item.targetKind) ?? 0) + 1)
 				// The `.catch` is the process's safety net, not a retry path: `runTurn` settles every failure
 				// itself, but this promise outlives `drain()` whenever a later `claimNext` throws, and an
 				// unobserved rejection then ends the daemon (2026-10-30, every boot).
-				const turn = this.runTurn(item)
+				const turn = this.runTurn(bundle)
 					.catch(error => {
 						this.logging.error({
 							content: {
@@ -453,6 +548,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					.finally(() => {
 						inflight.delete(turn)
 						running.set(item.targetKind, (running.get(item.targetKind) ?? 1) - 1)
+						// its spend is a new fact: the budget re-reads its ledger on a coming loop
+						this.gate.turnSettled()
 					})
 				inflight.add(turn)
 				continue
@@ -526,7 +623,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * keyed on the very lease the dead timer kept alive. `MAX_TURN_MS` is the bound; reaching it ends
 	 * the turn for the QUEUE, whatever the work is doing.
 	 */
-	private async runTurn(item: ClaimedMailboxItem): Promise<void> {
+	private async runTurn(bundle: ClaimedMailboxBundle): Promise<void> {
+		const item = bundle.head
+		const ids = idsOf(bundle)
 		const startedAt = Date.now()
 		/** Why the turn was given up on, or `null` while it is still believed. Read after the race. */
 		let abandoned: string | null = null
@@ -554,7 +653,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			}
 			// Fire-and-forget by design: a missed renewal is survivable (the lease still has two beats of
 			// slack), and awaiting here would make the turn's progress depend on the queue's write path.
-			void this.mailbox.renewLease(item.id, this.workerId, this.leaseMs).catch(error => {
+			// Every item the turn carries — a follower left to lapse would be claimed again beside its own turn.
+			void this.mailbox.renewLease(ids, this.workerId, this.leaseMs).catch(error => {
 				this.logging.warn({
 					content: {
 						message: 'mailbox lease renewal failed',
@@ -566,7 +666,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		}, this.heartbeatMs)
 
 		try {
-			const work = item.targetKind === MailboxTargetKind.THREAD ? this.runThreadTurn(item) : this.runIssueWork(item)
+			const work = item.targetKind === MailboxTargetKind.THREAD ? this.runThreadTurn(item) : this.runIssueWork(item, bundle.followers)
 			const report = await Promise.race([work, abandonedAt])
 
 			// NO REPORT ⇒ THE CEILING WON. A `TurnReport` is always an object, so this is unambiguous.
@@ -600,20 +700,20 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 							},
 						}),
 				)
-				await this.recordFailure(item, abandoned ?? 'o turno foi abandonado')
+				await this.recordFailure(bundle, abandoned ?? 'o turno foi abandonado')
 				return
 			}
 
 			// HELD — paused before it ran, or killed mid-run by a pause. Checked FIRST among the outcomes: a
 			// killed run may also look like a transport stop, and that must not spend an attempt.
 			if (report.held) {
-				await this.holdItem(item)
+				await this.holdItem(bundle)
 				return
 			}
 
 			// CUT BY "AGORA" (fase 2, item 4) — no conclusion was persisted, and no attempt is spent either way.
 			if (report.interrupted && !report.interrupted.sessionKept) {
-				await this.releaseInterrupted(item)
+				await this.releaseInterrupted(bundle)
 				return
 			}
 
@@ -630,24 +730,25 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				// is not a failure — the turn never ran — so it waits for that instant instead of spending
 				// one of three instant retries. See `waitForProvider`.
 				if (report.transportStop.retryAfter !== undefined) {
-					await this.waitForProvider(item, report.transportStop.retryAfter, report.provider)
+					await this.waitForProvider(bundle, report.transportStop.retryAfter, report.provider)
 					return
 				}
-				await this.recordFailure(item, report.transportStop.detail)
+				await this.recordFailure(bundle, report.transportStop.detail)
 				return
 			}
 
-			await this.mailbox.complete(item.id)
-			// LIDO (fase 2, item 5): the turn that carried a routed steer ended and the item is consumed. Not
-			// for a dropped report — no turn ran, nobody read anything. A held item never reaches this line.
-			if (!report.dropped) await this.cueSteer(item, SteerProgress.READ)
+			// Every item the turn carried, in ONE write: a crash between two completes would run the rest again.
+			await this.mailbox.complete(ids)
+			// LIDO (fase 2, item 5): the turn that carried a routed steer ended and the item is consumed — one ✅ per
+			// steer it carried, each on its own message. Not for a dropped report — no turn ran, nobody read anything.
+			// A held item never reaches this line.
+			if (!report.dropped) for (const member of membersOf(bundle)) await this.cueSteer(member, SteerProgress.READ)
 			// THE PAUSE IS OVER WHEN A TURN GETS THROUGH, not when the clock passes `pausedUntil`. A CLI that
 			// keeps refusing past its reported reset re-pauses on the floor, and clearing on the clock would
 			// re-send "atingi o limite" to every group once a minute. A turn the provider ran to its end is
 			// the evidence it is answering again — so a dropped report (no CLI ran) and any transport stop
 			// (one that spoke and THEN hit the limit included) prove nothing and credit nothing.
-			if (!report.dropped && !report.interrupted && report.transportStop === undefined)
-				await this.creditAcceptedTurn(report.provider, startedAt)
+			if (report.provider !== undefined && report.transportStop === undefined) await this.creditAcceptedTurn(report.provider, startedAt)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -661,7 +762,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					error: message,
 				},
 			})
-			await this.recordFailure(item, message)
+			await this.recordFailure(bundle, message)
 		} finally {
 			clearInterval(heartbeat)
 		}
@@ -699,7 +800,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 *
 	 * NEVER REJECTS, for the same reason `recordFailure` never does.
 	 */
-	private async waitForProvider(item: ClaimedMailboxItem, retryAfter: number, provider: ProviderKind): Promise<void> {
+	private async waitForProvider(bundle: ClaimedMailboxBundle, retryAfter: number, provider: ProviderKind): Promise<void> {
+		const item = bundle.head
 		const now = Date.now()
 		const resetsAt = Math.max(retryAfter, now + this.providerPauseFloorMs)
 		// THE CEILING, and the floor applied LAST: a recheck configured below the floor would be the very
@@ -720,7 +822,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			},
 		})
 		try {
-			await this.mailbox.defer(item.id, new Date(recheckAt))
+			await this.mailbox.defer(idsOf(bundle), new Date(recheckAt))
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -846,6 +948,46 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	}
 
 	/**
+	 * TELL THE GROUPS WHOSE TASKS THE BUDGET HOLDS (fase 4, `BlockCause.BUDGET_HELD`) — once per conversation while the
+	 * hold lasts, and only when the gate says to announce (the budget ENFORCED: `ANNOUNCES_HOLD`; observation says
+	 * nothing). The cause closes when the lane has REALLY reopened — admitting for `BUDGET_RELEASE_GRACE_MS` — and only
+	 * then is a later hold told again. Best-effort, like the pause's notice: a failure is logged and retried.
+	 */
+	private async noticeBudgetHeld(announce: IssueLane['announce']): Promise<void> {
+		const now = Date.now()
+		if (!announce) {
+			this.budgetReleasedAt ??= now
+			if (now - this.budgetReleasedAt >= this.budgetReleaseGraceMs) {
+				this.budgetNoticed.clear()
+				this.budgetNoticeAt = 0
+			}
+			return
+		}
+		this.budgetReleasedAt = undefined
+		if (now - this.budgetNoticeAt < this.budgetNoticeRecheckMs) return
+		this.budgetNoticeAt = now
+		try {
+			const threadIds = new Set<string>()
+			for (const issueId of await this.mailbox.pendingTargets(MailboxTargetKind.ISSUE)) {
+				const attributes = await this.attributes.findByIssueId(issueId)
+				if (attributes) threadIds.add(attributes.threadId)
+			}
+			for (const threadId of threadIds) {
+				if (this.budgetNoticed.has(threadId)) continue
+				await this.handlerFor(NotifyBudgetHeld).execute({ threadId, until: announce.reopensAt })
+				this.budgetNoticed.add(threadId)
+			}
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not tell a conversation the budget holds its tasks — the next recheck retries',
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+		}
+	}
+
+	/**
 	 * attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered AHEAD
 	 * of everything else for its target, so retrying forever would silence that thread.
 	 *
@@ -860,14 +1002,21 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * the ceiling) because they differ only in the sentence written to `last_error` — and the third one
 	 * arrived by copying the other two, which is how the poison counter drifts.
 	 */
-	private async recordFailure(item: ClaimedMailboxItem, cause: string): Promise<void> {
+	private async recordFailure(bundle: ClaimedMailboxBundle, cause: string): Promise<void> {
+		const item = bundle.head
 		// NEVER REJECTS. This runs from `runTurn`'s catch, and a turn promise is observed only while
 		// `drain()` races it — a `drain()` that already left on a failed `claimNext` leaves the turn with
 		// no observer, and a rejection there is unhandled: measured 2026-10-30, a BUSY on this write
 		// killed the daemon on every boot. Losing the write is recoverable — the item keeps its lease and
 		// is claimable again when it expires, with the attempt already charged at claim.
 		try {
-			await this.mailbox.fail(item.id, cause, MAX_ATTEMPTS)
+			// Only the head pays the attempt; the steers that rode with it are released with theirs given back (6b).
+			await this.mailbox.fail(
+				item.id,
+				bundle.followers.map(follower => follower.id),
+				cause,
+				MAX_ATTEMPTS,
+			)
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -954,25 +1103,33 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * callers keep passing their own). What changes is that this caller now answers the question
 	 * instead of leaving it blank.
 	 */
-	protected async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+	protected async runIssueWork(item: ClaimedMailboxItem, followers: readonly ClaimedMailboxItem[] = []): Promise<TurnReport> {
+		const members = [item, ...followers]
 		// ENTREGUE (fase 2, item 5): the FIRST hand-off of a routed steer — the same instant the issue
 		// timeline reads as "entregue" (`first_claimed_at`), so the two never disagree. A retry, a
-		// re-claim after a pause or a provider limit is the same delivery again and cues nothing.
-		if (item.firstClaim) await this.cueSteer(item, SteerProgress.DELIVERED)
+		// re-claim after a pause or a provider limit is the same delivery again and cues nothing. Per steer
+		// (fase 4, 6b): each one the turn carries is its own message, with its own ☑️.
+		for (const member of members) if (member.firstClaim) await this.cueSteer(member, SteerProgress.DELIVERED)
 		// THE KILL SWITCH IS ARMED BEFORE THE HOLD IS CHECKED (fase 2, item 2). In the other order a pause
 		// THE KILL SWITCH IS ARMED BEFORE THE HOLD IS CHECKED (fase 2, item 2). In the other order a pause
 		// landing between "not held" and the spawn would find nothing to abort and the turn would run to its
 		// end while the issue sat paused. Armed first, that pause aborts a signal `RunIssueTurn` reads before
 		// it starts anything.
-		// The entry a routed steer carries is registered with the turn, so an "agora" that lands after this
-		// steer's own turn started never cuts it (`IssueTurnAborter.interrupt`).
-		const turn = this.aborter.begin(item.targetId, item.kind === MailboxItemKind.STEER ? steerEntryOf(item.payload) : undefined)
+		// The entries the turn carries are registered with it, so an "agora" that lands after its own steer's turn
+		// started never cuts it (`IssueTurnAborter.interrupt`) — and one that arrives LATER, from outside the group,
+		// cuts the whole group (fase 4, 6b). The turn answers the LAST routed steer it carries (`answersEntryId`).
+		const entries = steerEntriesOf(members)
+		const turn = this.aborter.begin(item.targetId, entries.at(-1), entries)
 		// A PAUSE wins over whatever the turn reported; an INTERRUPT is already in the report `RunIssueTurn`
 		// returned (and a cut that landed after the turn concluded changes nothing — it simply ended first).
 		const paused = () => turn.signal.aborted && abortReasonOf(turn.signal) === TurnAbortReason.PAUSE
 		try {
 			if (await this.hold.isHeld(item.targetId)) return { held: true, spoke: false }
-			const report = await this.runIssueTurn(item)
+			// "PODE PUBLICAR" (fase 4, item 6c): an answer that authorizes publishing runs the workspace's command in place
+			// of the session turn. Once it ran, the item is DONE whatever a pause says now — held, it would be claimed
+			// again and the command would run twice.
+			if (await this.publishInsteadOfTurn(item, followers)) return { published: true, spoke: false }
+			const report = await this.runIssueTurn(item, followers)
 			return paused() ? { held: true, spoke: false } : report
 		} catch (error) {
 			if (paused()) return { held: true, spoke: false }
@@ -984,14 +1141,50 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	}
 
 	/**
+	 * Whether the workspace's publish command ran for this item (fase 4, item 6c) — only an item whose class is the
+	 * publish trigger (`PUBLISH_TRIGGER`), alone in its turn, whose payload declares the stop and the resolution. Every
+	 * "no" (not authorized, no command, no worktree, the window cancelled it, a read failed before the run) is the
+	 * session waking as before.
+	 */
+	private async publishInsteadOfTurn(item: ClaimedMailboxItem, followers: readonly ClaimedMailboxItem[]): Promise<boolean> {
+		if (!PUBLISH_TRIGGER[item.claimClass] || followers.length > 0) return false
+		const payload = ResumeIssuePayloadSchema.safeParse(item.payload)
+		if (!payload.success) return false
+		try {
+			const { ran } = await this.handlerFor(RunPublishCommand).execute({
+				ownerId: item.ownerId,
+				issueId: item.targetId,
+				threadId: payload.data.threadId,
+				key: payload.data.key,
+				title: payload.data.title,
+				stopId: payload.data.stopId,
+				resolution: payload.data.resolution,
+			})
+			return ran
+		} catch (error) {
+			// Before the command ran (`RunPublishCommand` never throws after it): the session wakes instead.
+			this.logging.warn({
+				content: {
+					message: 'publish command not run — the session wakes instead',
+					itemId: item.id,
+					error: error instanceof Error ? error.name : 'unknown',
+				},
+			})
+			return false
+		}
+	}
+
+	/**
 	 * An item whose turn an "agora" cut before the CLI reported a session: nothing of it reached a session,
 	 * so it must run again — released NOW (a `defer` to the present instant, attempt refunded), not after
 	 * the hold's 30 s. It runs before the steer (oldest first), which is the old order and loses nothing.
 	 */
-	private async releaseInterrupted(item: ClaimedMailboxItem): Promise<void> {
+	private async releaseInterrupted(bundle: ClaimedMailboxBundle): Promise<void> {
+		const item = bundle.head
 		this.logging.info({ content: { message: 'issue turn cut before its session existed — item released', itemId: item.id } })
 		try {
-			await this.mailbox.defer(item.id, new Date())
+			// Given back with NO lease — claimable by the very next claim, never "after the clock ticks" (`giveBack`).
+			await this.mailbox.giveBack(idsOf(bundle))
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -1004,10 +1197,12 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	}
 
 	/** Park a held issue's item: deferred, attempt refunded, re-checked in `HOLD_RECHECK_MS` unless a resume releases it first. */
-	private async holdItem(item: ClaimedMailboxItem): Promise<void> {
+	private async holdItem(bundle: ClaimedMailboxBundle): Promise<void> {
+		const item = bundle.head
 		this.logging.info({ content: { message: 'issue work held — paused', itemId: item.id, issueId: item.targetId } })
 		try {
-			await this.mailbox.defer(item.id, new Date(Date.now() + HOLD_RECHECK_MS))
+			// The whole group goes back held, attempts refunded — the steers come back together on resume.
+			await this.mailbox.defer(idsOf(bundle), new Date(Date.now() + HOLD_RECHECK_MS))
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -1039,7 +1234,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		}
 	}
 
-	private async runIssueTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
+	private async runIssueTurn(item: ClaimedMailboxItem, followers: readonly ClaimedMailboxItem[]): Promise<TurnReport> {
+		const members = [item, ...followers]
+		/** The turn's LAST item — its cursor and its dedup key: what the session has consumed once the turn commits. */
+		const last = members.at(-1) ?? item
 		const payload = item.payload as {
 			threadId: string
 			key: string
@@ -1059,6 +1257,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 
 		const provider = this.providerFor(item, thread)
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
+		// What the task was born with (fase 4, S7): the model its kind of work runs on, fixed at the fork.
+		const attributes = await this.attributes.findByIssueId(item.targetId)
 
 		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
@@ -1067,17 +1267,20 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			key: payload.key,
 			title: payload.title,
 			provider,
-			// THE ISSUE INHERITS THE CONVERSATION'S MODEL, and does not have one of its own. An issue is
-			// work the operator asked for IN a thread — the choice they made there is the one they meant,
-			// and giving the issue a second selector would be a second place to configure one thing, in a
-			// screen (the issue detail) where the CLI is not even named.
-			model: thread.modelFor(provider),
+			// THE TASK'S OWN MODEL (fase 4, S7 — this reverses "the issue inherits the conversation's model, resolved
+			// now"): `ForkIssue` fixes it from the kind of work (`MODEL_BY_WORK_KIND` — a diagnosis runs on a cheaper
+			// tier), so changing the conversation's model no longer moves a task already open and a resume never meets
+			// `MODEL_CHANGED`. Still no selector on the issue: the operator's choice is the conversation's, and it is what
+			// a task born before S7 (no model recorded) keeps inheriting, resolved now. The turn stamps this model on its
+			// usage facts — what lets cost per task be measured by kind of work.
+			model: issueTurnModel(provider, attributes?.model, thread.modelFor(provider)),
 			posture: item.posture,
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the
 			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
-			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
+			// Several steers ride as ONE turn (fase 4, 6b): their texts in arrival order, each still signed by its author.
+			prompt: item.kind === MailboxItemKind.STEER ? steerTextOf(members) : (payload.goal ?? ''),
 			// The same discriminant, handed on instead of being thrown away. Until the prompt grammar it
 			// only chose WHICH string to send; the working agent received the two under one shape and had
 			// to guess whether it was being briefed or corrected. `WORK` is the widened default because
@@ -1087,14 +1290,16 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// is standing there when what fired was a timer.
 			firedByLoop: payload.firedByLoop,
 			customPrompt: thread.customPrompt,
-			messageId: item.id,
+			// The LAST item the turn carries (fase 4, 6b): the session's cursor once it commits, and the result's dedup key.
+			messageId: last.id,
 			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
 			// issue's first turn, which is what `resolveSession` reads as "there is nothing to resume".
 			priorMessageId: session?.lastMessageId,
 			originEntryId: payload.originEntryId,
 			// The PERSON's message a routed steer carries (`RoutedSteer`) — the turn's words answer them (fase 3,
 			// item 5). Every other steer, and the brief, carry none, and their words are the issue's progress.
-			answersEntryId: item.kind === MailboxItemKind.STEER ? steerEntryOf(item.payload) : undefined,
+			// With several routed steers in the turn, it answers the LAST one — the latest word in the group.
+			answersEntryId: item.kind === MailboxItemKind.STEER ? steerEntriesOf(members).at(-1) : undefined,
 			// The automatic nudge (`ReconcileStalledIssues`) — read off its payload, where it always was and
 			// never reached the turn.
 			declarationReminder: item.kind === MailboxItemKind.STEER && reminderOf(item.payload) ? true : undefined,

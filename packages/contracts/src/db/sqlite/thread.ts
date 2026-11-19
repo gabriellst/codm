@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import {
 	ProviderKind,
 	AgentModelId,
@@ -18,6 +18,7 @@ import {
 	GroupOutputMode,
 	IssueSignalLevel,
 	OutputRouting,
+	BatchStatus,
 } from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -510,4 +511,55 @@ export const panelActionLedger = sqliteTable(
 		enumCheck('thread_panel_actions_outcome_check', t.outcome, Object.values(PanelActionOutcome)),
 		index('panel_actions_reported_idx').on(t.reportedAt),
 	],
+)
+
+/**
+ * A BATCH (fase 4, item 5): one message that listed several requests, numbered `L-<seq>` per conversation.
+ * Its own aggregate (`Batch`), not a child of the `Thread`: it has its own lifecycle (INCOMPLETE until every
+ * item has a destination, then RECORDED once the receipt went out) and the thread is large already.
+ */
+export const batches = sqliteTable(
+	'thread_batches',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		/** What people quote (`L-31`) — `L-` + `seq`. */
+		code: text('code').notNull(),
+		seq: integer('seq').notNull(),
+		/** The transcript entry whose message listed the items. */
+		sourceEntryId: text('source_entry_id').notNull(),
+		itemCount: integer('item_count').notNull(),
+		status: text('status').$type<BatchStatus>().notNull(),
+		/** The receipt the orchestrator posted once every item had a destination. */
+		receiptEntryId: text('receipt_entry_id'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		version: integer('version').notNull().default(1),
+	},
+	t => [
+		enumCheck('thread_batches_status_check', t.status, Object.values(BatchStatus)),
+		uniqueIndex('thread_batches_thread_seq_unq').on(t.threadId, t.seq),
+	],
+)
+
+/** One numbered item of a batch and its destination (`BatchItemDestinationSchema`, JSON owned by the TS core). */
+export const batchItems = sqliteTable(
+	'thread_batch_items',
+	{
+		batchId: text('batch_id').notNull(),
+		n: integer('n').notNull(),
+		excerpt: text('excerpt').notNull(),
+		/** Null until the orchestrator recorded where this item went. */
+		destination: text('destination', { mode: 'json' }),
+		/** The issue the destination names, when it names one — what the issue's timeline reads (`BATCH_LINKED`). */
+		issueId: text('issue_id'),
+		/** When the destination was recorded — the instant of the issue's `BATCH_LINKED` timeline item. */
+		recordedAt: integer('recorded_at', { mode: 'timestamp_ms' }),
+	},
+	t => [primaryKey({ columns: [t.batchId, t.n] }), index('thread_batch_items_issue_idx').on(t.issueId)],
 )

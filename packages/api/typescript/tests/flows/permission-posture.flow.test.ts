@@ -55,7 +55,7 @@ describe('Flow (integration): the posture is stamped by whoever triggered the wo
 			const item = await mailbox.claimNext('posture-test', 60_000)
 			if (!item) return claimed
 			claimed.push(item)
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 		}
 	}
 

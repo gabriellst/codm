@@ -8,6 +8,8 @@ import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository
 import { issuePrefixOf } from '@workspace/objects'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueSequence } from '../services/IssueSequence'
+import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttributes'
 import type { AgentInterfaceErrors } from '../errors'
 
 export const DeclareIssueOpenInputSchema = z.object({
@@ -36,6 +38,12 @@ export const DeclareIssueOpenOutputSchema = z.object({ issueId: z.uuid(), key: z
  * by guessing a uuid, and it would make the row's identity depend on a value that arrives over the
  * wire. The key is the short `<PREFIX>-<n>` drawn per workspace (`IssueSequence`); uniqueness is the DB's invariant and
  * `OpenIssue` is a no-op on a redelivery, so a collision degrades to "same issue" rather than a crash.
+ *
+ * ### It records the task's attributes too (fase 4, S0c — revisão 2)
+ * `ForkIssue` is not the only birth: this one (a worker separating work mid-turn, and the console through
+ * `CreateIssueController`) creates issues as well. Both write `agent_issue_attributes` in the transaction the issue
+ * is born in — here with the defaults, since neither caller declares a priority — or the queue, the batch receipt
+ * and the worktree janitor would treat these tasks as "older than fase 4" forever.
  */
 @injectable()
 export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema, typeof DeclareIssueOpenOutputSchema> {
@@ -47,6 +55,7 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
 		private readonly sequences: IssueSequence,
+		private readonly attributes: IssueAttributesRepository,
 	) {
 		super()
 	}
@@ -62,6 +71,10 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 		const key = await this.withTransaction(tx, async tx => {
 			// Same short key as `ForkIssue` — `<PREFIX>-<n>`, drawn in this transaction.
 			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
+			await this.attributes.insertIfNew(
+				IssueAttributes.born({ issueId, ownerId: input.ownerId, threadId: input.threadId, ...ISSUE_ATTRIBUTE_DEFAULTS }),
+				tx,
+			)
 			await this.domainEventRepository.save(
 				new AgentRunStartedEvent({
 					entityId: issueId,

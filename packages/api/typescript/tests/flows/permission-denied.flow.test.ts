@@ -4,16 +4,17 @@ import { uuidv7 } from 'uuidv7'
 import type { ZodType } from 'zod'
 import { DomainEventRepository } from '@codm/core-typescript'
 import {
+	GroupOutputMode,
+	IssueSignalLevel,
+	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
-	IssueStatus,
 	ProviderKind,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
-	GroupOutputMode,
-	IssueSignalLevel,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -138,19 +139,20 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: string[] = []
 		let completeCalls = 0
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls.push(error)
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 		await mailbox.enqueue({
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.WORK,
+			claimClass: MailboxClaimClass.WORK,
 			payload: {
 				issueId,
 				threadId: thread.id.value,
@@ -235,6 +237,7 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.WORK,
+			claimClass: MailboxClaimClass.WORK,
 			payload: { issueId, threadId, key: 'moeda', title: 'Troca a moeda', goal: 'troca a moeda', provider: ProviderKind.CLAUDE_CODE },
 			posture: PermissionPosture.AUTO,
 			dedupKey: `work:${issueId}`,

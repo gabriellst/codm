@@ -1,5 +1,14 @@
 import { injectable } from 'tsyringe-neo'
-import { ContactKind, Language, MailboxItemKind, MessageType, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	ContactKind,
+	IssuePriority,
+	IssueWorkKind,
+	Language,
+	MailboxItemKind,
+	MessageType,
+	PermissionPosture,
+	PriorityReason,
+} from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	toolNameOf,
@@ -23,6 +32,7 @@ import {
 	GetHomeDashboardController,
 	AddWorkspaceController,
 	RemoveWorkspaceController,
+	RecordBatchController,
 } from '../../mcp/exposure'
 import { ASKED_AS } from '@thread/objects'
 import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
@@ -394,6 +404,18 @@ export class OrchestratorPromptBuilder {
 			'Acknowledge in that same turn — name the key and say you will report back. One line. Then keep talking; the ' +
 				'work runs on its own, and you will be handed the result when it lands. Whenever you mention an issue in the ' +
 				'conversation, name it by that key, so people can answer about it by key.',
+			'',
+			// Fase 4 (S4): the queue claims by what the task is born with — the orchestrator is the one who declares it.
+			`Tasks wait their turn in a queue, and you decide where a new one stands. Set priorityReason ${PriorityReason.CLIENT_BUG} ` +
+				'only when a client is hitting a bug right now — it goes ahead of everything else, so never for an internal ' +
+				`wish or a nice-to-have. Set priority ${IssuePriority.HIGH} (with priorityReason ${PriorityReason.DECLARED}) when ` +
+				`someone says it is urgent or blocks them; ${IssuePriority.LOW} when they say it can wait. Otherwise leave both ` +
+				'out — most work is normal, and equal tasks run in the order they were asked.',
+			// Fase 4 (S7): the kind of work picks the model the task runs on (`MODEL_BY_WORK_KIND`) — a diagnosis runs cheaper.
+			`Set workKind ${IssueWorkKind.DIAGNOSIS} only when the task just looks and reports — find out why something happens, ` +
+				'read logs or data, explain how something works — and changes nothing: no edit, no commit, no deploy, no message ' +
+				`to anyone outside. It runs on a cheaper model. Anything that writes or publishes is ${IssueWorkKind.CHANGE} (the ` +
+				'default — leave it out); when in doubt, leave it out.',
 			'',
 			'  operator: crie uma issue específica para isso e vamos resolver',
 			'  you: abri a APP-42 (toggle de dark mode) — te aviso quando tiver resultado',
@@ -980,7 +1002,9 @@ export class OrchestratorPromptBuilder {
 						? { de: item.quoted.speaker, hora: clockOf(item.quoted.at, input.now, input.timezone), text: item.quoted.text }
 						: undefined,
 					content: item.text,
-				}).concat(triageHint(item.triage))
+				})
+					.concat(triageHint(item.triage))
+					.concat(batchHint(item.batch))
 			case MailboxItemKind.ISSUE_RESULT:
 				return this.issueResult(item)
 			default: {
@@ -1085,6 +1109,29 @@ function midiaLabel(messageType: MessageType | undefined): MediaLabel | undefine
  */
 function isGroup(input: { contactKind: ContactKind }): boolean {
 	return input.contactKind === ContactKind.GROUP
+}
+
+/**
+ * A BATCH under the live block (fase 4, item 5): the message listed several requests, and the turn owes each of them
+ * a destination through the tool. The receipt is composed by codm from what the tool recorded and routed by the
+ * group's output mode — so the turn is told not to write its own list (the group would read the same thing twice).
+ */
+function batchHint(batch: { batchCode: string; total: number; pending: readonly { n: number; excerpt: string }[] } | undefined): string[] {
+	if (!batch) return []
+	const recordBatch = toolNameOf(RecordBatchController)
+	const still =
+		batch.pending.length < batch.total
+			? `${batch.pending.length} of its ${batch.total} items still have`
+			: `none of its ${batch.total} items has`
+	return [
+		`(batch ${batch.batchCode}: this message lists ${batch.total} requests and ${still} a destination. Handle each one ` +
+			`as you would a message on its own — open an issue, add it to an issue of this conversation, say it is already ` +
+			`live, decline it, defer it, or wait on a decision — then call ${recordBatch} ONCE with batchCode ` +
+			`"${batch.batchCode}" and a destination for EVERY item 1..${batch.total}. codm composes the receipt with every ` +
+			"destination and the group's output mode decides where it goes; do not list them yourself.",
+		...batch.pending.map(item => `  ${item.n}. ${item.excerpt}`),
+		')',
+	]
 }
 
 /** WHO may ask for work and answer a stop, in the words of the sections that gate on it. */

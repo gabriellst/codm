@@ -64,6 +64,8 @@ describe('OutputPolicy — one notice per cause', () => {
 			BlockCause.PROVIDER_LIMIT,
 			BlockCause.PROVIDER_ERROR,
 			BlockCause.CLI_LOGIN,
+			// Fase 4: the budget holds the whole ISSUE lane at once — one fact for the group.
+			BlockCause.BUDGET_HELD,
 		])
 	})
 

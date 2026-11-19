@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue, givenThread } from '@test/support'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { GetIssuesOverview } from './GetIssuesOverview'
@@ -39,6 +39,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { threadId, key: 'ISS-1', title: 'x', text: dedupKey, provider: 'CLAUDE' },
 			dedupKey,
@@ -59,8 +60,8 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		const target =
 			claimed?.targetId === waiting.id.value ? claimed : await mailbox.claimNext('provider-wait-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!target) throw new Error('no item claimed')
-		await mailbox.defer(target.id, reset)
-		if (claimed && claimed.id !== target.id) await mailbox.complete(claimed.id)
+		await mailbox.defer([target.id], reset)
+		if (claimed && claimed.id !== target.id) await mailbox.complete([claimed.id])
 
 		const overview = await testBed.resolve(GetIssuesOverview).execute({ ownerId: MOCK_CLOUD_OWNER_ID, includeArchived: false })
 		const items = overview.groups.flatMap(g => g.items)
@@ -79,7 +80,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		await steer(issue.id.value, thread.id.value, `released-${uuidv7()}`)
 		const claimed = await mailbox.claimNext('provider-wait-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!claimed) throw new Error('no item claimed')
-		await mailbox.defer(claimed.id, new Date(Date.now() + 60 * 60_000))
+		await mailbox.defer([claimed.id], new Date(Date.now() + 60 * 60_000))
 		await mailbox.releaseDeferred([claimed.id])
 
 		const detail = await testBed.resolve(GetIssueDetail).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
@@ -114,11 +115,11 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		expect(deliveredAt).toBeDefined()
 
 		// A retry is the same delivery tried again — the hand-off instant does not move.
-		await mailbox.fail(first.id, 'transport', 3)
+		await mailbox.fail(first.id, [], 'transport', 3)
 		await new Promise(resolve => setTimeout(resolve, 5))
 		const retry = await mailbox.claimNext('steer-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!retry) throw new Error('no retry claimed')
-		await mailbox.complete(retry.id)
+		await mailbox.complete([retry.id])
 
 		;[only] = (await detail()).steers
 		expect(only?.deliveredAt).toBe(deliveredAt)

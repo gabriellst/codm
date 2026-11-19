@@ -25,6 +25,8 @@ import { ReplyStreamer } from './services/ReplyStreamer'
 import { PanelRosterRelay, CloudPanelRosterRelay, MockPanelRosterRelay } from './services/PanelRosterRelay'
 import { PanelMemberKey, FilePanelMemberKey, MockPanelMemberKey } from './services/PanelMemberKey'
 import { InboundTriageQueue } from './services/InboundTriageQueue'
+import { BatchRepository, LibSqlBatchRepository, MockBatchRepository } from './repositories/BatchRepository'
+import { BatchSequence, LibSqlBatchSequence, MockBatchSequence } from './services/BatchSequence'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -90,4 +92,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// point: the bound on concurrent triages only holds if every submit reaches the same pool. Same class in
 	// every env — whether anything is triaged is `InboundTriage`'s binding (agent registry), not this one's.
 	{ token: InboundTriageQueue, mock: InboundTriageQueue, integration: InboundTriageQueue, real: InboundTriageQueue },
+	// Fase 4, item 5 — the batch aggregate and its per-conversation number. Real in real + integration: the timeline
+	// reads the item rows this repository writes (`issue_id`, `recorded_at`), so the write is exercised for real.
+	{ token: BatchRepository, mock: MockBatchRepository, real: LibSqlBatchRepository },
+	{ token: BatchSequence, mock: MockBatchSequence, real: LibSqlBatchSequence },
 ])

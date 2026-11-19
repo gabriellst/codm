@@ -366,7 +366,11 @@ export class CodexAgentRunner extends AgentRunner {
 
 			yield {
 				type: 'finished',
-				result: this.buildResult(request, { terminal, sessionId, exitCode, watchdogFired, stderr: stderrChunks.join('') }),
+				result: {
+					...this.buildResult(request, { terminal, sessionId, exitCode, watchdogFired, stderr: stderrChunks.join('') }),
+					// What the run spent (fase 4, S1) — stamped with its role by the turn that ran it.
+					...(accumulator.usage && { usage: accumulator.usage }),
+				},
 			}
 		} finally {
 			request.signal?.removeEventListener('abort', onAbort)

@@ -12,6 +12,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__ReportProgress",
     "mcp__codm__RequestFeedback",
     "mcp__codm__TransitionIssueStatus",
+    "mcp__codm__WriteHandoffNotes",
   ],
   "orchestration": [
     "mcp__codm__AddWorkspace",
@@ -48,6 +49,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__ListWorkspaces",
     "mcp__codm__RaiseStop",
     "mcp__codm__RecordArtifact",
+    "mcp__codm__RecordBatch",
     "mcp__codm__RemoveWorkspace",
     "mcp__codm__ResolveStop",
     "mcp__codm__SaveOnboardingStep",

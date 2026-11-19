@@ -182,7 +182,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		const mailbox = testBed.resolve(MailboxRepository)
 		const first = await mailbox.claimNext('flow-test', 60_000)
 		expect(first).toBeDefined()
-		await mailbox.complete(first?.id ?? '')
+		await mailbox.complete([first?.id ?? ''])
 		expect(await mailbox.claimNext('flow-test', 60_000)).toBeUndefined()
 	})
 })

@@ -823,6 +823,10 @@ type IssueCreatedEvent struct {
 	Goal string `json:"goal"`
 	OriginEntryID string `json:"originEntryId"`
 	Provider ProviderKind `json:"provider"`
+	Priority *IssuePriority `json:"priority,omitempty"`
+	PriorityReason *PriorityReason `json:"priorityReason,omitempty"`
+	WorkKind *IssueWorkKind `json:"workKind,omitempty"`
+	Model *AgentModelId `json:"model,omitempty"`
 }
 
 func (e IssueCreatedEvent) EventName() string { return IssueCreatedEventName }
@@ -836,6 +840,10 @@ type IssueCreatedPayload struct {
 	Goal string `json:"goal" validate:"required"`
 	OriginEntryID string `json:"originEntryId" validate:"required"`
 	Provider ProviderKind `json:"provider" validate:"required"`
+	Priority *IssuePriority `json:"priority,omitempty"`
+	PriorityReason *PriorityReason `json:"priorityReason,omitempty"`
+	WorkKind *IssueWorkKind `json:"workKind,omitempty"`
+	Model *AgentModelId `json:"model,omitempty"`
 }
 
 // IssueOpenedEventName is the wire discriminator for IssueOpenedEvent.

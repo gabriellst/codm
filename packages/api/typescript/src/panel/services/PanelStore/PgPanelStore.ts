@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, sql } from 'drizzle-orm'
 import { PgDatabaseDriver, PgTransaction } from '@codm/core-typescript'
-import { panelDaemons, panelGroups, panelIssues } from '@codm/contracts/db/pg'
-import { PanelStore, type PanelGroupRow, type PanelIssueRow } from './PanelStore'
+import { panelBatches, panelDaemons, panelGroups, panelIssues } from '@codm/contracts/db/pg'
+import type { PanelHealth } from '@shared/objects'
+import { PanelStore, type PanelBatchRow, type PanelGroupRow, type PanelIssueRow } from './PanelStore'
 
 @injectable()
 export class PgPanelStore extends PanelStore {
@@ -55,12 +56,26 @@ export class PgPanelStore extends PanelStore {
 			})
 	}
 
-	async touchDaemon(ownerId: string, at: Date, tx?: PgTransaction): Promise<void> {
+	async upsertBatches(batches: readonly PanelBatchRow[], tx?: PgTransaction): Promise<void> {
+		if (batches.length === 0) return
+		const dbc = tx ?? this.driver.db
+		await dbc
+			.insert(panelBatches)
+			.values([...batches])
+			.onConflictDoUpdate({
+				target: [panelBatches.threadId, panelBatches.code],
+				set: { batch: sql`excluded.batch`, updatedAt: sql`excluded.updated_at` },
+				// Never overwrite another owner's row.
+				setWhere: sql`${panelBatches.ownerId} = excluded.owner_id`,
+			})
+	}
+
+	async touchDaemon(ownerId: string, at: Date, tx?: PgTransaction, health?: PanelHealth): Promise<void> {
 		const dbc = tx ?? this.driver.db
 		await dbc
 			.insert(panelDaemons)
-			.values({ ownerId, lastSeenAt: at })
-			.onConflictDoUpdate({ target: panelDaemons.ownerId, set: { lastSeenAt: at } })
+			.values({ ownerId, lastSeenAt: at, ...(health && { health }) })
+			.onConflictDoUpdate({ target: panelDaemons.ownerId, set: { lastSeenAt: at, ...(health && { health }) } })
 	}
 
 	async rotateToken(ownerId: string, threadId: string, token: string, tx?: PgTransaction): Promise<boolean> {

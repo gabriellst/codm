@@ -1,6 +1,14 @@
 import { AggregateRoot, BaseError, z } from '@codm/core-typescript'
 import type Z from 'zod'
-import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
+import {
+	AgentModelId,
+	IssueArchiveReason,
+	IssuePriority,
+	IssueStatus,
+	IssueWorkKind,
+	PriorityReason,
+	ProviderKind,
+} from '@codm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 
 export const IssueSchema = z.object({
@@ -39,7 +47,20 @@ export const IssueSchema = z.object({
 	 * transcript never literally contained.
 	 */
 	goal: z.string().trim().min(1).optional(),
+	/**
+	 * Fase 4 — a READ COPY of what the task was born with. The agent runtime owns these (`agent_issue_attributes`,
+	 * written in the birth's transaction) and the queue claims by its own table; here they are only shown (console,
+	 * panel, board). Optional: they arrive on `issue.created` alone — an issue born by `DeclareIssueOpen` or before
+	 * fase 4 has none here.
+	 */
+	priority: z.enum(IssuePriority).optional(),
+	priorityReason: z.enum(PriorityReason).optional(),
+	workKind: z.enum(IssueWorkKind).optional(),
+	model: z.enum(AgentModelId).optional(),
 })
+
+/** What the agent runtime fixed about the task at birth, as `issue.created` carries it. */
+export type IssueBirthAttributes = Pick<IssueProps, 'priority' | 'priorityReason' | 'workKind' | 'model'>
 
 export type IssueProps = Z.infer<typeof IssueSchema>
 
@@ -185,6 +206,18 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 	}
 
 	/** Guard used by RaiseStop / SteerIssue — no new stops/steers on an archived issue. */
+	/**
+	 * Keep the read copy of the task's birth attributes (fase 4). WRITE-ONCE per field: the agent's table is the source
+	 * and a task's birth never changes, so a later fact can only fill what is still missing — never overwrite it. That
+	 * is also what lets `issue.opened` (which knows none of them) and `issue.created` reconcile on one row in any order.
+	 */
+	recordBirthAttributes(attributes: IssueBirthAttributes): void {
+		this.priority ??= attributes.priority
+		this.priorityReason ??= attributes.priorityReason
+		this.workKind ??= attributes.workKind
+		this.model ??= attributes.model
+	}
+
 	assertNotArchived(): void {
 		if (this.archived) throw new BaseError<DomainErrors>('ISSUE_ARCHIVED')
 	}

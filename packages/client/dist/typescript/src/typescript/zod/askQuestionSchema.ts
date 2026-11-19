@@ -6,6 +6,7 @@
 import { askDefaultSchema } from "./askDefaultSchema.ts";
 import { askEffectSchema } from "./askEffectSchema.ts";
 import { askOptionSchema } from "./askOptionSchema.ts";
+import { publishFollowUpSchema } from "./publishFollowUpSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { z } from "zod/v4";
 
@@ -35,7 +36,10 @@ get "default"(){
 get "effects"(){
                 return z.array(askEffectSchema)
               },
-"addresseeId": z.optional(z.string().min(1))
+"addresseeId": z.optional(z.string().min(1)),
+get "onPublished"(){
+                return publishFollowUpSchema.optional()
+              }
     })
 
 export const askQuestionMutationResponseSchema = z.lazy(() => askQuestion200Schema)

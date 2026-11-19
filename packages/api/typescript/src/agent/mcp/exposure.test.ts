@@ -178,6 +178,61 @@ describe('the scan and the emitted spec describe the same surface, in both direc
 	})
 })
 
+/**
+ * FASE 4 (revisão 2, crítico) — the workspace's PUBLISH COMMAND never reaches a model. An argument of it can
+ * carry a credential, so no operation a model may call carries it in its input or its output — directly or
+ * through a referenced component. The console's two doors (`GET`/`PUT /workspaces/:workspaceId/publish-command`)
+ * declare no `mcpScopes`; this pins that no exposed DTO grew the field either (`ListWorkspaces` is a tool).
+ */
+describe('fase 4 — no MCP-exposed operation carries the publish command', () => {
+	const spec = JSON.parse(readFileSync(SPEC_PATH, 'utf8')) as {
+		paths: Record<string, Record<string, EmittedOperation>>
+		components?: { schemas?: Record<string, unknown> }
+	}
+	const LEAK = /publishCommand|PublishCommand|"argv"/
+
+	/** The operation's JSON plus every component it references, transitively. */
+	function closureText(operation: unknown): string {
+		const seen = new Set<string>()
+		const parts: string[] = []
+		const visit = (node: unknown): void => {
+			const text = JSON.stringify(node) ?? ''
+			parts.push(text)
+			for (const [, name] of text.matchAll(/"#\/components\/schemas\/([^"]+)"/g)) {
+				if (!name || seen.has(name)) continue
+				seen.add(name)
+				visit(spec.components?.schemas?.[name])
+			}
+		}
+		visit(operation)
+		return parts.join('\n')
+	}
+
+	const all = Object.values(spec.paths).flatMap(methods => Object.values(methods))
+	const exposed = all.filter(operation => (operation['x-mcp-scope'] ?? []).length > 0)
+
+	test('the scan sees the command where it IS declared — the console doors (falsifier)', () => {
+		const doors = all.filter(operation => LEAK.test(closureText(operation)))
+		expect(doors.length).toBeGreaterThan(0)
+		for (const door of doors) expect(door['x-mcp-scope'] ?? []).toEqual([])
+	})
+
+	test('no exposed operation carries it', () => {
+		expect(exposed.length).toBeGreaterThan(0)
+		expect(exposed.filter(operation => LEAK.test(closureText(operation))).map(operation => operation.operationId)).toEqual([])
+	})
+	/**
+	 * S11 — the console's doors of the command AND of what a run printed (the output may print a credential) are
+	 * operations no model can call; the MCP-exposed issue detail skips those lines (`RunPublishCommand.test.ts`).
+	 */
+	test("the publish doors — the command and a run's output — are console-only", () => {
+		const doors = ['GetWorkspacePublishCommand', 'SetWorkspacePublishCommand', 'GetPublishRunOutput']
+		const found = all.filter(operation => doors.includes(operation.operationId ?? ''))
+		expect(found.map(operation => operation.operationId).sort()).toEqual([...doors].sort())
+		for (const door of found) expect(door['x-mcp-scope'] ?? []).toEqual([])
+	})
+})
+
 describe('D-E — the run-token header has one spelling on both sides of the wire', () => {
 	test('core (server side) and the SDK (shim side) agree byte for byte', () => {
 		// `core` cannot import `@codm/client-typescript` (the api depends on the SDK, so the edge would

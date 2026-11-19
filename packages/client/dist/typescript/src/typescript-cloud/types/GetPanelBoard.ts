@@ -3,8 +3,10 @@
 * Do not edit manually.
 */
 
+import type { Batch } from "./Batch.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
+import type { PanelHealth } from "./PanelHealth.ts";
 
 export type GetPanelBoardPathParams = {
     /**
@@ -30,6 +32,11 @@ export type GetPanelBoard200 = {
      * @type string | undefined
     */
     daemonLastSeenAt?: string;
+    health?: PanelHealth;
+    /**
+     * @type array
+    */
+    batches: Batch[];
     /**
      * @type array
     */

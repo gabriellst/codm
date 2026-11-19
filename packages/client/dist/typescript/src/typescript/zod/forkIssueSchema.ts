@@ -3,6 +3,9 @@
 * Do not edit manually.
 */
 
+import { issuePrioritySchema } from "./issuePrioritySchema.ts";
+import { issueWorkKindSchema } from "./issueWorkKindSchema.ts";
+import { priorityReasonSchema } from "./priorityReasonSchema.ts";
 import { z } from "zod/v4";
 
 export const forkIssuePathParamsSchema = z.object({
@@ -19,7 +22,16 @@ export const forkIssue200Schema = z.object({
 
 export const forkIssueMutationRequestSchema = z.object({
     "goal": z.string().min(1).max(2000),
-"title": z.optional(z.string().min(1).max(80))
+"title": z.optional(z.string().min(1).max(80)),
+get "priority"(){
+                return issuePrioritySchema.optional()
+              },
+get "priorityReason"(){
+                return priorityReasonSchema.optional()
+              },
+get "workKind"(){
+                return issueWorkKindSchema.optional()
+              }
     })
 
 export const forkIssueMutationResponseSchema = z.lazy(() => forkIssue200Schema)

@@ -5,6 +5,7 @@
 
 import type { AskEffect } from "./AskEffect.ts";
 import type { AskOption } from "./AskOption.ts";
+import type { PublishFollowUp } from "./PublishFollowUp.ts";
 
 export type AskDecisionPathParams = {
     /**
@@ -43,6 +44,7 @@ export type AskDecisionMutationRequest = {
      * @type string | undefined
     */
     addresseeId?: string;
+    onPublished?: PublishFollowUp;
     /**
      * @type array
     */

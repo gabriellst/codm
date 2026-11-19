@@ -66,6 +66,9 @@ const (
 	ASKNOTDUE                       ApiErrors = "ASK_NOT_DUE"
 	ASKOPTIONSDUPLICATED            ApiErrors = "ASK_OPTIONS_DUPLICATED"
 	ASKOPTIONUNKNOWN                ApiErrors = "ASK_OPTION_UNKNOWN"
+	BATCHISSUENOTINTHREAD           ApiErrors = "BATCH_ISSUE_NOT_IN_THREAD"
+	BATCHITEMSMISMATCH              ApiErrors = "BATCH_ITEMS_MISMATCH"
+	BATCHNOTFOUND                   ApiErrors = "BATCH_NOT_FOUND"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELMEDIAUNSUPPORTED         ApiErrors = "CHANNEL_MEDIA_UNSUPPORTED"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
@@ -85,6 +88,7 @@ const (
 	FORBIDDEN                       ApiErrors = "FORBIDDEN"
 	GATEWAYUNAVAILABLE              ApiErrors = "GATEWAY_UNAVAILABLE"
 	HANDLERNOTBOUND                 ApiErrors = "HANDLER_NOT_BOUND"
+	HEALTHNOTSAMPLED                ApiErrors = "HEALTH_NOT_SAMPLED"
 	INVALIDATEDAUTHTOKEN            ApiErrors = "INVALIDATED_AUTH_TOKEN"
 	INVALIDAUTHTOKEN                ApiErrors = "INVALID_AUTH_TOKEN"
 	INVALIDCONTROLLEREXAMPLES       ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
@@ -169,6 +173,7 @@ const (
 	THREADNOTFOUND                  ApiErrors = "THREAD_NOT_FOUND"
 	THREADNOTPAUSED                 ApiErrors = "THREAD_NOT_PAUSED"
 	THREADPAUSED                    ApiErrors = "THREAD_PAUSED"
+	THROUGHPUTNOTREADY              ApiErrors = "THROUGHPUT_NOT_READY"
 	TOOMANYTERMINALSTREAMS          ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
 	UNAUTHORIZED                    ApiErrors = "UNAUTHORIZED"
 	USERNOTFOUND                    ApiErrors = "USER_NOT_FOUND"
@@ -212,6 +217,12 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case ASKOPTIONUNKNOWN:
 		return true
+	case BATCHISSUENOTINTHREAD:
+		return true
+	case BATCHITEMSMISMATCH:
+		return true
+	case BATCHNOTFOUND:
+		return true
 	case CANNOTCONVERTINPUT:
 		return true
 	case CHANNELMEDIAUNSUPPORTED:
@@ -249,6 +260,8 @@ func (e ApiErrors) Valid() bool {
 	case GATEWAYUNAVAILABLE:
 		return true
 	case HANDLERNOTBOUND:
+		return true
+	case HEALTHNOTSAMPLED:
 		return true
 	case INVALIDATEDAUTHTOKEN:
 		return true
@@ -418,6 +431,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case THREADPAUSED:
 		return true
+	case THROUGHPUTNOTREADY:
+		return true
 	case TOOMANYTERMINALSTREAMS:
 		return true
 	case UNAUTHORIZED:
@@ -502,6 +517,54 @@ func (e AskEffect) Valid() bool {
 	case IRREVERSIBLE:
 		return true
 	case PUBLISH:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BatchItemDestinationKind.
+const (
+	BatchItemDestinationKindALREADYLIVE   BatchItemDestinationKind = "ALREADY_LIVE"
+	BatchItemDestinationKindATTACHED      BatchItemDestinationKind = "ATTACHED"
+	BatchItemDestinationKindDECLINED      BatchItemDestinationKind = "DECLINED"
+	BatchItemDestinationKindDEFERRED      BatchItemDestinationKind = "DEFERRED"
+	BatchItemDestinationKindNEEDSDECISION BatchItemDestinationKind = "NEEDS_DECISION"
+	BatchItemDestinationKindNEWISSUE      BatchItemDestinationKind = "NEW_ISSUE"
+)
+
+// Valid indicates whether the value is a known member of the BatchItemDestinationKind enum.
+func (e BatchItemDestinationKind) Valid() bool {
+	switch e {
+	case BatchItemDestinationKindALREADYLIVE:
+		return true
+	case BatchItemDestinationKindATTACHED:
+		return true
+	case BatchItemDestinationKindDECLINED:
+		return true
+	case BatchItemDestinationKindDEFERRED:
+		return true
+	case BatchItemDestinationKindNEEDSDECISION:
+		return true
+	case BatchItemDestinationKindNEWISSUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BatchStatus.
+const (
+	INCOMPLETE BatchStatus = "INCOMPLETE"
+	RECORDED   BatchStatus = "RECORDED"
+)
+
+// Valid indicates whether the value is a known member of the BatchStatus enum.
+func (e BatchStatus) Valid() bool {
+	switch e {
+	case INCOMPLETE:
+		return true
+	case RECORDED:
 		return true
 	default:
 		return false
@@ -600,22 +663,22 @@ func (e ChatPresenceType) Valid() bool {
 
 // Defines values for ClassificationMethod.
 const (
-	CLARIFIED    ClassificationMethod = "CLARIFIED"
-	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
-	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
-	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+	ClassificationMethodCLARIFIED    ClassificationMethod = "CLARIFIED"
+	ClassificationMethodCONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	ClassificationMethodNEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	ClassificationMethodREPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
 )
 
 // Valid indicates whether the value is a known member of the ClassificationMethod enum.
 func (e ClassificationMethod) Valid() bool {
 	switch e {
-	case CLARIFIED:
+	case ClassificationMethodCLARIFIED:
 		return true
-	case CONTEXTMATCH:
+	case ClassificationMethodCONTEXTMATCH:
 		return true
-	case NEWISSUE:
+	case ClassificationMethodNEWISSUE:
 		return true
-	case REPLYQUOTE:
+	case ClassificationMethodREPLYQUOTE:
 		return true
 	default:
 		return false
@@ -1047,6 +1110,7 @@ const (
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
 	IssueLifeStateSTALLED         IssueLifeState = "STALLED"
+	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
 )
@@ -1066,9 +1130,32 @@ func (e IssueLifeState) Valid() bool {
 		return true
 	case IssueLifeStateSTALLED:
 		return true
+	case IssueLifeStateWAITINGBUDGET:
+		return true
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuePriority.
+const (
+	HIGH   IssuePriority = "HIGH"
+	LOW    IssuePriority = "LOW"
+	NORMAL IssuePriority = "NORMAL"
+)
+
+// Valid indicates whether the value is a known member of the IssuePriority enum.
+func (e IssuePriority) Valid() bool {
+	switch e {
+	case HIGH:
+		return true
+	case LOW:
+		return true
+	case NORMAL:
 		return true
 	default:
 		return false
@@ -1130,10 +1217,12 @@ func (e IssueStatus) Valid() bool {
 const (
 	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
 	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
 	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
 	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
@@ -1149,6 +1238,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindARTIFACT:
 		return true
+	case IssueTimelineItemKindBATCHLINKED:
+		return true
 	case IssueTimelineItemKindCOMPLETED:
 		return true
 	case IssueTimelineItemKindCREATED:
@@ -1156,6 +1247,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindMESSAGE:
 		return true
 	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindPUBLISHRAN:
 		return true
 	case IssueTimelineItemKindREGRETWINDOW:
 		return true
@@ -1168,6 +1261,24 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindSTOPRESOLVED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueWorkKind.
+const (
+	CHANGE    IssueWorkKind = "CHANGE"
+	DIAGNOSIS IssueWorkKind = "DIAGNOSIS"
+)
+
+// Valid indicates whether the value is a known member of the IssueWorkKind enum.
+func (e IssueWorkKind) Valid() bool {
+	switch e {
+	case CHANGE:
+		return true
+	case DIAGNOSIS:
 		return true
 	default:
 		return false
@@ -1339,6 +1450,27 @@ func (e OutputRouting) Valid() bool {
 	}
 }
 
+// Defines values for PriorityReason.
+const (
+	CLIENTBUG PriorityReason = "CLIENT_BUG"
+	DECLARED  PriorityReason = "DECLARED"
+	DEFAULT   PriorityReason = "DEFAULT"
+)
+
+// Valid indicates whether the value is a known member of the PriorityReason enum.
+func (e PriorityReason) Valid() bool {
+	switch e {
+	case CLIENTBUG:
+		return true
+	case DECLARED:
+		return true
+	case DEFAULT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderKind.
 const (
 	CLAUDECODE ProviderKind = "CLAUDE_CODE"
@@ -1354,6 +1486,27 @@ func (e ProviderKind) Valid() bool {
 	case CODEX:
 		return true
 	case OPENCODE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLimitWindow.
+const (
+	ProviderLimitWindowFIVEHOUR ProviderLimitWindow = "FIVE_HOUR"
+	ProviderLimitWindowUNKNOWN  ProviderLimitWindow = "UNKNOWN"
+	ProviderLimitWindowWEEKLY   ProviderLimitWindow = "WEEKLY"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLimitWindow enum.
+func (e ProviderLimitWindow) Valid() bool {
+	switch e {
+	case ProviderLimitWindowFIVEHOUR:
+		return true
+	case ProviderLimitWindowUNKNOWN:
+		return true
+	case ProviderLimitWindowWEEKLY:
 		return true
 	default:
 		return false
@@ -1378,6 +1531,78 @@ func (e ProviderStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublishFollowUpKind.
+const (
+	COMPLETE PublishFollowUpKind = "COMPLETE"
+	CONTINUE PublishFollowUpKind = "CONTINUE"
+)
+
+// Valid indicates whether the value is a known member of the PublishFollowUpKind enum.
+func (e PublishFollowUpKind) Valid() bool {
+	switch e {
+	case COMPLETE:
+		return true
+	case CONTINUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublishRunOutcome.
+const (
+	PublishRunOutcomeCANCELLEDBYPAUSE PublishRunOutcome = "CANCELLED_BY_PAUSE"
+	PublishRunOutcomeCANCELLEDBYSTEER PublishRunOutcome = "CANCELLED_BY_STEER"
+	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
+	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
+	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+	PublishRunOutcomeUNKNOWN          PublishRunOutcome = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the PublishRunOutcome enum.
+func (e PublishRunOutcome) Valid() bool {
+	switch e {
+	case PublishRunOutcomeCANCELLEDBYPAUSE:
+		return true
+	case PublishRunOutcomeCANCELLEDBYSTEER:
+		return true
+	case PublishRunOutcomeFAILED:
+		return true
+	case PublishRunOutcomeSUCCEEDED:
+		return true
+	case PublishRunOutcomeTIMEDOUT:
+		return true
+	case PublishRunOutcomeUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QuotaState.
+const (
+	HOLDING QuotaState = "HOLDING"
+	NEAR    QuotaState = "NEAR"
+	OK      QuotaState = "OK"
+	REFUSED QuotaState = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the QuotaState enum.
+func (e QuotaState) Valid() bool {
+	switch e {
+	case HOLDING:
+		return true
+	case NEAR:
+		return true
+	case OK:
+		return true
+	case REFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegretWindowOutcome.
 const (
 	CANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
@@ -1393,6 +1618,27 @@ func (e RegretWindowOutcome) Valid() bool {
 	case CANCELLEDBYSTEER:
 		return true
 	case PROCEEDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlotLimit.
+const (
+	BUDGET  SlotLimit = "BUDGET"
+	MACHINE SlotLimit = "MACHINE"
+	MAX     SlotLimit = "MAX"
+)
+
+// Valid indicates whether the value is a known member of the SlotLimit enum.
+func (e SlotLimit) Valid() bool {
+	switch e {
+	case BUDGET:
+		return true
+	case MACHINE:
+		return true
+	case MAX:
 		return true
 	default:
 		return false
@@ -1646,9 +1892,67 @@ type AskEffect string
 
 // AskOption defines model for AskOption.
 type AskOption struct {
-	Id    string `json:"id"`
-	Label string `json:"label"`
+	Authorizes *[]AskEffect `json:"authorizes,omitempty"`
+	Id         string       `json:"id"`
+	Label      string       `json:"label"`
 }
+
+// BatchItem defines model for BatchItem.
+type BatchItem struct {
+	Destination *BatchItemDestination `json:"destination,omitempty"`
+	Excerpt     string                `json:"excerpt"`
+	N           int                   `json:"n"`
+}
+
+// BatchItemDestination defines model for BatchItemDestination.
+type BatchItemDestination struct {
+	union json.RawMessage
+}
+
+// BatchItemDestination0 defines model for .
+type BatchItemDestination0 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// BatchItemDestination1 defines model for .
+type BatchItemDestination1 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// BatchItemDestination2 defines model for .
+type BatchItemDestination2 struct {
+	IssueId *openapi_types.UUID `json:"issueId,omitempty"`
+	Kind    string              `json:"kind"`
+	Note    string              `json:"note"`
+}
+
+// BatchItemDestination3 defines model for .
+type BatchItemDestination3 struct {
+	Kind   string `json:"kind"`
+	Reason string `json:"reason"`
+}
+
+// BatchItemDestination4 defines model for .
+type BatchItemDestination4 struct {
+	Kind   string     `json:"kind"`
+	Reason string     `json:"reason"`
+	Until  *time.Time `json:"until,omitempty"`
+}
+
+// BatchItemDestination5 defines model for .
+type BatchItemDestination5 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	StopId  openapi_types.UUID `json:"stopId"`
+}
+
+// BatchItemDestinationKind defines model for BatchItemDestinationKind.
+type BatchItemDestinationKind string
+
+// BatchStatus defines model for BatchStatus.
+type BatchStatus string
 
 // BufferSize defines model for BufferSize.
 type BufferSize string
@@ -1692,6 +1996,9 @@ type IssueControlSource string
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
+// IssuePriority defines model for IssuePriority.
+type IssuePriority string
+
 // IssueSignalLevel defines model for IssueSignalLevel.
 type IssueSignalLevel string
 
@@ -1700,6 +2007,9 @@ type IssueStatus string
 
 // IssueTimelineItemKind defines model for IssueTimelineItemKind.
 type IssueTimelineItemKind string
+
+// IssueWorkKind defines model for IssueWorkKind.
+type IssueWorkKind string
 
 // Language defines model for Language.
 type Language string
@@ -1719,14 +2029,85 @@ type OnboardingStep string
 // OutputRouting defines model for OutputRouting.
 type OutputRouting string
 
+// PriorityReason defines model for PriorityReason.
+type PriorityReason string
+
 // ProviderKind defines model for ProviderKind.
 type ProviderKind string
+
+// ProviderLimitWindow defines model for ProviderLimitWindow.
+type ProviderLimitWindow string
 
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
 
+// PublishCommand defines model for PublishCommand.
+type PublishCommand struct {
+	Argv []string `json:"argv"`
+}
+
+// PublishFollowUp defines model for PublishFollowUp.
+type PublishFollowUp struct {
+	union json.RawMessage
+}
+
+// PublishFollowUp0 defines model for .
+type PublishFollowUp0 struct {
+	Kind    string `json:"kind"`
+	Summary string `json:"summary"`
+}
+
+// PublishFollowUp1 defines model for .
+type PublishFollowUp1 struct {
+	Kind string `json:"kind"`
+}
+
+// PublishFollowUpKind defines model for PublishFollowUpKind.
+type PublishFollowUpKind string
+
+// PublishRunOutcome defines model for PublishRunOutcome.
+type PublishRunOutcome string
+
+// QuotaSnapshot defines model for QuotaSnapshot.
+type QuotaSnapshot struct {
+	Budget struct {
+		Admits   bool                 `json:"admits"`
+		Enforced bool                 `json:"enforced"`
+		HeldBy   *ProviderLimitWindow `json:"heldBy,omitempty"`
+	} `json:"budget"`
+	DiskFreeBytes int `json:"diskFreeBytes"`
+	Queue         struct {
+		HeldByBudget int `json:"heldByBudget"`
+		Pending      int `json:"pending"`
+	} `json:"queue"`
+	Slots struct {
+		Effective int       `json:"effective"`
+		InUse     int       `json:"inUse"`
+		LimitedBy SlotLimit `json:"limitedBy"`
+		Max       int       `json:"max"`
+	} `json:"slots"`
+	State QuotaState `json:"state"`
+	Week  struct {
+		Ceiling  float32    `json:"ceiling"`
+		ResetsAt *time.Time `json:"resetsAt,omitempty"`
+		Spent    float32    `json:"spent"`
+	} `json:"week"`
+	Window struct {
+		Ceiling  float32    `json:"ceiling"`
+		Reserve  float32    `json:"reserve"`
+		ResetsAt *time.Time `json:"resetsAt,omitempty"`
+		Spent    float32    `json:"spent"`
+	} `json:"window"`
+}
+
+// QuotaState defines model for QuotaState.
+type QuotaState string
+
 // RegretWindowOutcome defines model for RegretWindowOutcome.
 type RegretWindowOutcome string
+
+// SlotLimit defines model for SlotLimit.
+type SlotLimit string
 
 // Status defines model for Status.
 type Status string
@@ -1888,6 +2269,25 @@ type GetIssueTimeline200JSONResponseBodyItems11 struct {
 	WaitedMs   int                    `json:"waitedMs"`
 }
 
+// GetIssueTimeline200JSONResponseBodyItems12 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems12 struct {
+	At        string `json:"at"`
+	BatchCode string `json:"batchCode"`
+	Id        string `json:"id"`
+	Kind      string `json:"kind"`
+	N         int    `json:"n"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems13 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems13 struct {
+	At         string            `json:"at"`
+	DurationMs *int              `json:"durationMs,omitempty"`
+	ExitCode   *int              `json:"exitCode,omitempty"`
+	Id         string            `json:"id"`
+	Kind       string            `json:"kind"`
+	Outcome    PublishRunOutcome `json:"outcome"`
+}
+
 // GetIssueTimeline200JSONResponseBody_Items_Item defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBody_Items_Item struct {
 	union json.RawMessage
@@ -1968,6 +2368,15 @@ type SendArtifactJSONBody struct {
 	Caption *string `json:"caption,omitempty"`
 }
 
+// RecordBatchJSONBody defines parameters for RecordBatch.
+type RecordBatchJSONBody struct {
+	BatchCode string `json:"batchCode"`
+	Items     []struct {
+		Destination BatchItemDestination `json:"destination"`
+		N           int                  `json:"n"`
+	} `json:"items"`
+}
+
 // ConfigureContextBufferJSONBody defines parameters for ConfigureContextBuffer.
 type ConfigureContextBufferJSONBody struct {
 	BufferSize BufferSize `json:"bufferSize"`
@@ -2002,16 +2411,20 @@ type CreateIssueJSONBody struct {
 
 // ForkIssueJSONBody defines parameters for ForkIssue.
 type ForkIssueJSONBody struct {
-	Goal  string  `json:"goal"`
-	Title *string `json:"title,omitempty"`
+	Goal           string          `json:"goal"`
+	Priority       *IssuePriority  `json:"priority,omitempty"`
+	PriorityReason *PriorityReason `json:"priorityReason,omitempty"`
+	Title          *string         `json:"title,omitempty"`
+	WorkKind       *IssueWorkKind  `json:"workKind,omitempty"`
 }
 
 // AskDecisionJSONBody defines parameters for AskDecision.
 type AskDecisionJSONBody struct {
-	AddresseeId *string     `json:"addresseeId,omitempty"`
-	Effects     []AskEffect `json:"effects"`
-	Options     []AskOption `json:"options"`
-	Question    string      `json:"question"`
+	AddresseeId *string          `json:"addresseeId,omitempty"`
+	Effects     []AskEffect      `json:"effects"`
+	OnPublished *PublishFollowUp `json:"onPublished,omitempty"`
+	Options     []AskOption      `json:"options"`
+	Question    string           `json:"question"`
 }
 
 // RequestFeedbackJSONBody defines parameters for RequestFeedback.
@@ -2019,6 +2432,11 @@ type RequestFeedbackJSONBody struct {
 	ArtifactIds    []openapi_types.UUID `json:"artifactIds"`
 	MainArtifactId openapi_types.UUID   `json:"mainArtifactId"`
 	Text           string               `json:"text"`
+}
+
+// WriteHandoffNotesJSONBody defines parameters for WriteHandoffNotes.
+type WriteHandoffNotesJSONBody struct {
+	Notes string `json:"notes"`
 }
 
 // AskOperatorJSONBody defines parameters for AskOperator.
@@ -2033,11 +2451,12 @@ type ReportProgressJSONBody struct {
 
 // AskQuestionJSONBody defines parameters for AskQuestion.
 type AskQuestionJSONBody struct {
-	AddresseeId *string     `json:"addresseeId,omitempty"`
-	Default     AskDefault  `json:"default"`
-	Effects     []AskEffect `json:"effects"`
-	Options     []AskOption `json:"options"`
-	Question    string      `json:"question"`
+	AddresseeId *string          `json:"addresseeId,omitempty"`
+	Default     AskDefault       `json:"default"`
+	Effects     []AskEffect      `json:"effects"`
+	OnPublished *PublishFollowUp `json:"onPublished,omitempty"`
+	Options     []AskOption      `json:"options"`
+	Question    string           `json:"question"`
 }
 
 // TransitionIssueStatusJSONBody defines parameters for TransitionIssueStatus.
@@ -2306,6 +2725,11 @@ type AddWorkspaceJSONBody struct {
 	Path string `json:"path"`
 }
 
+// SetWorkspacePublishCommandJSONBody defines parameters for SetWorkspacePublishCommand.
+type SetWorkspacePublishCommandJSONBody struct {
+	Command nullable.Nullable[PublishCommand] `json:"command"`
+}
+
 // SteerIssueJSONRequestBody defines body for SteerIssue for application/json ContentType.
 type SteerIssueJSONRequestBody SteerIssueJSONBody
 
@@ -2330,6 +2754,9 @@ type RecordArtifactJSONRequestBody RecordArtifactJSONBody
 // SendArtifactJSONRequestBody defines body for SendArtifact for application/json ContentType.
 type SendArtifactJSONRequestBody SendArtifactJSONBody
 
+// RecordBatchJSONRequestBody defines body for RecordBatch for application/json ContentType.
+type RecordBatchJSONRequestBody RecordBatchJSONBody
+
 // ConfigureContextBufferJSONRequestBody defines body for ConfigureContextBuffer for application/json ContentType.
 type ConfigureContextBufferJSONRequestBody ConfigureContextBufferJSONBody
 
@@ -2347,6 +2774,9 @@ type AskDecisionJSONRequestBody AskDecisionJSONBody
 
 // RequestFeedbackJSONRequestBody defines body for RequestFeedback for application/json ContentType.
 type RequestFeedbackJSONRequestBody RequestFeedbackJSONBody
+
+// WriteHandoffNotesJSONRequestBody defines body for WriteHandoffNotes for application/json ContentType.
+type WriteHandoffNotesJSONRequestBody WriteHandoffNotesJSONBody
 
 // AskOperatorJSONRequestBody defines body for AskOperator for application/json ContentType.
 type AskOperatorJSONRequestBody AskOperatorJSONBody
@@ -2414,6 +2844,9 @@ type SaveOnboardingStepJSONRequestBody SaveOnboardingStepJSONBody
 // AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
 type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
 
+// SetWorkspacePublishCommandJSONRequestBody defines body for SetWorkspacePublishCommand for application/json ContentType.
+type SetWorkspacePublishCommandJSONRequestBody SetWorkspacePublishCommandJSONBody
+
 // AsAskDefault0 returns the union data inside the AskDefault as a AskDefault0
 func (t AskDefault) AsAskDefault0() (AskDefault0, error) {
 	var body AskDefault0
@@ -2472,6 +2905,234 @@ func (t AskDefault) MarshalJSON() ([]byte, error) {
 }
 
 func (t *AskDefault) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsBatchItemDestination0 returns the union data inside the BatchItemDestination as a BatchItemDestination0
+func (t BatchItemDestination) AsBatchItemDestination0() (BatchItemDestination0, error) {
+	var body BatchItemDestination0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination0 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination0
+func (t *BatchItemDestination) FromBatchItemDestination0(v BatchItemDestination0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination0 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination0
+func (t *BatchItemDestination) MergeBatchItemDestination0(v BatchItemDestination0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination1 returns the union data inside the BatchItemDestination as a BatchItemDestination1
+func (t BatchItemDestination) AsBatchItemDestination1() (BatchItemDestination1, error) {
+	var body BatchItemDestination1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination1 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination1
+func (t *BatchItemDestination) FromBatchItemDestination1(v BatchItemDestination1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination1 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination1
+func (t *BatchItemDestination) MergeBatchItemDestination1(v BatchItemDestination1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination2 returns the union data inside the BatchItemDestination as a BatchItemDestination2
+func (t BatchItemDestination) AsBatchItemDestination2() (BatchItemDestination2, error) {
+	var body BatchItemDestination2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination2 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination2
+func (t *BatchItemDestination) FromBatchItemDestination2(v BatchItemDestination2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination2 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination2
+func (t *BatchItemDestination) MergeBatchItemDestination2(v BatchItemDestination2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination3 returns the union data inside the BatchItemDestination as a BatchItemDestination3
+func (t BatchItemDestination) AsBatchItemDestination3() (BatchItemDestination3, error) {
+	var body BatchItemDestination3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination3 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination3
+func (t *BatchItemDestination) FromBatchItemDestination3(v BatchItemDestination3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination3 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination3
+func (t *BatchItemDestination) MergeBatchItemDestination3(v BatchItemDestination3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination4 returns the union data inside the BatchItemDestination as a BatchItemDestination4
+func (t BatchItemDestination) AsBatchItemDestination4() (BatchItemDestination4, error) {
+	var body BatchItemDestination4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination4 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination4
+func (t *BatchItemDestination) FromBatchItemDestination4(v BatchItemDestination4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination4 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination4
+func (t *BatchItemDestination) MergeBatchItemDestination4(v BatchItemDestination4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBatchItemDestination5 returns the union data inside the BatchItemDestination as a BatchItemDestination5
+func (t BatchItemDestination) AsBatchItemDestination5() (BatchItemDestination5, error) {
+	var body BatchItemDestination5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatchItemDestination5 overwrites any union data inside the BatchItemDestination as the provided BatchItemDestination5
+func (t *BatchItemDestination) FromBatchItemDestination5(v BatchItemDestination5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBatchItemDestination5 performs a merge with any union data inside the BatchItemDestination, using the provided BatchItemDestination5
+func (t *BatchItemDestination) MergeBatchItemDestination5(v BatchItemDestination5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t BatchItemDestination) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *BatchItemDestination) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsPublishFollowUp0 returns the union data inside the PublishFollowUp as a PublishFollowUp0
+func (t PublishFollowUp) AsPublishFollowUp0() (PublishFollowUp0, error) {
+	var body PublishFollowUp0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishFollowUp0 overwrites any union data inside the PublishFollowUp as the provided PublishFollowUp0
+func (t *PublishFollowUp) FromPublishFollowUp0(v PublishFollowUp0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishFollowUp0 performs a merge with any union data inside the PublishFollowUp, using the provided PublishFollowUp0
+func (t *PublishFollowUp) MergePublishFollowUp0(v PublishFollowUp0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublishFollowUp1 returns the union data inside the PublishFollowUp as a PublishFollowUp1
+func (t PublishFollowUp) AsPublishFollowUp1() (PublishFollowUp1, error) {
+	var body PublishFollowUp1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishFollowUp1 overwrites any union data inside the PublishFollowUp as the provided PublishFollowUp1
+func (t *PublishFollowUp) FromPublishFollowUp1(v PublishFollowUp1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishFollowUp1 performs a merge with any union data inside the PublishFollowUp, using the provided PublishFollowUp1
+func (t *PublishFollowUp) MergePublishFollowUp1(v PublishFollowUp1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PublishFollowUp) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PublishFollowUp) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -2778,6 +3439,58 @@ func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200
 
 // MergeGetIssueTimeline200JSONResponseBodyItems11 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems11
 func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems11(v GetIssueTimeline200JSONResponseBodyItems11) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems12 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems12
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems12() (GetIssueTimeline200JSONResponseBodyItems12, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems12
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems12 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems12
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems12(v GetIssueTimeline200JSONResponseBodyItems12) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems12 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems12
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems12(v GetIssueTimeline200JSONResponseBodyItems12) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems13 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems13
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems13() (GetIssueTimeline200JSONResponseBodyItems13, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems13
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems13 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems13
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems13(v GetIssueTimeline200JSONResponseBodyItems13) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems13 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems13
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems13(v GetIssueTimeline200JSONResponseBodyItems13) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -3506,6 +4219,9 @@ type ClientInterface interface {
 	// PauseIssue request
 	PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPublishRunOutput request
+	GetPublishRunOutput(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RestoreIssue request
 	RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3576,6 +4292,11 @@ type ClientInterface interface {
 
 	SendArtifact(ctx context.Context, threadId string, artifactId string, body SendArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RecordBatchWithBody request with any body
+	RecordBatchWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RecordBatch(ctx context.Context, threadId string, body RecordBatchJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ConfigureContextBufferWithBody request with any body
 	ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3611,6 +4332,11 @@ type ClientInterface interface {
 	RequestFeedbackWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	RequestFeedback(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// WriteHandoffNotesWithBody request with any body
+	WriteHandoffNotesWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	WriteHandoffNotes(ctx context.Context, threadId string, issueId string, body WriteHandoffNotesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AskOperatorWithBody request with any body
 	AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3771,6 +4497,12 @@ type ClientInterface interface {
 	// GetSettings request
 	GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetSystemHealth request
+	GetSystemHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetBatch request
+	GetBatch(ctx context.Context, threadId string, batchCode string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetUserInfo request
 	GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3784,6 +4516,14 @@ type ClientInterface interface {
 
 	// RemoveWorkspace request
 	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetWorkspacePublishCommand request
+	GetWorkspacePublishCommand(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspacePublishCommandWithBody request with any body
+	SetWorkspacePublishCommandWithBody(ctx context.Context, workspaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetWorkspacePublishCommand(ctx context.Context, workspaceId string, body SetWorkspacePublishCommandJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -3836,6 +4576,18 @@ func (c *Client) ArchiveIssue(ctx context.Context, issueId string, reqEditors ..
 
 func (c *Client) PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPublishRunOutput(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPublishRunOutputRequest(c.Server, issueId, timelineItemId)
 	if err != nil {
 		return nil, err
 	}
@@ -4158,6 +4910,30 @@ func (c *Client) SendArtifact(ctx context.Context, threadId string, artifactId s
 	return c.Client.Do(req)
 }
 
+func (c *Client) RecordBatchWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordBatchRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RecordBatch(ctx context.Context, threadId string, body RecordBatchJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordBatchRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewConfigureContextBufferRequestWithBody(c.Server, threadId, contentType, body)
 	if err != nil {
@@ -4316,6 +5092,30 @@ func (c *Client) RequestFeedbackWithBody(ctx context.Context, threadId string, i
 
 func (c *Client) RequestFeedback(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRequestFeedbackRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) WriteHandoffNotesWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewWriteHandoffNotesRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) WriteHandoffNotes(ctx context.Context, threadId string, issueId string, body WriteHandoffNotesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewWriteHandoffNotesRequest(c.Server, threadId, issueId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5046,6 +5846,30 @@ func (c *Client) GetSettings(ctx context.Context, reqEditors ...RequestEditorFn)
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetSystemHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSystemHealthRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetBatch(ctx context.Context, threadId string, batchCode string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetBatchRequest(c.Server, threadId, batchCode)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetUserInfoRequest(c.Server)
 	if err != nil {
@@ -5096,6 +5920,42 @@ func (c *Client) AddWorkspace(ctx context.Context, body AddWorkspaceJSONRequestB
 
 func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRemoveWorkspaceRequest(c.Server, workspaceId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetWorkspacePublishCommand(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetWorkspacePublishCommandRequest(c.Server, workspaceId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetWorkspacePublishCommandWithBody(ctx context.Context, workspaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspacePublishCommandRequestWithBody(c.Server, workspaceId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetWorkspacePublishCommand(ctx context.Context, workspaceId string, body SetWorkspacePublishCommandJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspacePublishCommandRequest(c.Server, workspaceId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5282,6 +6142,47 @@ func NewPauseIssueRequest(server string, issueId string) (*http.Request, error) 
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPublishRunOutputRequest generates requests for GetPublishRunOutput
+func NewGetPublishRunOutputRequest(server string, issueId string, timelineItemId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "timelineItemId", timelineItemId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/issues/%s/publish-runs/%s/output", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -6027,6 +6928,53 @@ func NewSendArtifactRequestWithBody(server string, threadId string, artifactId s
 	return req, nil
 }
 
+// NewRecordBatchRequest calls the generic RecordBatch builder with application/json body
+func NewRecordBatchRequest(server string, threadId string, body RecordBatchJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRecordBatchRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewRecordBatchRequestWithBody generates requests for RecordBatch with any type of body
+func NewRecordBatchRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/batches/record", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewConfigureContextBufferRequest calls the generic ConfigureContextBuffer builder with application/json body
 func NewConfigureContextBufferRequest(server string, threadId string, body ConfigureContextBufferJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -6372,6 +7320,60 @@ func NewRequestFeedbackRequestWithBody(server string, threadId string, issueId s
 	}
 
 	operationPath := fmt.Sprintf("/threads/%s/issues/%s/feedback", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewWriteHandoffNotesRequest calls the generic WriteHandoffNotes builder with application/json body
+func NewWriteHandoffNotesRequest(server string, threadId string, issueId string, body WriteHandoffNotesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewWriteHandoffNotesRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewWriteHandoffNotesRequestWithBody generates requests for WriteHandoffNotes with any type of body
+func NewWriteHandoffNotesRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/handoff-notes", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -8057,6 +9059,74 @@ func NewGetSettingsRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetSystemHealthRequest generates requests for GetSystemHealth
+func NewGetSystemHealthRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/ui/system/health")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetBatchRequest generates requests for GetBatch
+func NewGetBatchRequest(server string, threadId string, batchCode string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "batchCode", batchCode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/ui/threads/%s/batches/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetUserInfoRequest generates requests for GetUserInfo
 func NewGetUserInfoRequest(server string) (*http.Request, error) {
 	var err error
@@ -8185,6 +9255,87 @@ func NewRemoveWorkspaceRequest(server string, workspaceId string) (*http.Request
 	return req, nil
 }
 
+// NewGetWorkspacePublishCommandRequest generates requests for GetWorkspacePublishCommand
+func NewGetWorkspacePublishCommandRequest(server string, workspaceId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/publish-command", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetWorkspacePublishCommandRequest calls the generic SetWorkspacePublishCommand builder with application/json body
+func NewSetWorkspacePublishCommandRequest(server string, workspaceId string, body SetWorkspacePublishCommandJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetWorkspacePublishCommandRequestWithBody(server, workspaceId, "application/json", bodyReader)
+}
+
+// NewSetWorkspacePublishCommandRequestWithBody generates requests for SetWorkspacePublishCommand with any type of body
+func NewSetWorkspacePublishCommandRequestWithBody(server string, workspaceId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/publish-command", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -8242,6 +9393,9 @@ type ClientWithResponsesInterface interface {
 
 	// PauseIssueWithResponse request
 	PauseIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*PauseIssueResponse, error)
+
+	// GetPublishRunOutputWithResponse request
+	GetPublishRunOutputWithResponse(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*GetPublishRunOutputResponse, error)
 
 	// RestoreIssueWithResponse request
 	RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error)
@@ -8313,6 +9467,11 @@ type ClientWithResponsesInterface interface {
 
 	SendArtifactWithResponse(ctx context.Context, threadId string, artifactId string, body SendArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*SendArtifactResponse, error)
 
+	// RecordBatchWithBodyWithResponse request with any body
+	RecordBatchWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordBatchResponse, error)
+
+	RecordBatchWithResponse(ctx context.Context, threadId string, body RecordBatchJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordBatchResponse, error)
+
 	// ConfigureContextBufferWithBodyWithResponse request with any body
 	ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error)
 
@@ -8348,6 +9507,11 @@ type ClientWithResponsesInterface interface {
 	RequestFeedbackWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error)
 
 	RequestFeedbackWithResponse(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error)
+
+	// WriteHandoffNotesWithBodyWithResponse request with any body
+	WriteHandoffNotesWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*WriteHandoffNotesResponse, error)
+
+	WriteHandoffNotesWithResponse(ctx context.Context, threadId string, issueId string, body WriteHandoffNotesJSONRequestBody, reqEditors ...RequestEditorFn) (*WriteHandoffNotesResponse, error)
 
 	// AskOperatorWithBodyWithResponse request with any body
 	AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
@@ -8508,6 +9672,12 @@ type ClientWithResponsesInterface interface {
 	// GetSettingsWithResponse request
 	GetSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSettingsResponse, error)
 
+	// GetSystemHealthWithResponse request
+	GetSystemHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSystemHealthResponse, error)
+
+	// GetBatchWithResponse request
+	GetBatchWithResponse(ctx context.Context, threadId string, batchCode string, reqEditors ...RequestEditorFn) (*GetBatchResponse, error)
+
 	// GetUserInfoWithResponse request
 	GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error)
 
@@ -8521,6 +9691,14 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveWorkspaceWithResponse request
 	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
+
+	// GetWorkspacePublishCommandWithResponse request
+	GetWorkspacePublishCommandWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*GetWorkspacePublishCommandResponse, error)
+
+	// SetWorkspacePublishCommandWithBodyWithResponse request with any body
+	SetWorkspacePublishCommandWithBodyWithResponse(ctx context.Context, workspaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspacePublishCommandResponse, error)
+
+	SetWorkspacePublishCommandWithResponse(ctx context.Context, workspaceId string, body SetWorkspacePublishCommandJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspacePublishCommandResponse, error)
 }
 
 type HealthResponse struct {
@@ -8748,6 +9926,41 @@ func (r PauseIssueResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PauseIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPublishRunOutputResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Lines []struct {
+			At   string `json:"at"`
+			Line string `json:"line"`
+		} `json:"lines"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPublishRunOutputResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPublishRunOutputResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPublishRunOutputResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9320,6 +10533,36 @@ func (r SendArtifactResponse) ContentType() string {
 	return ""
 }
 
+type RecordBatchResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RecordBatchResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RecordBatchResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RecordBatchResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ConfigureContextBufferResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -9638,6 +10881,36 @@ func (r RequestFeedbackResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RequestFeedbackResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type WriteHandoffNotesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r WriteHandoffNotesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r WriteHandoffNotesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r WriteHandoffNotesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -11057,6 +12330,76 @@ func (r GetSettingsResponse) ContentType() string {
 	return ""
 }
 
+type GetSystemHealthResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *QuotaSnapshot
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSystemHealthResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSystemHealthResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSystemHealthResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetBatchResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Code   string `json:"code"`
+		Issues []struct {
+			IssueId openapi_types.UUID `json:"issueId"`
+			Key     string             `json:"key"`
+			Title   string             `json:"title"`
+		} `json:"issues"`
+		Items         []BatchItem        `json:"items"`
+		SourceEntryId openapi_types.UUID `json:"sourceEntryId"`
+		Status        BatchStatus        `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetBatchResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetBatchResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetBatchResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetUserInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -11203,6 +12546,68 @@ func (r RemoveWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+type GetWorkspacePublishCommandResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Command nullable.Nullable[PublishCommand] `json:"command"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetWorkspacePublishCommandResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetWorkspacePublishCommandResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetWorkspacePublishCommandResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetWorkspacePublishCommandResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetWorkspacePublishCommandResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetWorkspacePublishCommandResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetWorkspacePublishCommandResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // HealthWithResponse request returning *HealthResponse
 func (c *ClientWithResponses) HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error) {
 	rsp, err := c.Health(ctx, reqEditors...)
@@ -11246,6 +12651,15 @@ func (c *ClientWithResponses) PauseIssueWithResponse(ctx context.Context, issueI
 		return nil, err
 	}
 	return ParsePauseIssueResponse(rsp)
+}
+
+// GetPublishRunOutputWithResponse request returning *GetPublishRunOutputResponse
+func (c *ClientWithResponses) GetPublishRunOutputWithResponse(ctx context.Context, issueId string, timelineItemId string, reqEditors ...RequestEditorFn) (*GetPublishRunOutputResponse, error) {
+	rsp, err := c.GetPublishRunOutput(ctx, issueId, timelineItemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPublishRunOutputResponse(rsp)
 }
 
 // RestoreIssueWithResponse request returning *RestoreIssueResponse
@@ -11474,6 +12888,23 @@ func (c *ClientWithResponses) SendArtifactWithResponse(ctx context.Context, thre
 	return ParseSendArtifactResponse(rsp)
 }
 
+// RecordBatchWithBodyWithResponse request with arbitrary body returning *RecordBatchResponse
+func (c *ClientWithResponses) RecordBatchWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordBatchResponse, error) {
+	rsp, err := c.RecordBatchWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordBatchResponse(rsp)
+}
+
+func (c *ClientWithResponses) RecordBatchWithResponse(ctx context.Context, threadId string, body RecordBatchJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordBatchResponse, error) {
+	rsp, err := c.RecordBatch(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordBatchResponse(rsp)
+}
+
 // ConfigureContextBufferWithBodyWithResponse request with arbitrary body returning *ConfigureContextBufferResponse
 func (c *ClientWithResponses) ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error) {
 	rsp, err := c.ConfigureContextBufferWithBody(ctx, threadId, contentType, body, reqEditors...)
@@ -11592,6 +13023,23 @@ func (c *ClientWithResponses) RequestFeedbackWithResponse(ctx context.Context, t
 		return nil, err
 	}
 	return ParseRequestFeedbackResponse(rsp)
+}
+
+// WriteHandoffNotesWithBodyWithResponse request with arbitrary body returning *WriteHandoffNotesResponse
+func (c *ClientWithResponses) WriteHandoffNotesWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*WriteHandoffNotesResponse, error) {
+	rsp, err := c.WriteHandoffNotesWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseWriteHandoffNotesResponse(rsp)
+}
+
+func (c *ClientWithResponses) WriteHandoffNotesWithResponse(ctx context.Context, threadId string, issueId string, body WriteHandoffNotesJSONRequestBody, reqEditors ...RequestEditorFn) (*WriteHandoffNotesResponse, error) {
+	rsp, err := c.WriteHandoffNotes(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseWriteHandoffNotesResponse(rsp)
 }
 
 // AskOperatorWithBodyWithResponse request with arbitrary body returning *AskOperatorResponse
@@ -12113,6 +13561,24 @@ func (c *ClientWithResponses) GetSettingsWithResponse(ctx context.Context, reqEd
 	return ParseGetSettingsResponse(rsp)
 }
 
+// GetSystemHealthWithResponse request returning *GetSystemHealthResponse
+func (c *ClientWithResponses) GetSystemHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSystemHealthResponse, error) {
+	rsp, err := c.GetSystemHealth(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSystemHealthResponse(rsp)
+}
+
+// GetBatchWithResponse request returning *GetBatchResponse
+func (c *ClientWithResponses) GetBatchWithResponse(ctx context.Context, threadId string, batchCode string, reqEditors ...RequestEditorFn) (*GetBatchResponse, error) {
+	rsp, err := c.GetBatch(ctx, threadId, batchCode, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetBatchResponse(rsp)
+}
+
 // GetUserInfoWithResponse request returning *GetUserInfoResponse
 func (c *ClientWithResponses) GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error) {
 	rsp, err := c.GetUserInfo(ctx, reqEditors...)
@@ -12155,6 +13621,32 @@ func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRemoveWorkspaceResponse(rsp)
+}
+
+// GetWorkspacePublishCommandWithResponse request returning *GetWorkspacePublishCommandResponse
+func (c *ClientWithResponses) GetWorkspacePublishCommandWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*GetWorkspacePublishCommandResponse, error) {
+	rsp, err := c.GetWorkspacePublishCommand(ctx, workspaceId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetWorkspacePublishCommandResponse(rsp)
+}
+
+// SetWorkspacePublishCommandWithBodyWithResponse request with arbitrary body returning *SetWorkspacePublishCommandResponse
+func (c *ClientWithResponses) SetWorkspacePublishCommandWithBodyWithResponse(ctx context.Context, workspaceId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspacePublishCommandResponse, error) {
+	rsp, err := c.SetWorkspacePublishCommandWithBody(ctx, workspaceId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspacePublishCommandResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetWorkspacePublishCommandWithResponse(ctx context.Context, workspaceId string, body SetWorkspacePublishCommandJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspacePublishCommandResponse, error) {
+	rsp, err := c.SetWorkspacePublishCommand(ctx, workspaceId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspacePublishCommandResponse(rsp)
 }
 
 // ParseHealthResponse parses an HTTP response from a HealthWithResponse call
@@ -12358,6 +13850,37 @@ func ParsePauseIssueResponse(rsp *http.Response) (*PauseIssueResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPublishRunOutputResponse parses an HTTP response from a GetPublishRunOutputWithResponse call
+func ParseGetPublishRunOutputResponse(rsp *http.Response) (*GetPublishRunOutputResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPublishRunOutputResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Lines []struct {
+				At   string `json:"at"`
+				Line string `json:"line"`
+			} `json:"lines"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -12844,6 +14367,32 @@ func ParseSendArtifactResponse(rsp *http.Response) (*SendArtifactResponse, error
 	return response, nil
 }
 
+// ParseRecordBatchResponse parses an HTTP response from a RecordBatchWithResponse call
+func ParseRecordBatchResponse(rsp *http.Response) (*RecordBatchResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RecordBatchResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseConfigureContextBufferResponse parses an HTTP response from a ConfigureContextBufferWithResponse call
 func ParseConfigureContextBufferResponse(rsp *http.Response) (*ConfigureContextBufferResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -13119,6 +14668,32 @@ func ParseRequestFeedbackResponse(rsp *http.Response) (*RequestFeedbackResponse,
 	}
 
 	response := &RequestFeedbackResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseWriteHandoffNotesResponse parses an HTTP response from a WriteHandoffNotesWithResponse call
+func ParseWriteHandoffNotesResponse(rsp *http.Response) (*WriteHandoffNotesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &WriteHandoffNotesResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -14375,6 +15950,68 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 	return response, nil
 }
 
+// ParseGetSystemHealthResponse parses an HTTP response from a GetSystemHealthWithResponse call
+func ParseGetSystemHealthResponse(rsp *http.Response) (*GetSystemHealthResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSystemHealthResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest QuotaSnapshot
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetBatchResponse parses an HTTP response from a GetBatchWithResponse call
+func ParseGetBatchResponse(rsp *http.Response) (*GetBatchResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetBatchResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Code   string `json:"code"`
+			Issues []struct {
+				IssueId openapi_types.UUID `json:"issueId"`
+				Key     string             `json:"key"`
+				Title   string             `json:"title"`
+			} `json:"issues"`
+			Items         []BatchItem        `json:"items"`
+			SourceEntryId openapi_types.UUID `json:"sourceEntryId"`
+			Status        BatchStatus        `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetUserInfoResponse parses an HTTP response from a GetUserInfoWithResponse call
 func ParseGetUserInfoResponse(rsp *http.Response) (*GetUserInfoResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -14488,6 +16125,60 @@ func ParseRemoveWorkspaceResponse(rsp *http.Response) (*RemoveWorkspaceResponse,
 	}
 
 	response := &RemoveWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetWorkspacePublishCommandResponse parses an HTTP response from a GetWorkspacePublishCommandWithResponse call
+func ParseGetWorkspacePublishCommandResponse(rsp *http.Response) (*GetWorkspacePublishCommandResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetWorkspacePublishCommandResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Command nullable.Nullable[PublishCommand] `json:"command"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetWorkspacePublishCommandResponse parses an HTTP response from a SetWorkspacePublishCommandWithResponse call
+func ParseSetWorkspacePublishCommandResponse(rsp *http.Response) (*SetWorkspacePublishCommandResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetWorkspacePublishCommandResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}

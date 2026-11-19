@@ -11,6 +11,7 @@ import {
 	type HttpControllerRequest,
 } from '@codm/core-typescript'
 import {
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	McpScope,
@@ -65,7 +66,7 @@ describe('Flow (integration): an APPROVE from someone who may elevate resumes in
 		for (;;) {
 			const item = await mailbox.claimNext('approve-test', 60_000)
 			if (!item) return undefined
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 			if (item.targetKind === MailboxTargetKind.ISSUE && item.targetId === issueId) return item
 		}
 	}
@@ -130,6 +131,7 @@ describe('Flow (integration): an APPROVE from someone who may elevate resumes in
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issue.id.value,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			payload: { issueId: issue.id.value, threadId: thread.id.value, key: 'moeda', title: 'moeda', text: 'pode gravar' },
 			posture: PermissionPosture.BYPASS,
 			dedupKey: `steer:${uuidv7()}`,

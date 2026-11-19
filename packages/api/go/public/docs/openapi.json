@@ -2332,13 +2332,44 @@
         },
         "type": "object"
       },
+      "BatchItemDestinationKind": {
+        "enum": [
+          "NEW_ISSUE",
+          "ATTACHED",
+          "ALREADY_LIVE",
+          "DECLINED",
+          "DEFERRED",
+          "NEEDS_DECISION"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "BatchItemDestinationKindNEW_ISSUE",
+          "BatchItemDestinationKindATTACHED",
+          "BatchItemDestinationKindALREADY_LIVE",
+          "BatchItemDestinationKindDECLINED",
+          "BatchItemDestinationKindDEFERRED",
+          "BatchItemDestinationKindNEEDS_DECISION"
+        ]
+      },
+      "BatchStatus": {
+        "enum": [
+          "INCOMPLETE",
+          "RECORDED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "BatchStatusINCOMPLETE",
+          "BatchStatusRECORDED"
+        ]
+      },
       "BlockCause": {
         "enum": [
           "PROVIDER_LIMIT",
           "PROVIDER_ERROR",
           "CLI_LOGIN",
           "STALLED",
-          "CLASSIFICATION"
+          "CLASSIFICATION",
+          "BUDGET_HELD"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -2346,7 +2377,8 @@
           "BlockCausePROVIDER_ERROR",
           "BlockCauseCLI_LOGIN",
           "BlockCauseSTALLED",
-          "BlockCauseCLASSIFICATION"
+          "BlockCauseCLASSIFICATION",
+          "BlockCauseBUDGET_HELD"
         ]
       },
       "BufferSize": {
@@ -7274,6 +7306,7 @@
           "RUNNING",
           "QUEUED",
           "WAITING_PROVIDER",
+          "WAITING_BUDGET",
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
@@ -7285,11 +7318,25 @@
           "IssueLifeStateRUNNING",
           "IssueLifeStateQUEUED",
           "IssueLifeStateWAITING_PROVIDER",
+          "IssueLifeStateWAITING_BUDGET",
           "IssueLifeStateWAITING_PERSON",
           "IssueLifeStateREMINDED",
           "IssueLifeStateSTALLED",
           "IssueLifeStatePAUSED",
           "IssueLifeStateDONE"
+        ]
+      },
+      "IssuePriority": {
+        "enum": [
+          "HIGH",
+          "NORMAL",
+          "LOW"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssuePriorityHIGH",
+          "IssuePriorityNORMAL",
+          "IssuePriorityLOW"
         ]
       },
       "IssueSignalLevel": {
@@ -7337,7 +7384,9 @@
           "ARCHIVED",
           "PAUSED",
           "RESUMED",
-          "REGRET_WINDOW"
+          "REGRET_WINDOW",
+          "BATCH_LINKED",
+          "PUBLISH_RAN"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7352,7 +7401,20 @@
           "IssueTimelineItemKindARCHIVED",
           "IssueTimelineItemKindPAUSED",
           "IssueTimelineItemKindRESUMED",
-          "IssueTimelineItemKindREGRET_WINDOW"
+          "IssueTimelineItemKindREGRET_WINDOW",
+          "IssueTimelineItemKindBATCH_LINKED",
+          "IssueTimelineItemKindPUBLISH_RAN"
+        ]
+      },
+      "IssueWorkKind": {
+        "enum": [
+          "CHANGE",
+          "DIAGNOSIS"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueWorkKindCHANGE",
+          "IssueWorkKindDIAGNOSIS"
         ]
       },
       "Language": {
@@ -7526,6 +7588,27 @@
         "x-enum-varnames": [
           "LoopScheduleKindDAILY",
           "LoopScheduleKindINTERVAL"
+        ]
+      },
+      "MailboxClaimClass": {
+        "enum": [
+          "DECISION_ANSWER",
+          "INTERRUPT",
+          "STEER",
+          "WORK",
+          "REMINDER",
+          "RESULT",
+          "OPERATOR"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "MailboxClaimClassDECISION_ANSWER",
+          "MailboxClaimClassINTERRUPT",
+          "MailboxClaimClassSTEER",
+          "MailboxClaimClassWORK",
+          "MailboxClaimClassREMINDER",
+          "MailboxClaimClassRESULT",
+          "MailboxClaimClassOPERATOR"
         ]
       },
       "MailboxItemKind": {
@@ -7789,6 +7872,19 @@
           "PresenceTypePaused"
         ]
       },
+      "PriorityReason": {
+        "enum": [
+          "CLIENT_BUG",
+          "DECLARED",
+          "DEFAULT"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PriorityReasonCLIENT_BUG",
+          "PriorityReasonDECLARED",
+          "PriorityReasonDEFAULT"
+        ]
+      },
       "ProviderKind": {
         "enum": [
           "CLAUDE_CODE",
@@ -7800,6 +7896,19 @@
           "ProviderKindCLAUDE_CODE",
           "ProviderKindCODEX",
           "ProviderKindOPENCODE"
+        ]
+      },
+      "ProviderLimitWindow": {
+        "enum": [
+          "FIVE_HOUR",
+          "WEEKLY",
+          "UNKNOWN"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "ProviderLimitWindowFIVE_HOUR",
+          "ProviderLimitWindowWEEKLY",
+          "ProviderLimitWindowUNKNOWN"
         ]
       },
       "ProviderStatus": {
@@ -7826,6 +7935,51 @@
           "ProxyProtocolHTTPS",
           "ProxyProtocolSOCKS4",
           "ProxyProtocolSOCKS5"
+        ]
+      },
+      "PublishFollowUpKind": {
+        "enum": [
+          "COMPLETE",
+          "CONTINUE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PublishFollowUpKindCOMPLETE",
+          "PublishFollowUpKindCONTINUE"
+        ]
+      },
+      "PublishRunOutcome": {
+        "enum": [
+          "SUCCEEDED",
+          "FAILED",
+          "TIMED_OUT",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE",
+          "UNKNOWN"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PublishRunOutcomeSUCCEEDED",
+          "PublishRunOutcomeFAILED",
+          "PublishRunOutcomeTIMED_OUT",
+          "PublishRunOutcomeCANCELLED_BY_STEER",
+          "PublishRunOutcomeCANCELLED_BY_PAUSE",
+          "PublishRunOutcomeUNKNOWN"
+        ]
+      },
+      "QuotaState": {
+        "enum": [
+          "OK",
+          "NEAR",
+          "HOLDING",
+          "REFUSED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "QuotaStateOK",
+          "QuotaStateNEAR",
+          "QuotaStateHOLDING",
+          "QuotaStateREFUSED"
         ]
       },
       "ReactionKeyData": {
@@ -8312,6 +8466,19 @@
           "IntegrationChannelMessageReceived",
           "IntegrationChannelMessageSeen",
           "IntegrationChannelSpecialPlatformEventReceived"
+        ]
+      },
+      "SlotLimit": {
+        "enum": [
+          "MAX",
+          "MACHINE",
+          "BUDGET"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "SlotLimitMAX",
+          "SlotLimitMACHINE",
+          "SlotLimitBUDGET"
         ]
       },
       "StickerMessageData": {
@@ -9056,6 +9223,19 @@
           "TranscriptKindDIRECT",
           "TranscriptKindWHISPER",
           "TranscriptKindACTION"
+        ]
+      },
+      "UsageRole": {
+        "enum": [
+          "ORCHESTRATOR",
+          "ISSUE",
+          "TRIAGE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "UsageRoleORCHESTRATOR",
+          "UsageRoleISSUE",
+          "UsageRoleTRIAGE"
         ]
       },
       "VideoMessageData": {

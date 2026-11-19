@@ -32,6 +32,11 @@ export type AgentApplicationErrors =
 	// Fase 3: `RequestFeedback` cites artifacts THIS issue recorded — another owner's, conversation's or
 	// issue's is not found, the same answer `SendArtifact` gives (re-registered from `artifact`, same status).
 	| 'ARTIFACT_NOT_FOUND'
+	// Fase 4 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK build
+	// against it — but its behaviour lands in a later slice. Every such WRITE refuses with THIS code, never a
+	// silent 2xx (a 2xx from a tool tells the model it was recorded). 501: the route is declared, the
+	// implementation is not there yet. Registered in `agent`, `thread` and `workspace` with the same status.
+	| 'THROUGHPUT_NOT_READY'
 export type ApplicationErrors = BaseApplicationErrors | AgentApplicationErrors
 
 /**
@@ -56,6 +61,8 @@ export type InfrastructureErrors = BaseInfrastructureErrors | AgentInfrastructur
 export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
 
 registerErrorCodes({
+	// Fase 4 (S0b) — see the union: a declared door whose behaviour lands in a later slice.
+	THROUGHPUT_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 	// Domain — um segundo OBSERVER para uma issue que já tem um. A exclusão de RUN não vive mais
 	// aqui: é o lease por alvo do mailbox.
 	SESSION_ALREADY_STREAMING: HttpStatusCode.CONFLICT,

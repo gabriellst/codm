@@ -2,9 +2,13 @@ import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import {
 	AgentModelId,
+	IssuePriority,
+	IssueWorkKind,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
+	PriorityReason,
 	ProviderKind,
 } from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
@@ -50,6 +54,13 @@ export const agentSessions = sqliteTable(
 		 * free with every turn, so nothing has to tokenize anything to decide.
 		 */
 		lastContextTokens: integer('last_context_tokens'),
+		/**
+		 * Fase 4 (item 6a) — the HANDOFF NOTES the issue's session wrote (`WriteHandoffNotes`) once its context
+		 * passed the ask threshold, and when. A fresh session opened above the context budget starts from them
+		 * instead of from the whole transcript. Null until a session wrote notes.
+		 */
+		handoffNotes: text('handoff_notes'),
+		handoffAt: integer('handoff_at', { mode: 'timestamp_ms' }),
 		lastTurnAt: integer('last_turn_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -123,6 +134,18 @@ export const agentMailbox = sqliteTable(
 		 * with no branch anywhere in the reader.
 		 */
 		posture: text('posture').$type<PermissionPosture>().notNull().default(PermissionPosture.AUTO),
+		/**
+		 * WHAT THIS ITEM IS (fase 4, items 4 and 6b) — declared by its producer, read by the claim order
+		 * (`CLAIM_RANK`) and by steer coalescing. A column for the same reason `posture` is one: the payload
+		 * is opaque to the queue, and "which item is this" read off a payload key or a dedup-key prefix
+		 * (`resume:`) is convention, not contract (Non-Negotiable 5).
+		 *
+		 * The DEFAULT is a constant because SQLite's `ADD COLUMN … NOT NULL` demands one; migration 0037
+		 * derives the class of every existing row from its `kind` (`CLAIM_CLASS_OF_KIND`). `WORK` is the most
+		 * conservative class for a writer that bypasses `EnqueueMailboxItem`: it never coalesces and never
+		 * jumps the queue. No CHECK — a new column on an existing table; `z.enum` closes it on hydration.
+		 */
+		claimClass: text('claim_class').$type<MailboxClaimClass>().notNull().default(MailboxClaimClass.WORK),
 		// The item's own shape, discriminated by `kind`. Opaque here on purpose: the queue schedules
 		// turns, it does not model what a turn is about.
 		payload: text('payload', { mode: 'json' }).notNull(),
@@ -204,3 +227,48 @@ export const agentIssueSequences = sqliteTable('agent_issue_sequences', {
 	/** The last number handed out. The next issue gets `last_seq + 1`. */
 	lastSeq: integer('last_seq').notNull(),
 })
+
+/**
+ * What the agent runtime fixed about a task when it was BORN (fase 4) — its priority (and why), its kind of
+ * work, the model it runs on — plus the worktree its session registered and when it was closed.
+ *
+ * Owned by `agent`, not `issue`: the queue claims by priority (item 4) and the dispatcher picks the model
+ * (item 6d) INSIDE this context, which never reads `issue` at run time. Written in the same transaction the
+ * issue is born in (`ForkIssue`, `DeclareIssueOpen`, `CreateIssue`), so it exists in the very turn that forked
+ * it — `issue_issues` is materialized later, from the `issue.created` fact, and keeps only a read copy.
+ *
+ * Migration 0037 backfills one row per existing issue (`NORMAL` / `DEFAULT` / `CHANGE`, `model` null =
+ * inherits the conversation's, `closed_at` from `completed_at`).
+ */
+export const agentIssueAttributes = sqliteTable(
+	'agent_issue_attributes',
+	{
+		issueId: text('issue_id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		priority: text('priority').$type<IssuePriority>().notNull(),
+		priorityReason: text('priority_reason').$type<PriorityReason>().notNull(),
+		workKind: text('work_kind').$type<IssueWorkKind>().notNull(),
+		/** The model fixed for the task at birth; null ⇒ it inherits the conversation's (older tasks). */
+		model: text('model').$type<AgentModelId>(),
+		/**
+		 * The git worktree the task's session works in, as REGISTERED from the hook's declared `cwd` (only when
+		 * `git worktree list --porcelain` of the workspace lists it and it is not the main one) — never inferred
+		 * from a folder name. Null ⇒ nothing is ever removed for this task.
+		 */
+		worktreePath: text('worktree_path'),
+		worktreeSeenAt: integer('worktree_seen_at', { mode: 'timestamp_ms' }),
+		/** When the task was completed or archived — the start of the worktree's grace period. */
+		closedAt: integer('closed_at', { mode: 'timestamp_ms' }),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	t => [
+		enumCheck('agent_issue_attributes_priority_check', t.priority, Object.values(IssuePriority)),
+		enumCheck('agent_issue_attributes_priority_reason_check', t.priorityReason, Object.values(PriorityReason)),
+		enumCheck('agent_issue_attributes_work_kind_check', t.workKind, Object.values(IssueWorkKind)),
+		enumCheck('agent_issue_attributes_model_check', t.model, Object.values(AgentModelId)),
+		index('agent_issue_attributes_thread_idx').on(t.threadId),
+	],
+)

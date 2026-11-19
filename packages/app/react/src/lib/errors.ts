@@ -153,6 +153,14 @@ const onboardingRequiredHandler: ErrorHandler = ctx => {
 	)
 }
 
+/**
+ * A STATE, NOT A FAILURE (fase 4, item 7): the health strip asked before the dispatcher's first loop. The strip itself
+ * says it is waiting for the first reading and re-reads on its own — a toast would repeat the same thing in red.
+ */
+const healthNotSampledHandler: ErrorHandler = ctx => {
+	console.info('[errors] HEALTH_NOT_SAMPLED: the health strip shows the waiting state — no toast', ctx.originalError ?? ctx.message)
+}
+
 // Custom handlers for specific errors.
 const customErrorHandlers: Partial<Record<ErrorCode, ErrorHandler>> = {
 	NETWORK_ERROR: infrastructureErrorHandler,
@@ -178,6 +186,7 @@ const customErrorHandlers: Partial<Record<ErrorCode, ErrorHandler>> = {
 	CLOUD_UNREACHABLE: sessionEndedHandler,
 	// Um portão de estado, não uma falha: o `OnboardingMiddleware` recusa até o operador concluir.
 	ONBOARDING_NOT_COMPLETED: onboardingRequiredHandler,
+	HEALTH_NOT_SAMPLED: healthNotSampledHandler,
 }
 
 export function handleError(code: ErrorCode | (string & {}), message?: string, originalError?: unknown): void {

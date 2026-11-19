@@ -2,11 +2,9 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IrreversibleActionKind, RegretWindowOutcome } from '@codm/contracts-typescript/wire/enums'
-import { IssueHold } from '@issue/services/IssueHold'
-import { MailboxRepository } from '../repositories/MailboxRepository'
-import { RegretWindowClock } from '../services/RegretWindowClock'
+import { RegretWindowGate } from '../services/RegretWindowGate'
 import { RegretWindowClosedEvent } from '../events/RegretWindowClosedEvent'
-import { matchIrreversibleAction, REGRET_WINDOW_MS } from '../utils/irreversibleActions'
+import { matchIrreversibleAction } from '../utils/irreversibleActions'
 
 export const OpenRegretWindowInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -40,7 +38,8 @@ export const OpenRegretWindowOutputSchema = z
  * A cancel does NOT touch the steer: it stays in the mailbox and is read the usual way, at the issue's
  * next turn (or now, if it said `agora` — item 4). The refusal only makes the session stop and look.
  *
- * Pause before steer: a held issue is the stronger statement ("pare"), and its timeline should say so.
+ * Pause before steer: a held issue is the stronger statement ("pare"), and its timeline should say so. The rule
+ * itself lives in `RegretWindowGate` — the same one the workspace's publish command waits on (fase 4, item 6c).
  */
 @injectable()
 export class OpenRegretWindow extends Handler<typeof OpenRegretWindowInputSchema, typeof OpenRegretWindowOutputSchema> {
@@ -48,11 +47,7 @@ export class OpenRegretWindow extends Handler<typeof OpenRegretWindowInputSchema
 	readonly inputSchema = OpenRegretWindowInputSchema
 	readonly outputSchema = OpenRegretWindowOutputSchema
 
-	constructor(
-		private readonly hold: IssueHold,
-		private readonly mailbox: MailboxRepository,
-		private readonly clock: RegretWindowClock,
-	) {
+	constructor(private readonly gate: RegretWindowGate) {
 		super()
 	}
 
@@ -60,14 +55,7 @@ export class OpenRegretWindow extends Handler<typeof OpenRegretWindowInputSchema
 		const actionKind = matchIrreversibleAction(input.command)
 		if (actionKind === undefined) return undefined
 
-		let waitedMs = 0
-		let outcome = await this.cancellation(input.issueId, tx)
-		if (outcome === undefined) {
-			await this.clock.wait(REGRET_WINDOW_MS)
-			waitedMs = REGRET_WINDOW_MS
-			outcome = (await this.cancellation(input.issueId, tx)) ?? RegretWindowOutcome.PROCEEDED
-		}
-
+		const { outcome, waitedMs } = await this.gate.window(input.issueId, tx)
 		const closed = { actionKind, outcome, waitedMs }
 		await this.withTransaction(tx, async tx => {
 			await this.domainEventRepository.save(
@@ -80,12 +68,5 @@ export class OpenRegretWindow extends Handler<typeof OpenRegretWindowInputSchema
 			)
 		})
 		return closed
-	}
-
-	/** Why the action must not run now — `undefined` when nothing stands in its way. */
-	private async cancellation(issueId: string, tx?: Transaction): Promise<RegretWindowOutcome | undefined> {
-		if (await this.hold.isHeld(issueId, tx)) return RegretWindowOutcome.CANCELLED_BY_PAUSE
-		if (await this.mailbox.hasUnreadSteer(issueId, tx)) return RegretWindowOutcome.CANCELLED_BY_STEER
-		return undefined
 	}
 }

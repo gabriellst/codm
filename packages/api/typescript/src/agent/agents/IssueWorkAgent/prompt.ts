@@ -9,8 +9,10 @@ import {
 	RequestFeedbackController,
 	ReportProgressController,
 	RecordArtifactController,
+	WriteHandoffNotesController,
 } from '../../mcp/exposure'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
+import { HandoffStep } from '../../enums'
 import { agoraLine, HORA_AGORA, renderMsg } from '../grammar'
 import type { IssueWorkInputSchema } from './types'
 
@@ -93,6 +95,9 @@ export class IssueWorkPromptBuilder {
 			agoraLine(input.now, input.timezone),
 			// Per turn, so it rides with the message and not in the standing prompt (see `system()`).
 			...this.requesterApproval(input),
+			// The handoff is per turn too: a changed system prompt on a resumed session rewrites the cache of the whole
+			// context — the very cost the handoff exists to cut.
+			...this.handoffSeed(input),
 			'',
 			...renderMsg({
 				de: input.speaker,
@@ -102,7 +107,41 @@ export class IssueWorkPromptBuilder {
 				tipo: TIPO[input.turnKind],
 				content: input.prompt,
 			}),
+			...this.handoffAsk(input),
 		].join('\n')
+	}
+
+	/**
+	 * A FRESH SESSION CONTINUING A TASK (fase 4, item 6a): what the previous session wrote for it, then the task's
+	 * durable state — the goal, the decisions and answers, what is still waiting, what it produced and said, the tree.
+	 * Ahead of the message, so the message is read as the next step of work already under way.
+	 */
+	private handoffSeed(input: IssueWorkInput): string[] {
+		if (input.handoff?.kind !== HandoffStep.SEED) return []
+		return [
+			'',
+			'YOU ARE CONTINUING THIS TASK IN A NEW SESSION',
+			'The previous session of this task grew too large and was closed. Nothing of the work is lost: the files and the ' +
+				'branch are as it left them. Continue from the notes below — do not start over, and do not redo what they say is done.',
+			...(input.handoff.sessionNotes ? ['', 'NOTES THE PREVIOUS SESSION WROTE', input.handoff.sessionNotes] : []),
+			'',
+			'THE TASK SO FAR (from its record)',
+			input.handoff.derived,
+		]
+	}
+
+	/**
+	 * THE ASK (fase 4, item 6a): the session is large, so before it ends this turn it writes what a fresh session would
+	 * need. After the message, so it reads as "and also, at the end" — never as the work itself.
+	 */
+	private handoffAsk(input: IssueWorkInput): string[] {
+		if (input.handoff?.kind !== HandoffStep.ASK) return []
+		return [
+			'',
+			`This session is getting large. Do the work above first; then, before you end this turn, call the ` +
+				`${operationIdOf(WriteHandoffNotesController)} tool with notes a fresh session could continue from: the goal, ` +
+				'what is done, what was decided (and by whom), what is still open, the files and the branch, and the next step.',
+		]
 	}
 
 	/**
@@ -164,6 +203,12 @@ export class IssueWorkPromptBuilder {
 				'see), IRREVERSIBLE (an action that cannot be undone, like deleting data), CLIENT_DATA (reading or changing a ' +
 				"client's data). Any effect makes it a decision only someone who may release can answer. Leave it empty only " +
 				'when the answer authorizes none of them.',
+			`PUBLISHING — when you ask to publish with ${operationIdOf(AskDecisionController)}, mark the option that means "yes, ` +
+				'publish" with `authorizes: ["PUBLISH"]` (and `effects` with PUBLISH). If the workspace has a publish command, ' +
+				'codm runs it itself when that option is chosen — you are not woken to publish. Say in `onPublished` what ' +
+				'follows a successful publish: `{ kind: "COMPLETE", summary }` closes this task with that summary, ' +
+				'`{ kind: "CONTINUE" }` (or nothing) tells you the outcome so you go on. A failed publish comes back to you ' +
+				'with the end of its output.',
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,

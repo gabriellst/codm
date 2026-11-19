@@ -40,3 +40,4 @@ export {
 	type AskStopKind,
 	type StopAskProps,
 } from './StopAsk'
+export { ResumeIssuePayloadSchema, type ResumeIssuePayload } from './ResumeIssuePayload'

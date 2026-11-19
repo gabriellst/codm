@@ -3,6 +3,9 @@
 * Do not edit manually.
 */
 
+import type { IssuePriority } from "./IssuePriority.ts";
+import type { IssueWorkKind } from "./IssueWorkKind.ts";
+import type { PriorityReason } from "./PriorityReason.ts";
 
 export type ForkIssuePathParams = {
     /**
@@ -38,6 +41,18 @@ export type ForkIssueMutationRequest = {
      * @type string | undefined
     */
     title?: string;
+    /**
+     * @type string | undefined
+    */
+    priority?: IssuePriority;
+    /**
+     * @type string | undefined
+    */
+    priorityReason?: PriorityReason;
+    /**
+     * @type string | undefined
+    */
+    workKind?: IssueWorkKind;
 };
 
 export type ForkIssueMutationResponse = ForkIssue200;

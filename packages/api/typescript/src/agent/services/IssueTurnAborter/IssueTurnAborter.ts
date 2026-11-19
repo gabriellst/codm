@@ -9,8 +9,13 @@ export interface IssueTurnHandle {
 
 interface RunningTurn {
 	controller: AbortController
-	/** The transcript entry the running turn's item carries (a routed steer), when it carries one. */
+	/** The transcript entry the running turn ANSWERS (its last routed steer), when it carries one. */
 	carrying: string | undefined
+	/**
+	 * Every routed steer's entry the turn carries — several when steers ride together (fase 4, item 6b). An "agora" for
+	 * any of them never cuts this turn: it is already being read.
+	 */
+	carries: ReadonlySet<string>
 	/** The completion declared during this turn answers `carrying` — the closing is that person's reply. */
 	answeredByClosing: boolean
 }
@@ -48,10 +53,16 @@ export const abortReasonOf = (signal: AbortSignal): TurnAbortReason =>
 export class IssueTurnAborter {
 	private readonly running = new Map<string, RunningTurn>()
 
-	/** @param carrying the transcript entry the turn's item came from, so an "agora" never kills its own turn. */
-	begin(issueId: string, carrying?: string): IssueTurnHandle {
+	/**
+	 * @param carrying the transcript entry the turn answers — its (last) routed steer — so the closing can quote it.
+	 * @param carries every routed steer's entry the turn carries (fase 4, item 6b), so an "agora" never kills its own
+	 *   turn; `carrying` is always one of them.
+	 */
+	begin(issueId: string, carrying?: string, carries: readonly string[] = []): IssueTurnHandle {
 		const controller = new AbortController()
-		this.running.set(issueId, { controller, carrying, answeredByClosing: false })
+		const all = new Set(carries)
+		if (carrying) all.add(carrying)
+		this.running.set(issueId, { controller, carrying, carries: all, answeredByClosing: false })
 		return {
 			signal: controller.signal,
 			end: () => {
@@ -99,7 +110,7 @@ export class IssueTurnAborter {
 	/**
 	 * Kill the issue's running turn so the steer from `entryId` can lead the next one ("agora").
 	 *
-	 * SPARES the turn that is already carrying that steer: the fact reaches here through the outbox, and
+	 * SPARES the turn that is already carrying that steer (alone, or riding with others): the fact reaches here through the outbox, and
 	 * by then the turn it wanted to cut may have ended on its own and the steer's OWN turn be running —
 	 * killing that one would interrupt the very message that asked for the interruption.
 	 *
@@ -107,7 +118,7 @@ export class IssueTurnAborter {
 	 */
 	interrupt(issueId: string, entryId: string): boolean {
 		const turn = this.running.get(issueId)
-		if (!turn || turn.carrying === entryId || turn.controller.signal.aborted) return false
+		if (!turn || turn.carries.has(entryId) || turn.controller.signal.aborted) return false
 		turn.controller.abort(TurnAbortReason.INTERRUPT)
 		return true
 	}

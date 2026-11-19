@@ -12,6 +12,11 @@ export type WorkspaceApplicationErrors =
 	| 'WORKSPACE_ALREADY_REGISTERED'
 	| 'WORKSPACE_NOT_FOUND'
 	| 'WORKSPACE_IN_USE'
+	// Fase 4 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK build
+	// against it — but its behaviour lands in a later slice. Every such WRITE refuses with THIS code, never a
+	// silent 2xx (a 2xx from a tool tells the model it was recorded). 501: the route is declared, the
+	// implementation is not there yet. Registered in `agent`, `thread` and `workspace` with the same status.
+	| 'THROUGHPUT_NOT_READY'
 export type ApplicationErrors = BaseApplicationErrors | WorkspaceApplicationErrors
 
 export type WorkspaceInterfaceErrors = never
@@ -29,4 +34,6 @@ registerErrorCodes({
 	WORKSPACE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	// An issue with status WORKING runs on this workspace — removal is refused.
 	WORKSPACE_IN_USE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// Fase 4 (S0b) — the publish-command setter is declared; its behaviour lands in S11.
+	THROUGHPUT_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 })

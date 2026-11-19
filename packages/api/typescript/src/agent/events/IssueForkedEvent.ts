@@ -1,5 +1,5 @@
 import { BaseDomainEvent, z } from '@codm/core-typescript'
-import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, IssuePriority, IssueWorkKind, PriorityReason, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 
 export const IssueForkedEventSchema = z.domainEvent({
 	issueId: z.string(),
@@ -12,6 +12,15 @@ export const IssueForkedEventSchema = z.domainEvent({
 	originEntryId: z.string(),
 	/** Which CLI works it — resolved from the thread, carried so the materializer need not re-read. */
 	provider: z.enum(ProviderKind),
+	/**
+	 * Fase 4 (S0c) — what the task was born with, as `agent_issue_attributes` recorded it in the same transaction;
+	 * carried so `issue.created` gives the issue context its read copy. OPTIONAL only because facts written before
+	 * fase 4 sit in the outbox without them; `ForkIssue` always sets all four (the model since S7, `MODEL_BY_WORK_KIND`).
+	 */
+	priority: z.enum(IssuePriority).optional(),
+	priorityReason: z.enum(PriorityReason).optional(),
+	workKind: z.enum(IssueWorkKind).optional(),
+	model: z.enum(AgentModelId).optional(),
 })
 
 /**

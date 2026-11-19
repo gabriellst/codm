@@ -6,6 +6,7 @@
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { askAnswerKindSchema } from "./askAnswerKindSchema.ts";
 import { askOptionSchema } from "./askOptionSchema.ts";
+import { batchSchema } from "./batchSchema.ts";
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
 import { irreversibleActionKindSchema } from "./irreversibleActionKindSchema.ts";
 import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
@@ -13,6 +14,8 @@ import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { outputRoutingSchema } from "./outputRoutingSchema.ts";
+import { panelHealthSchema } from "./panelHealthSchema.ts";
+import { publishRunOutcomeSchema } from "./publishRunOutcomeSchema.ts";
 import { regretWindowOutcomeSchema } from "./regretWindowOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
@@ -157,9 +160,33 @@ get "outcome"(){
                 return regretWindowOutcomeSchema
               },
 "waitedMs": z.int().min(0).max(9007199254740991)
+    }), z.object({
+    "kind": z.enum(["BATCH_LINKED"]),
+"id": z.string(),
+"at": z.string(),
+"batchCode": z.string(),
+"n": z.int().min(1).max(9007199254740991)
+    }), z.object({
+    "kind": z.enum(["PUBLISH_RAN"]),
+"id": z.string(),
+"at": z.string(),
+get "outcome"(){
+                return publishRunOutcomeSchema
+              },
+"exitCode": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"durationMs": z.optional(z.int().min(0).max(9007199254740991))
     })])).max(2000),
 "updatedAt": z.iso.datetime()
-    })).max(500)
+    })).max(500),
+"batches": z.optional(z.array(z.object({
+    "threadId": z.uuid(),
+get "batch"(){
+                return batchSchema
+              }
+    })).max(200)),
+get "health"(){
+                return panelHealthSchema.optional()
+              }
     })
 
 export const syncPanelMutationResponseSchema = z.lazy(() => syncPanel200Schema)

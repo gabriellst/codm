@@ -4,11 +4,13 @@ import { DomainEventRepository, LibSqlDatabaseDriver } from '@codm/core-typescri
 import {
 	IrreversibleActionKind,
 	IssueTimelineItemKind,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
 	RegretWindowOutcome,
 } from '@codm/contracts-typescript/wire/enums'
+import { CLAIM_CLASS_OF_KIND } from '@agent/utils/ClaimClassOfKind'
 import { TestBed, givenIssue, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { assembleIssueTimeline } from '@issue/utils/issueTimeline'
@@ -70,6 +72,7 @@ describe('OpenRegretWindow', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind,
+			claimClass: CLAIM_CLASS_OF_KIND[kind],
 			posture: PermissionPosture.AUTO,
 			payload: { text: `recado ${n}` },
 			dedupKey: `regret-test:${issueId}:${n}`,
@@ -139,6 +142,7 @@ describe('OpenRegretWindow', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: ids.issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { text: 'declare o desfecho', declarationReminder: true },
 			dedupKey: `regret-test:reminder:${ids.issueId}`,

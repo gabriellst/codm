@@ -45,6 +45,11 @@ export class MaterializeIssueFromExecution extends EventHandler<
 				provider: event.payload.provider,
 				originEntryId: event.payload.originEntryId,
 				goal: event.payload.goal,
+				// Fase 4 — the read copy of the task's birth attributes (the agent's table is the source).
+				priority: event.payload.priority,
+				priorityReason: event.payload.priorityReason,
+				workKind: event.payload.workKind,
+				model: event.payload.model,
 			})
 			return
 		}

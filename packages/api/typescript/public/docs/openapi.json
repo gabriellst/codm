@@ -1109,6 +1109,13 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "onPublished": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PublishFollowUp"
+                      }
+                    ]
+                  },
                   "options": {
                     "minItems": 2,
                     "maxItems": 6,
@@ -1234,6 +1241,13 @@
                   "addresseeId": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "onPublished": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PublishFollowUp"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -1482,6 +1496,76 @@
         ]
       }
     },
+    "/threads/{threadId}/issues/{issueId}/handoff-notes": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Write handoff notes for this task (goal, state, decisions, files/branch, next step) — a fresh session will continue from them.",
+        "operationId": "WriteHandoffNotes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notes": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8000
+                  }
+                },
+                "required": [
+                  "notes"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "notes": "Goal: dark mode toggle. Done: settings page and theme store. Decided: follow the OS by default. Next: persist the choice. Branch: feat/dark-mode."
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Write handoff notes for this task (goal, state, decisions, files/branch, next step) — a fresh session will continue from them.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
     "/threads/{threadId}/issues/fork": {
       "post": {
         "tags": [
@@ -1505,6 +1589,15 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "priority": {
+                    "$ref": "#/components/schemas/IssuePriority"
+                  },
+                  "priorityReason": {
+                    "$ref": "#/components/schemas/PriorityReason"
+                  },
+                  "workKind": {
+                    "$ref": "#/components/schemas/IssueWorkKind"
                   }
                 },
                 "required": [
@@ -4629,6 +4722,106 @@
         ]
       }
     },
+    "/threads/{threadId}/batches/record": {
+      "post": {
+        "tags": [
+          "thread",
+          "mcp:orchestration"
+        ],
+        "description": "Record where each item of a batch (a message listing several requests) went — every item exactly once",
+        "operationId": "RecordBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "batchCode": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "n": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 50
+                        },
+                        "destination": {
+                          "$ref": "#/components/schemas/BatchItemDestination"
+                        }
+                      },
+                      "required": [
+                        "n",
+                        "destination"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "batchCode",
+                  "items"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "batchCode": "L-31",
+                    "items": [
+                      {
+                        "n": 1,
+                        "destination": {
+                          "kind": "NEW_ISSUE",
+                          "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                        }
+                      },
+                      {
+                        "n": 2,
+                        "destination": {
+                          "kind": "DECLINED",
+                          "reason": "fora do escopo do projeto"
+                        }
+                      }
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record where each item of a batch (a message listing several requests) went — every item exactly once",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
+      }
+    },
     "/settings/stop-criteria": {
       "put": {
         "tags": [
@@ -5485,6 +5678,141 @@
           "system",
           "orchestration"
         ]
+      }
+    },
+    "/workspaces/{workspaceId}/publish-command": {
+      "put": {
+        "tags": [
+          "workspace"
+        ],
+        "description": "Declare or remove the workspace's publish command (an argument list, never a shell line)",
+        "operationId": "SetWorkspacePublishCommand",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "nullable": true,
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PublishCommand"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "command"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "command": {
+                      "argv": [
+                        "bun",
+                        "run",
+                        "deploy"
+                      ]
+                    }
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declare or remove the workspace's publish command (an argument list, never a shell line)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "The workspace's declared publish command, or null",
+        "operationId": "GetWorkspacePublishCommand",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workspace's declared publish command, or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "nullable": true,
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PublishCommand"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "command"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "command": {
+                        "argv": [
+                          "bun",
+                          "run",
+                          "deploy"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "command": {
+                        "argv": [
+                          "bun",
+                          "run",
+                          "deploy"
+                        ]
+                      }
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/ui/events": {
@@ -8374,6 +8702,9 @@
                             },
                             "finalArtifactId": {
                               "type": "string"
+                            },
+                            "answersEntryId": {
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -8426,6 +8757,18 @@
                             },
                             "provider": {
                               "$ref": "#/components/schemas/ProviderKind"
+                            },
+                            "priority": {
+                              "$ref": "#/components/schemas/IssuePriority"
+                            },
+                            "priorityReason": {
+                              "$ref": "#/components/schemas/PriorityReason"
+                            },
+                            "workKind": {
+                              "$ref": "#/components/schemas/IssueWorkKind"
+                            },
+                            "model": {
+                              "$ref": "#/components/schemas/AgentModelId"
                             }
                           },
                           "required": [
@@ -10458,6 +10801,72 @@
                               "waitedMs"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "BATCH_LINKED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "batchCode": {
+                                "type": "string"
+                              },
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "batchCode",
+                              "n"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "PUBLISH_RAN"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "outcome": {
+                                "$ref": "#/components/schemas/PublishRunOutcome"
+                              },
+                              "exitCode": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "durationMs": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "outcome"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -10511,6 +10920,354 @@
           }
         }
       }
+    },
+    "/ui/system/health": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Quota health: both windows, task slots and their limit, queue, free disk",
+        "operationId": "GetSystemHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Quota health: both windows, task slots and their limit, queue, free disk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {
+                      "state": "NEAR",
+                      "window": {
+                        "spent": 18400000,
+                        "ceiling": 40000000,
+                        "reserve": 7440000,
+                        "resetsAt": "2026-11-19T18:00:00.000Z"
+                      },
+                      "week": {
+                        "spent": 310000000,
+                        "ceiling": 420000000,
+                        "resetsAt": "2026-11-22T12:00:00.000Z"
+                      },
+                      "slots": {
+                        "inUse": 3,
+                        "max": 6,
+                        "effective": 4,
+                        "limitedBy": "MACHINE"
+                      },
+                      "queue": {
+                        "pending": 5,
+                        "heldByBudget": 0
+                      },
+                      "diskFreeBytes": 12884901888,
+                      "budget": {
+                        "enforced": false,
+                        "admits": false,
+                        "heldBy": "FIVE_HOUR"
+                      }
+                    }
+                  ],
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/QuotaSnapshot"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "state": "NEAR",
+                      "window": {
+                        "spent": 18400000,
+                        "ceiling": 40000000,
+                        "reserve": 7440000,
+                        "resetsAt": "2026-11-19T18:00:00.000Z"
+                      },
+                      "week": {
+                        "spent": 310000000,
+                        "ceiling": 420000000,
+                        "resetsAt": "2026-11-22T12:00:00.000Z"
+                      },
+                      "slots": {
+                        "inUse": 3,
+                        "max": 6,
+                        "effective": 4,
+                        "limitedBy": "MACHINE"
+                      },
+                      "queue": {
+                        "pending": 5,
+                        "heldByBudget": 0
+                      },
+                      "diskFreeBytes": 12884901888,
+                      "budget": {
+                        "enforced": false,
+                        "admits": false,
+                        "heldBy": "FIVE_HOUR"
+                      }
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ui/threads/{threadId}/batches/{batchCode}": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "A conversation's batch: each listed item and where it went",
+        "operationId": "GetBatch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "batchCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "L-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A conversation's batch: each listed item and where it went",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/BatchStatus"
+                    },
+                    "sourceEntryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "items": {
+                      "maxItems": 50,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BatchItem"
+                      }
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "issueId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "issueId",
+                          "key",
+                          "title"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "status",
+                    "sourceEntryId",
+                    "items",
+                    "issues"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "code": "L-31",
+                      "status": "RECORDED",
+                      "sourceEntryId": "019e4d24-6524-7041-9e1c-8108180cddb0",
+                      "items": [
+                        {
+                          "n": 1,
+                          "excerpt": "trocar o texto do botão",
+                          "destination": {
+                            "kind": "NEW_ISSUE",
+                            "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                          }
+                        },
+                        {
+                          "n": 2,
+                          "excerpt": "o rodapé da página de preços",
+                          "destination": {
+                            "kind": "ATTACHED",
+                            "issueId": "019e4d24-6524-7041-9e1c-8108180cddb1"
+                          }
+                        },
+                        {
+                          "n": 3,
+                          "excerpt": "refazer o logo",
+                          "destination": {
+                            "kind": "DECLINED",
+                            "reason": "fora do escopo do projeto"
+                          }
+                        }
+                      ],
+                      "issues": [
+                        {
+                          "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                          "key": "APP-42",
+                          "title": "Texto do botão"
+                        },
+                        {
+                          "issueId": "019e4d24-6524-7041-9e1c-8108180cddb1",
+                          "key": "APP-40",
+                          "title": "Página de preços"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "code": "L-31",
+                      "status": "RECORDED",
+                      "sourceEntryId": "019e4d24-6524-7041-9e1c-8108180cddb0",
+                      "items": [
+                        {
+                          "n": 1,
+                          "excerpt": "trocar o texto do botão",
+                          "destination": {
+                            "kind": "NEW_ISSUE",
+                            "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                          }
+                        },
+                        {
+                          "n": 2,
+                          "excerpt": "o rodapé da página de preços",
+                          "destination": {
+                            "kind": "ATTACHED",
+                            "issueId": "019e4d24-6524-7041-9e1c-8108180cddb1"
+                          }
+                        },
+                        {
+                          "n": 3,
+                          "excerpt": "refazer o logo",
+                          "destination": {
+                            "kind": "DECLINED",
+                            "reason": "fora do escopo do projeto"
+                          }
+                        }
+                      ],
+                      "issues": [
+                        {
+                          "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                          "key": "APP-42",
+                          "title": "Texto do botão"
+                        },
+                        {
+                          "issueId": "019e4d24-6524-7041-9e1c-8108180cddb1",
+                          "key": "APP-40",
+                          "title": "Página de preços"
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/issues/{issueId}/publish-runs/{timelineItemId}/output": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "What one publish run of the issue printed (console only)",
+        "operationId": "GetPublishRunOutput",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          },
+          {
+            "in": "path",
+            "name": "timelineItemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What one publish run of the issue printed (console only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string"
+                          },
+                          "line": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "at",
+                          "line"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "lines"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10533,6 +11290,9 @@
           "ASK_NOT_DUE",
           "ASK_OPTIONS_DUPLICATED",
           "ASK_OPTION_UNKNOWN",
+          "BATCH_ISSUE_NOT_IN_THREAD",
+          "BATCH_ITEMS_MISMATCH",
+          "BATCH_NOT_FOUND",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_MEDIA_UNSUPPORTED",
           "CHANNEL_NOT_CONNECTED",
@@ -10552,6 +11312,7 @@
           "FORBIDDEN",
           "GATEWAY_UNAVAILABLE",
           "HANDLER_NOT_BOUND",
+          "HEALTH_NOT_SAMPLED",
           "INVALIDATED_AUTH_TOKEN",
           "INVALID_AUTH_TOKEN",
           "INVALID_CONTROLLER_EXAMPLES",
@@ -10636,6 +11397,7 @@
           "THREAD_NOT_FOUND",
           "THREAD_NOT_PAUSED",
           "THREAD_PAUSED",
+          "THROUGHPUT_NOT_READY",
           "TOO_MANY_TERMINAL_STREAMS",
           "UNAUTHORIZED",
           "USER_NOT_FOUND",
@@ -10705,6 +11467,55 @@
           "STALLED"
         ]
       },
+      "PublishFollowUpKind": {
+        "type": "string",
+        "enum": [
+          "COMPLETE",
+          "CONTINUE"
+        ]
+      },
+      "PublishFollowUp": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "COMPLETE"
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "kind",
+              "summary"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "CONTINUE"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ]
+      },
+      "AskEffect": {
+        "type": "string",
+        "enum": [
+          "PUBLISH",
+          "IRREVERSIBLE",
+          "CLIENT_DATA"
+        ]
+      },
       "AskOption": {
         "type": "object",
         "properties": {
@@ -10717,19 +11528,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200
+          },
+          "authorizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AskEffect"
+            }
           }
         },
         "required": [
           "id",
           "label"
-        ]
-      },
-      "AskEffect": {
-        "type": "string",
-        "enum": [
-          "PUBLISH",
-          "IRREVERSIBLE",
-          "CLIENT_DATA"
         ]
       },
       "AskDefault": {
@@ -10772,6 +11581,29 @@
           }
         ]
       },
+      "IssuePriority": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "NORMAL",
+          "LOW"
+        ]
+      },
+      "PriorityReason": {
+        "type": "string",
+        "enum": [
+          "CLIENT_BUG",
+          "DECLARED",
+          "DEFAULT"
+        ]
+      },
+      "IssueWorkKind": {
+        "type": "string",
+        "enum": [
+          "CHANGE",
+          "DIAGNOSIS"
+        ]
+      },
       "ArtifactKind": {
         "type": "string",
         "enum": [
@@ -10788,6 +11620,7 @@
           "RUNNING",
           "QUEUED",
           "WAITING_PROVIDER",
+          "WAITING_BUDGET",
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
@@ -10900,6 +11733,145 @@
           "DEFAULT_APPLIED"
         ]
       },
+      "BatchItemDestinationKind": {
+        "type": "string",
+        "enum": [
+          "ALREADY_LIVE",
+          "ATTACHED",
+          "DECLINED",
+          "DEFERRED",
+          "NEEDS_DECISION",
+          "NEW_ISSUE"
+        ]
+      },
+      "BatchItemDestination": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "NEW_ISSUE"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "ATTACHED"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "ALREADY_LIVE"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "kind",
+              "note"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "DECLINED"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "kind",
+              "reason"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "DEFERRED"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "until": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "kind",
+              "reason"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "NEEDS_DECISION"
+              },
+              "issueId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "stopId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "kind",
+              "issueId",
+              "stopId"
+            ]
+          }
+        ]
+      },
       "Timezone": {
         "type": "string",
         "x-tpl-zod-refinements": [
@@ -10933,6 +11905,24 @@
         "enum": [
           "GIT",
           "CLAUDE_PROJECT"
+        ]
+      },
+      "PublishCommand": {
+        "type": "object",
+        "properties": {
+          "argv": {
+            "minItems": 1,
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        },
+        "required": [
+          "argv"
         ]
       },
       "MessageType": {
@@ -11108,10 +12098,12 @@
         "enum": [
           "ARCHIVED",
           "ARTIFACT",
+          "BATCH_LINKED",
           "COMPLETED",
           "CREATED",
           "MESSAGE",
           "PAUSED",
+          "PUBLISH_RAN",
           "REGRET_WINDOW",
           "RESUMED",
           "STEER",
@@ -11154,6 +12146,218 @@
           "CANCELLED_BY_STEER",
           "CANCELLED_BY_PAUSE"
         ]
+      },
+      "PublishRunOutcome": {
+        "type": "string",
+        "enum": [
+          "SUCCEEDED",
+          "FAILED",
+          "TIMED_OUT",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE",
+          "UNKNOWN"
+        ]
+      },
+      "QuotaState": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "NEAR",
+          "HOLDING",
+          "REFUSED"
+        ]
+      },
+      "SlotLimit": {
+        "type": "string",
+        "enum": [
+          "MAX",
+          "MACHINE",
+          "BUDGET"
+        ]
+      },
+      "ProviderLimitWindow": {
+        "type": "string",
+        "enum": [
+          "FIVE_HOUR",
+          "WEEKLY",
+          "UNKNOWN"
+        ]
+      },
+      "QuotaSnapshot": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/QuotaState"
+          },
+          "window": {
+            "type": "object",
+            "properties": {
+              "spent": {
+                "type": "number",
+                "minimum": 0
+              },
+              "ceiling": {
+                "type": "number",
+                "minimum": 0
+              },
+              "reserve": {
+                "type": "number",
+                "minimum": 0
+              },
+              "resetsAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "spent",
+              "ceiling",
+              "reserve"
+            ],
+            "additionalProperties": false
+          },
+          "week": {
+            "type": "object",
+            "properties": {
+              "spent": {
+                "type": "number",
+                "minimum": 0
+              },
+              "ceiling": {
+                "type": "number",
+                "minimum": 0
+              },
+              "resetsAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "spent",
+              "ceiling"
+            ],
+            "additionalProperties": false
+          },
+          "slots": {
+            "type": "object",
+            "properties": {
+              "inUse": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "effective": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "limitedBy": {
+                "$ref": "#/components/schemas/SlotLimit"
+              }
+            },
+            "required": [
+              "inUse",
+              "max",
+              "effective",
+              "limitedBy"
+            ],
+            "additionalProperties": false
+          },
+          "queue": {
+            "type": "object",
+            "properties": {
+              "pending": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "heldByBudget": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "pending",
+              "heldByBudget"
+            ],
+            "additionalProperties": false
+          },
+          "diskFreeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "budget": {
+            "type": "object",
+            "properties": {
+              "enforced": {
+                "type": "boolean"
+              },
+              "admits": {
+                "type": "boolean"
+              },
+              "heldBy": {
+                "$ref": "#/components/schemas/ProviderLimitWindow"
+              }
+            },
+            "required": [
+              "enforced",
+              "admits"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "state",
+          "window",
+          "week",
+          "slots",
+          "queue",
+          "diskFreeBytes",
+          "budget"
+        ],
+        "additionalProperties": false
+      },
+      "BatchItem": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "destination": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatchItemDestination"
+              }
+            ]
+          }
+        },
+        "required": [
+          "n",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "BatchStatus": {
+        "type": "string",
+        "enum": [
+          "INCOMPLETE",
+          "RECORDED"
+        ]
       }
     }
   },
@@ -11173,6 +12377,9 @@
     "ASK_NOT_DUE",
     "ASK_OPTIONS_DUPLICATED",
     "ASK_OPTION_UNKNOWN",
+    "BATCH_ISSUE_NOT_IN_THREAD",
+    "BATCH_ITEMS_MISMATCH",
+    "BATCH_NOT_FOUND",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_MEDIA_UNSUPPORTED",
     "CHANNEL_NOT_CONNECTED",
@@ -11192,6 +12399,7 @@
     "FORBIDDEN",
     "GATEWAY_UNAVAILABLE",
     "HANDLER_NOT_BOUND",
+    "HEALTH_NOT_SAMPLED",
     "INVALIDATED_AUTH_TOKEN",
     "INVALID_AUTH_TOKEN",
     "INVALID_CONTROLLER_EXAMPLES",
@@ -11276,6 +12484,7 @@
     "THREAD_NOT_FOUND",
     "THREAD_NOT_PAUSED",
     "THREAD_PAUSED",
+    "THROUGHPUT_NOT_READY",
     "TOO_MANY_TERMINAL_STREAMS",
     "UNAUTHORIZED",
     "USER_NOT_FOUND",
@@ -11295,7 +12504,8 @@
       "RecordArtifact",
       "ReportProgress",
       "RequestFeedback",
-      "TransitionIssueStatus"
+      "TransitionIssueStatus",
+      "WriteHandoffNotes"
     ],
     "orchestration": [
       "AddWorkspace",
@@ -11332,6 +12542,7 @@
       "ListWorkspaces",
       "RaiseStop",
       "RecordArtifact",
+      "RecordBatch",
       "RemoveWorkspace",
       "ResolveStop",
       "SaveOnboardingStep",

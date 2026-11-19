@@ -197,7 +197,7 @@ describe('Flow (integration): a resolved stop puts the issue back to work', () =
 			const item = await mailbox.claimNext('resume-test', 60_000)
 			if (!item) return claimed
 			claimed.push(item)
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 		}
 	}
 

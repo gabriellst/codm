@@ -25,6 +25,7 @@ import { Route as appSettingsAccountIndexRouteImport } from './routes/(app)/sett
 import { Route as appThreadsThreadIdIndexRouteImport } from './routes/(app)/threads/$threadId/index'
 import { Route as appThreadsThreadIdArtifactsIndexRouteImport } from './routes/(app)/threads/$threadId/artifacts/index'
 import { Route as appThreadsThreadIdIssuesIndexRouteImport } from './routes/(app)/threads/$threadId/issues/index'
+import { Route as appThreadsThreadIdBatchesBatchCodeIndexRouteImport } from './routes/(app)/threads/$threadId/batches/$batchCode/index'
 import { Route as appThreadsThreadIdIssuesIssueIdIndexRouteImport } from './routes/(app)/threads/$threadId/issues/$issueId/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -108,6 +109,12 @@ const appThreadsThreadIdIssuesIndexRoute =
     path: '/issues/',
     getParentRoute: () => appThreadsThreadIdRouteRoute,
   } as any)
+const appThreadsThreadIdBatchesBatchCodeIndexRoute =
+  appThreadsThreadIdBatchesBatchCodeIndexRouteImport.update({
+    id: '/batches/$batchCode/',
+    path: '/batches/$batchCode/',
+    getParentRoute: () => appThreadsThreadIdRouteRoute,
+  } as any)
 const appThreadsThreadIdIssuesIssueIdIndexRoute =
   appThreadsThreadIdIssuesIssueIdIndexRouteImport.update({
     id: '/issues/$issueId/',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/threads/$threadId/': typeof appThreadsThreadIdIndexRoute
   '/threads/$threadId/artifacts/': typeof appThreadsThreadIdArtifactsIndexRoute
   '/threads/$threadId/issues/': typeof appThreadsThreadIdIssuesIndexRoute
+  '/threads/$threadId/batches/$batchCode/': typeof appThreadsThreadIdBatchesBatchCodeIndexRoute
   '/threads/$threadId/issues/$issueId/': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -148,6 +156,7 @@ export interface FileRoutesByTo {
   '/threads/$threadId': typeof appThreadsThreadIdIndexRoute
   '/threads/$threadId/artifacts': typeof appThreadsThreadIdArtifactsIndexRoute
   '/threads/$threadId/issues': typeof appThreadsThreadIdIssuesIndexRoute
+  '/threads/$threadId/batches/$batchCode': typeof appThreadsThreadIdBatchesBatchCodeIndexRoute
   '/threads/$threadId/issues/$issueId': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRoutesById {
@@ -168,6 +177,7 @@ export interface FileRoutesById {
   '/(app)/threads/$threadId/': typeof appThreadsThreadIdIndexRoute
   '/(app)/threads/$threadId/artifacts/': typeof appThreadsThreadIdArtifactsIndexRoute
   '/(app)/threads/$threadId/issues/': typeof appThreadsThreadIdIssuesIndexRoute
+  '/(app)/threads/$threadId/batches/$batchCode/': typeof appThreadsThreadIdBatchesBatchCodeIndexRoute
   '/(app)/threads/$threadId/issues/$issueId/': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId/'
     | '/threads/$threadId/artifacts/'
     | '/threads/$threadId/issues/'
+    | '/threads/$threadId/batches/$batchCode/'
     | '/threads/$threadId/issues/$issueId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId'
     | '/threads/$threadId/artifacts'
     | '/threads/$threadId/issues'
+    | '/threads/$threadId/batches/$batchCode'
     | '/threads/$threadId/issues/$issueId'
   id:
     | '__root__'
@@ -224,6 +236,7 @@ export interface FileRouteTypes {
     | '/(app)/threads/$threadId/'
     | '/(app)/threads/$threadId/artifacts/'
     | '/(app)/threads/$threadId/issues/'
+    | '/(app)/threads/$threadId/batches/$batchCode/'
     | '/(app)/threads/$threadId/issues/$issueId/'
   fileRoutesById: FileRoutesById
 }
@@ -349,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appThreadsThreadIdIssuesIndexRouteImport
       parentRoute: typeof appThreadsThreadIdRouteRoute
     }
+    '/(app)/threads/$threadId/batches/$batchCode/': {
+      id: '/(app)/threads/$threadId/batches/$batchCode/'
+      path: '/batches/$batchCode'
+      fullPath: '/threads/$threadId/batches/$batchCode/'
+      preLoaderRoute: typeof appThreadsThreadIdBatchesBatchCodeIndexRouteImport
+      parentRoute: typeof appThreadsThreadIdRouteRoute
+    }
     '/(app)/threads/$threadId/issues/$issueId/': {
       id: '/(app)/threads/$threadId/issues/$issueId/'
       path: '/issues/$issueId'
@@ -363,6 +383,7 @@ interface appThreadsThreadIdRouteRouteChildren {
   appThreadsThreadIdIndexRoute: typeof appThreadsThreadIdIndexRoute
   appThreadsThreadIdArtifactsIndexRoute: typeof appThreadsThreadIdArtifactsIndexRoute
   appThreadsThreadIdIssuesIndexRoute: typeof appThreadsThreadIdIssuesIndexRoute
+  appThreadsThreadIdBatchesBatchCodeIndexRoute: typeof appThreadsThreadIdBatchesBatchCodeIndexRoute
   appThreadsThreadIdIssuesIssueIdIndexRoute: typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 
@@ -372,6 +393,8 @@ const appThreadsThreadIdRouteRouteChildren: appThreadsThreadIdRouteRouteChildren
     appThreadsThreadIdArtifactsIndexRoute:
       appThreadsThreadIdArtifactsIndexRoute,
     appThreadsThreadIdIssuesIndexRoute: appThreadsThreadIdIssuesIndexRoute,
+    appThreadsThreadIdBatchesBatchCodeIndexRoute:
+      appThreadsThreadIdBatchesBatchCodeIndexRoute,
     appThreadsThreadIdIssuesIssueIdIndexRoute:
       appThreadsThreadIdIssuesIssueIdIndexRoute,
   }
@@ -417,13 +440,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

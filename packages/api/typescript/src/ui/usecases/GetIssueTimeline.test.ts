@@ -1,14 +1,19 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
+import { LibSqlDatabaseDriver } from '@codm/core-typescript'
+import { batchItems, batches, events } from '@codm/contracts/db'
 import {
 	AskAnswerKind,
+	BatchStatus,
 	IssueSignalLevel,
 	IssueTimelineItemKind,
-	OutputRouting,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
+	OutputRouting,
 	PermissionPosture,
+	PublishRunOutcome,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
@@ -56,6 +61,7 @@ describe('GetIssueTimeline', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issue.id.value,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { threadId: thread.id.value, key: issue.key, title: issue.title, text: 'tira o rodapé' },
 			dedupKey: 'timeline-steer',
@@ -107,14 +113,12 @@ describe('GetIssueTimeline', () => {
 			ask: { question: 'Uso o tema escuro?', options, effects: [], requested: StopKind.DECISION_REQUESTED },
 		})
 		await tick()
-		await testBed
-			.resolve(AnswerStop)
-			.execute({
-				ownerId: MOCK_CLOUD_OWNER_ID,
-				stopId: stop.stopId,
-				answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
-				answeredBy: 'operator',
-			})
+		await testBed.resolve(AnswerStop).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			stopId: stop.stopId,
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+			answeredBy: 'operator',
+		})
 
 		const { items } = await testBed.resolve(GetIssueTimeline).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
 
@@ -133,6 +137,51 @@ describe('GetIssueTimeline', () => {
 		const resolved = items.find(item => item.kind === IssueTimelineItemKind.STOP_RESOLVED)
 		expect(resolved?.kind === IssueTimelineItemKind.STOP_RESOLVED && resolved.answer).toEqual({ kind: AskAnswerKind.OPTION, label: 'Não' })
 		expect(JSON.stringify(resolved)).not.toContain('operator')
+	})
+
+	it('fase 4 — a recorded batch item names the issue (BATCH_LINKED); a publish run shows its outcome, never the command', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value })
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		const at = new Date()
+		await db.insert(batches).values({
+			id: 'batch-1',
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			threadId: thread.id.value,
+			code: 'L-3',
+			seq: 3,
+			sourceEntryId: '00000000-0000-4000-8000-0000000000e1',
+			itemCount: 3,
+			status: BatchStatus.INCOMPLETE,
+		})
+		await db.insert(batchItems).values([
+			{ batchId: 'batch-1', n: 2, excerpt: 'item two', issueId: issue.id.value, recordedAt: new Date(at.getTime() + 1) },
+			// Not recorded yet: no instant, no moment on the timeline.
+			{ batchId: 'batch-1', n: 3, excerpt: 'item three', issueId: issue.id.value },
+		])
+		await db.insert(events).values({
+			id: 'fact-publish',
+			name: 'agent.publish.ran',
+			entityId: issue.id.value,
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			payload: { issueId: issue.id.value, outcome: PublishRunOutcome.SUCCEEDED, exitCode: 0, durationMs: 4200 },
+			source: 'agent',
+			occurredAt: new Date(at.getTime() + 2),
+		})
+
+		const { items } = await testBed.resolve(GetIssueTimeline).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
+		const fase4 = items.filter(item => item.kind === IssueTimelineItemKind.BATCH_LINKED || item.kind === IssueTimelineItemKind.PUBLISH_RAN)
+		expect(fase4).toEqual([
+			{ kind: IssueTimelineItemKind.BATCH_LINKED, id: 'batch-1:2', at: new Date(at.getTime() + 1).toISOString(), batchCode: 'L-3', n: 2 },
+			{
+				kind: IssueTimelineItemKind.PUBLISH_RAN,
+				id: 'fact-publish',
+				at: new Date(at.getTime() + 2).toISOString(),
+				outcome: PublishRunOutcome.SUCCEEDED,
+				exitCode: 0,
+				durationMs: 4200,
+			},
+		])
 	})
 
 	it("another owner's issue is not found", async () => {

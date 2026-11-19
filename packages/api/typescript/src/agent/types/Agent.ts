@@ -20,7 +20,7 @@ import type { AgentApplicationErrors } from '../errors'
 const RUN_TOKEN_TTL_MS = 6 * 60 * 60 * 1000
 import type { AgentInputEnvelope, AgentInputSchemaConstraint } from './AgentInput'
 import type { AgentRunRequest } from './AgentRunRequest'
-import type { AgentRuntimeEvent } from './AgentRuntimeEvent'
+import type { AgentRunResult, AgentRuntimeEvent } from './AgentRuntimeEvent'
 
 /**
  * The base every internal agent extends (GOAL-agent-abstraction §4.5).
@@ -268,13 +268,24 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * both arrive as fields on the terminal record. Turning that record into a NAMED error is this
 	 * method's job, and `collectFailure()` is where each agent supplies its own code instead of this
 	 * base inventing one it has no vocabulary for.
+	 *
+	 * ### `onFinished` — the run's terminal record, for whoever accounts for it (fase 4, S1)
+	 * The structured output is all `collect` returns, but the run also SPENT something (`result.usage`) and the
+	 * provider may have refused or warned (`result.providerLimit`). A caller that records that cost (the triage's
+	 * `TriageUsageRecorder`) observes the record through this TRANSPORT callback — same family as `signal` — called
+	 * once, before the output is validated, so a run that failed validation is accounted for all the same.
 	 */
-	protected async collect(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): Promise<this['output']> {
+	protected async collect(
+		runner: AgentRunner,
+		input: this['input'],
+		transport: { signal?: AbortSignal; onFinished?: (result: AgentRunResult) => void } = {},
+	): Promise<this['output']> {
 		// The cancellation signal travels the same way it does for `run()` — a caller that bounds a
 		// structured run (the triage's timeout) must be able to kill the CLI, not only stop waiting for it.
-		for await (const event of this.run(runner, input, transport)) {
+		for await (const event of this.run(runner, input, { signal: transport.signal })) {
 			if (event.type !== 'finished') continue
 			const { result } = event
+			transport.onFinished?.(result)
 			if (result.stop) throw this.collectFailure(`agent run stopped: ${result.stop.kind} — ${result.stop.detail}`)
 			if (result.failed || result.output === undefined) {
 				throw this.collectFailure(result.failure ?? 'agent run produced no parseable structured output')

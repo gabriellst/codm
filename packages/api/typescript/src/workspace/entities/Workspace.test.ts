@@ -22,4 +22,18 @@ describe('Workspace entity', () => {
 	it('rejects an empty path (schema invariant)', () => {
 		expect(() => Workspace.create({ ownerId, path: '   ', badges: [] })).toThrow(BaseError)
 	})
+
+	it('declares a publish command as an argument list, and removes it with null', () => {
+		const w = Workspace.create({ ownerId, path: '/tmp/plain', badges: [] })
+		expect(w.publishCommand).toBeUndefined()
+		w.setPublishCommand({ argv: ['bun', 'run', 'deploy'] })
+		expect(w.publishCommand).toEqual({ argv: ['bun', 'run', 'deploy'] })
+		w.setPublishCommand(null)
+		expect(w.publishCommand).toBeUndefined()
+	})
+
+	it('refuses an empty argument list (schema invariant)', () => {
+		const w = Workspace.create({ ownerId, path: '/tmp/plain', badges: [] })
+		expect(() => w.setPublishCommand({ argv: [] })).toThrow(BaseError)
+	})
 })

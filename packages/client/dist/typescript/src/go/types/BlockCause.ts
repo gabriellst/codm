@@ -9,7 +9,8 @@ export const BlockCauseEnum = {
     PROVIDER_ERROR: "PROVIDER_ERROR",
     CLI_LOGIN: "CLI_LOGIN",
     STALLED: "STALLED",
-    CLASSIFICATION: "CLASSIFICATION"
+    CLASSIFICATION: "CLASSIFICATION",
+    BUDGET_HELD: "BUDGET_HELD"
 } as const;
 
 export type BlockCauseEnumKey = (typeof BlockCauseEnum)[keyof typeof BlockCauseEnum];

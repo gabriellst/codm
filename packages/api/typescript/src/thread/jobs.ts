@@ -12,3 +12,5 @@ export { PublishPanelRoster } from './usecases/PublishPanelRoster'
 export { ApplyDueQuestionDefaults } from './usecases/ApplyDueQuestionDefaults'
 // Fase 3, item 2 — a rede do resumo por pessoa: sinal que passou da janela sem flush sai (a cada 30 s).
 export { FlushOverdueDigests } from './usecases/FlushOverdueDigests'
+// Fase 4, item 5 — o lote que ficou sem destino: um lembrete ao orquestrador, depois o aviso STALLED (a cada 60 s).
+export { FollowUpIncompleteBatches } from './usecases/FollowUpIncompleteBatches'

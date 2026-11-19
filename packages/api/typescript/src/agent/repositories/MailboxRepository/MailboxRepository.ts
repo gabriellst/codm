@@ -1,5 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import type { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -15,6 +15,14 @@ export interface EnqueueMailboxItem {
 	 * work queued from inside a turn, AUTO for a loop tick or an `ISSUE_RESULT`.
 	 */
 	posture: PermissionPosture
+	/**
+	 * WHAT THIS ITEM IS (fase 4, S0c) — REQUIRED, declared by the producer, the only one who knows: the kind cannot
+	 * tell a decision's answer (`DECISION_ANSWER`), an "agora" (`INTERRUPT`) or the declaration reminder (`REMINDER`)
+	 * from an ordinary steer. The claim order (S4) and steer coalescing (S5) read this column — never a payload key
+	 * nor a dedup-key prefix (`resume:`), which would be convention, not contract (Non-Negotiable 5). Gated by
+	 * `tests/architecture/mailbox-claim-class.test.ts`.
+	 */
+	claimClass: MailboxClaimClass
 	/**
 	 * Idempotency key of the FACT behind the item — an entry id, an issue's run, a steer's own id.
 	 *
@@ -58,6 +66,8 @@ export interface ClaimedMailboxItem {
 	 * is what an item enqueued before the column existed reads as.
 	 */
 	posture: PermissionPosture
+	/** What the item is, as its producer declared it (fase 4, S0c) — `WORK` for an item enqueued before the column. */
+	claimClass: MailboxClaimClass
 	attempts: number
 	/**
 	 * THIS claim is the item's first hand-off — the one that stamped `first_claimed_at` ("entregue").
@@ -66,6 +76,21 @@ export interface ClaimedMailboxItem {
 	 * read 1 again. What makes a delivery the first is the stamp, decided in the claim's own write.
 	 */
 	firstClaim: boolean
+}
+
+/**
+ * ONE TURN'S WORTH OF A TARGET'S QUEUE (fase 4, item 6b — recados juntos): the item the claim picked (`head`, the
+ * target's oldest ready item, in the S4 order) and the steers that RIDE with it — the contiguous prefix behind it that
+ * `coalescedPrefix` admits (same posture, same loop origin, class `STEER`, up to `MAX_COALESCED`), in arrival order.
+ *
+ * Every member is a row of its own and stays one: each is leased, charged an attempt and stamped `first_claimed_at` by
+ * the same write, carries its own `firstClaim` (its own ☑️), and is consumed by its own row (its own ✅, its own line on
+ * the timeline). What they share is the TURN — and so every write that settles the turn settles all of them at once
+ * (`complete`, `defer`, `renewLease` take the set; `fail` takes the head apart).
+ */
+export interface ClaimedMailboxBundle {
+	head: ClaimedMailboxItem
+	followers: readonly ClaimedMailboxItem[]
 }
 
 /**
@@ -111,6 +136,12 @@ export abstract class MailboxRepository {
 	 * conversation queued behind coding-agent turns waited for them — measured 2026-10-30, operator
 	 * messages sat at 👀 for minutes while four issue turns held every slot. Absent ⇒ every kind,
 	 * oldest first (the shape every caller outside the dispatcher wants).
+	 *
+	 * INSIDE a lane, targets go by RANK (fase 4, S4 — `CLAIM_RANK`): a decision's answer, then a client's bug, then the
+	 * task's declared priority, read from `agent_issue_attributes` at claim time; equal ranks by arrival (`created_at`,
+	 * then `id`, uuid v7 — the owner's decision of 19/11). A target ranks by the best of its ready items but always hands
+	 * its OLDEST one, so a priority never jumps an older item of its own task — and a target with anything leased (a
+	 * turn, a hold, a pause) is skipped whole, so nothing jumps a paused task's item either.
 	 */
 	abstract claimNext(
 		claimedBy: string,
@@ -118,6 +149,18 @@ export abstract class MailboxRepository {
 		lanes?: readonly MailboxTargetKind[],
 		tx?: Transaction,
 	): Promise<ClaimedMailboxItem | undefined>
+
+	/**
+	 * `claimNext`, and the steers that ride with its item (fase 4, item 6b) — the head is exactly the item `claimNext`
+	 * would hand, and the followers are leased by the SAME write: one transaction, so a crash never leaves half a group
+	 * claimed. The dispatcher's claim; `claimNext` stays the one-item shape every other caller wants.
+	 */
+	abstract claimBundle(
+		claimedBy: string,
+		leaseMs: number,
+		lanes?: readonly MailboxTargetKind[],
+		tx?: Transaction,
+	): Promise<ClaimedMailboxBundle | undefined>
 
 	/**
 	 * Give a CLAIMED item back WITHOUT spending the attempt its claim charged, and keep it unclaimable
@@ -146,7 +189,17 @@ export abstract class MailboxRepository {
 	 * find it. A second writer of an ownerless lease would have to give the release a way to tell the two
 	 * apart — that is the condition under which a marker becomes necessary.
 	 */
-	abstract defer(id: string, until: Date, tx?: Transaction): Promise<void>
+	abstract defer(ids: readonly string[], until: Date, tx?: Transaction): Promise<void>
+
+	/**
+	 * Give a claim back NOW: no holder, NO lease, the attempt the claim charged refunded — claimable by the very next
+	 * `claimNext`, the same drain included. For a turn cut before it ran anything (an "agora" before the session).
+	 *
+	 * Not `defer(ids, new Date())`: that writes an ownerless lease AT the current millisecond, which `claimNext`
+	 * (`lease_until < now`) refuses until the clock ticks and `deferred` reads as a pause meanwhile — whether the
+	 * group came back in the same drain depended on the millisecond (the flaky coalesce case, 2026-11-19).
+	 */
+	abstract giveBack(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
 	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
@@ -193,17 +246,21 @@ export abstract class MailboxRepository {
 	 * alive and nothing more; whether the WORK is alive is the caller's to bound (see the dispatcher's
 	 * renewal ceiling) and the runner's to detect (a dead child now ends its own turn).
 	 */
-	abstract renewLease(id: string, claimedBy: string, leaseMs: number, tx?: Transaction): Promise<void>
+	abstract renewLease(ids: readonly string[], claimedBy: string, leaseMs: number, tx?: Transaction): Promise<void>
 
-	/** Mark a turn done. The item never runs again. */
-	abstract complete(id: string, tx?: Transaction): Promise<void>
+	/** Mark a turn done — every item it carried, in one write. They never run again. */
+	abstract complete(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
 	 * Record a failed turn: attempts++, lease released. Past `maxAttempts` the item is POISONED
 	 * (`dead_at`) rather than retried forever — a turn that keeps dying must stop being scheduled, or
 	 * it starves every later item for the same target.
+	 *
+	 * ONLY THE HEAD PAYS (fase 4, item 6b): the steers that rode with it (`followers`) get the attempt their claim
+	 * charged back and are released beside it, never poisoned — a turn that died is the head's failure to run, and a
+	 * steer that arrived while it was queued must not die of it. One write for the whole group.
 	 */
-	abstract fail(id: string, error: string, maxAttempts: number, tx?: Transaction): Promise<void>
+	abstract fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: Transaction): Promise<void>
 
 	/**
 	 * Release every lease held by a daemon boot that is PROVABLY gone — the boot sweep, made honest.

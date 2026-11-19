@@ -1,4 +1,12 @@
 import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { AgentModelId, ProviderKind, ProviderLimitWindow, UsageRole } from '@codm/contracts-typescript/wire/enums'
+
+/**
+ * A window boundary the provider CLI reported during the run (fase 4, item 2) — the `resetsAt` of a usage window,
+ * read from EVERY rate-limit line, `allowed` ones included. Persisted on the usage fact so the budget knows where
+ * the provider's 5-hour and weekly windows start even after a restart. ISO instant, like `AgentToolCallEvent`'s.
+ */
+export const LimitWindowBoundarySchema = z.object({ window: z.enum(ProviderLimitWindow), resetsAt: z.iso.datetime() })
 
 /**
  * OBSERVED FACT: token accounting for one agent turn (GOAL-agent-abstraction §4.3).
@@ -39,6 +47,12 @@ import { BaseDomainEvent, z } from '@codm/core-typescript'
  * Persisting the buckets is exactly what lets the reader apply a rate card it can revise later;
  * persisting a single `costUsd` would freeze today's rate card into the durable record. The FACT is
  * the token count; the price is applied by whoever reads it.
+ *
+ * WHO SPENT IT (fase 4, S1). `role` (orchestrator, issue, triage), `provider` and `model` say whose turn this was —
+ * the budget sums by role and never infers it from `entity_id`. OPTIONAL in the schema only because rows written
+ * before fase 4 lack them (the budget ignores a row without `role`); every producer sets all three, and
+ * `tests/architecture/usage-role.test.ts` fails a `new AgentUsageEvent(` that does not pass `role`. `windows` is
+ * the boundary of each usage window the CLI reported during the run, when it reported one.
  */
 export const AgentUsageEventSchema = z.domainEvent({
 	inputTokens: z.number().int().nonnegative(),
@@ -46,6 +60,10 @@ export const AgentUsageEventSchema = z.domainEvent({
 	cacheCreationInputTokens: z.number().int().nonnegative(),
 	cacheReadInputTokens: z.number().int().nonnegative(),
 	reasoningOutputTokens: z.number().int().nonnegative().optional(),
+	role: z.enum(UsageRole).optional(),
+	provider: z.enum(ProviderKind).optional(),
+	model: z.enum(AgentModelId).optional(),
+	windows: z.array(LimitWindowBoundarySchema).optional(),
 })
 
 export class AgentUsageEvent extends BaseDomainEvent<typeof AgentUsageEventSchema> {

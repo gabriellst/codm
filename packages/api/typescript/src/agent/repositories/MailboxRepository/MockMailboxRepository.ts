@@ -3,11 +3,16 @@ import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
+	type ClaimedMailboxBundle,
 	type ClaimedMailboxItem,
 	type DeferredMailboxItem,
 	type EnqueueMailboxItem,
 	type HoldSettlement,
 } from './MailboxRepository'
+import { IssueAttributesRepository } from '../IssueAttributesRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
+import { claimRankOf } from '../../utils/ClaimRank'
+import { coalescedPrefix, MAX_COALESCED } from '../../utils/SteerCoalescing'
 
 interface Row extends EnqueueMailboxItem {
 	id: string
@@ -49,41 +54,86 @@ export class MockMailboxRepository extends MailboxRepository {
 		return true
 	}
 
+	constructor(private readonly attributes: IssueAttributesRepository) {
+		super()
+	}
+
 	async claimNext(claimedBy: string, leaseMs: number, lanes?: readonly MailboxTargetKind[]): Promise<ClaimedMailboxItem | undefined> {
+		return (await this.claim(claimedBy, leaseMs, lanes, false))?.head
+	}
+
+	async claimBundle(claimedBy: string, leaseMs: number, lanes?: readonly MailboxTargetKind[]): Promise<ClaimedMailboxBundle | undefined> {
+		return this.claim(claimedBy, leaseMs, lanes, true)
+	}
+
+	private async claim(
+		claimedBy: string,
+		leaseMs: number,
+		lanes: readonly MailboxTargetKind[] | undefined,
+		coalesce: boolean,
+	): Promise<ClaimedMailboxBundle | undefined> {
 		const now = Date.now()
 		const runnable = (r: Row) => !r.consumed && !r.dead
 		const leased = (r: Row) => r.leaseUntil !== undefined && r.leaseUntil >= now
 		// Same rule as the SQL twin: a lane's position is its rank, and a kind outside `lanes` is not claimable.
-		const rank = (r: Row) => (lanes ? lanes.indexOf(r.targetKind) : 0)
-		const busy = new Set(this.rows.filter(r => runnable(r) && leased(r)).map(r => `${r.targetKind}:${r.targetId}`))
-		const row = this.rows
-			.filter(r => runnable(r) && !leased(r) && !busy.has(`${r.targetKind}:${r.targetId}`) && rank(r) >= 0)
-			.sort((a, b) => rank(a) - rank(b) || a.seq - b.seq)[0]
-		if (!row) return undefined
-		row.attempts += 1
-		const firstClaim = row.firstClaimedAt === undefined
-		row.firstClaimedAt ??= now
-		row.leaseUntil = now + leaseMs
-		row.claimedBy = claimedBy
-		row.claimedBoot = DAEMON_BOOT.id
-		row.claimedPid = DAEMON_BOOT.pid
-		return {
-			id: row.id,
-			ownerId: row.ownerId,
-			targetKind: row.targetKind,
-			targetId: row.targetId,
-			kind: row.kind,
-			payload: row.payload,
-			posture: row.posture,
-			attempts: row.attempts,
-			firstClaim,
+		const lane = (r: Row) => (lanes ? lanes.indexOf(r.targetKind) : 0)
+		const targetOf = (r: Row) => `${r.targetKind}:${r.targetId}`
+		const busy = new Set(this.rows.filter(r => runnable(r) && leased(r)).map(targetOf))
+		const ready = this.rows.filter(r => runnable(r) && !leased(r) && !busy.has(targetOf(r)) && lane(r) >= 0)
+		// The target's rank: the best of its ready items, the task's priority read NOW (fase 4, S4).
+		const targetRank = new Map<string, number>()
+		for (const r of ready) {
+			const attributes = r.targetKind === MailboxTargetKind.ISSUE ? await this.attributes.findByIssueId(r.targetId) : undefined
+			const rank = claimRankOf(
+				r.claimClass,
+				attributes?.priorityReason ?? ISSUE_ATTRIBUTE_DEFAULTS.priorityReason,
+				attributes?.priority ?? ISSUE_ATTRIBUTE_DEFAULTS.priority,
+			)
+			targetRank.set(targetOf(r), Math.min(rank, targetRank.get(targetOf(r)) ?? rank))
 		}
+		// Each target's OLDEST runnable item is its only candidate — `seq` is arrival.
+		const oldest = new Map<string, Row>()
+		for (const r of [...ready].sort((a, b) => a.seq - b.seq)) if (!oldest.has(targetOf(r))) oldest.set(targetOf(r), r)
+		const row = [...oldest.values()].sort(
+			(a, b) => lane(a) - lane(b) || (targetRank.get(targetOf(a)) ?? 0) - (targetRank.get(targetOf(b)) ?? 0) || a.seq - b.seq,
+		)[0]
+		if (!row) return undefined
+		// The steers that ride with it (fase 4, item 6b) — same rule as the SQL twin: the target's next runnable items in
+		// arrival order, the contiguous prefix `coalescedPrefix` admits.
+		const next = coalesce
+			? this.rows
+					.filter(r => runnable(r) && targetOf(r) === targetOf(row) && r.seq > row.seq)
+					.sort((a, b) => a.seq - b.seq)
+					.slice(0, MAX_COALESCED - 1)
+			: []
+		const [head, ...followers] = [row, ...next.slice(0, coalescedPrefix(row, next))].map(member => {
+			member.attempts += 1
+			const firstClaim = member.firstClaimedAt === undefined
+			member.firstClaimedAt ??= now
+			member.leaseUntil = now + leaseMs
+			member.claimedBy = claimedBy
+			member.claimedBoot = DAEMON_BOOT.id
+			member.claimedPid = DAEMON_BOOT.pid
+			return {
+				id: member.id,
+				ownerId: member.ownerId,
+				targetKind: member.targetKind,
+				targetId: member.targetId,
+				kind: member.kind,
+				payload: member.payload,
+				posture: member.posture,
+				claimClass: member.claimClass,
+				attempts: member.attempts,
+				firstClaim,
+			}
+		})
+		return head ? { head, followers } : undefined
 	}
 
-	async renewLease(id: string, _claimedBy: string, leaseMs: number): Promise<void> {
-		const row = this.rows.find(r => r.id === id)
-		if (!row || row.consumed || row.dead) return
-		row.leaseUntil = Date.now() + leaseMs
+	async renewLease(ids: readonly string[], claimedBy: string, leaseMs: number): Promise<void> {
+		for (const row of this.rows.filter(r => ids.includes(r.id) && r.claimedBy === claimedBy && !r.consumed && !r.dead)) {
+			row.leaseUntil = Date.now() + leaseMs
+		}
 	}
 
 	async releaseOrphanedClaims(): Promise<number> {
@@ -115,35 +165,46 @@ export class MockMailboxRepository extends MailboxRepository {
 		return this.rows.some(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
 	}
 
-	async complete(id: string): Promise<void> {
-		const row = this.rows.find(r => r.id === id)
-		if (row) {
+	async complete(ids: readonly string[]): Promise<void> {
+		for (const row of this.rows.filter(r => ids.includes(r.id))) {
 			row.consumed = true
-			row.leaseUntil = undefined
-			row.claimedBy = null
-			row.claimedBoot = null
-			row.claimedPid = null
+			this.release(row)
 		}
 	}
 
-	async fail(id: string, _error: string, maxAttempts: number): Promise<void> {
-		const row = this.rows.find(r => r.id === id)
-		if (!row) return
+	async fail(head: string, followers: readonly string[], _error: string, maxAttempts: number): Promise<void> {
+		const row = this.rows.find(r => r.id === head)
+		if (row) {
+			this.release(row)
+			if (row.attempts >= maxAttempts) row.dead = true
+		}
+		// Only the head pays: the steers that rode with it get their attempt back.
+		for (const follower of this.rows.filter(r => followers.includes(r.id) && !r.consumed && !r.dead)) {
+			this.release(follower)
+			follower.attempts = Math.max(follower.attempts - 1, 0)
+		}
+	}
+
+	async defer(ids: readonly string[], until: Date): Promise<void> {
+		for (const row of this.rows.filter(r => ids.includes(r.id) && !r.consumed && !r.dead)) {
+			this.release(row)
+			row.leaseUntil = until.getTime()
+			row.attempts = Math.max(row.attempts - 1, 0)
+		}
+	}
+
+	async giveBack(ids: readonly string[]): Promise<void> {
+		for (const row of this.rows.filter(r => ids.includes(r.id) && !r.consumed && !r.dead)) {
+			this.release(row)
+			row.attempts = Math.max(row.attempts - 1, 0)
+		}
+	}
+
+	private release(row: Row): void {
 		row.leaseUntil = undefined
 		row.claimedBy = null
 		row.claimedBoot = null
 		row.claimedPid = null
-		if (row.attempts >= maxAttempts) row.dead = true
-	}
-
-	async defer(id: string, until: Date): Promise<void> {
-		const row = this.rows.find(r => r.id === id)
-		if (!row || row.consumed || row.dead) return
-		row.leaseUntil = until.getTime()
-		row.claimedBy = null
-		row.claimedBoot = null
-		row.claimedPid = null
-		row.attempts = Math.max(row.attempts - 1, 0)
 	}
 
 	/** Same predicate as the SQL twin's `deferredAt`: runnable, no holder, lease in the future. */

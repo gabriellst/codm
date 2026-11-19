@@ -1,4 +1,12 @@
-import { BlockCause, IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	PublishRunOutcome,
+	BatchItemDestinationKind,
+	BlockCause,
+	IssueLifeState,
+	IssueSignalLevel,
+	Language,
+	StopKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
 import { BulletinSection } from '../enums/ThreadCommand'
@@ -247,6 +255,7 @@ const CAUSE_PT: Record<BlockCause, string> = {
 	[BlockCause.CLI_LOGIN]: 'o CLI precisa de login',
 	[BlockCause.STALLED]: 'parou sem dizer o que falta',
 	[BlockCause.CLASSIFICATION]: 'barrada pela classificação',
+	[BlockCause.BUDGET_HELD]: 'segurada para não estourar a cota',
 }
 const CAUSE_EN: Record<BlockCause, string> = {
 	[BlockCause.PROVIDER_LIMIT]: 'provider limit',
@@ -254,6 +263,7 @@ const CAUSE_EN: Record<BlockCause, string> = {
 	[BlockCause.CLI_LOGIN]: 'the CLI needs a login',
 	[BlockCause.STALLED]: 'stopped without saying what it needs',
 	[BlockCause.CLASSIFICATION]: 'blocked by the classification',
+	[BlockCause.BUDGET_HELD]: 'held so the quota is not exhausted',
 }
 
 /** What a line adds about where the issue's work stands — total over `IssueLifeState` (the asks speak for WAITING_PERSON). */
@@ -262,6 +272,8 @@ const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'pausada',
 	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
+	// Fase 4: held by the quota budget (only while it is enforced) — the estimated return is the S3 notice's, not the row's.
+	[IssueLifeState.WAITING_BUDGET]: () => 'esperando cota',
 	[IssueLifeState.RUNNING]: () => undefined,
 	[IssueLifeState.QUEUED]: () => 'na fila',
 	[IssueLifeState.REMINDED]: () => undefined,
@@ -272,6 +284,7 @@ const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'paused',
 	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
+	[IssueLifeState.WAITING_BUDGET]: () => 'waiting for quota',
 	[IssueLifeState.RUNNING]: () => undefined,
 	[IssueLifeState.QUEUED]: () => 'queued',
 	[IssueLifeState.REMINDED]: () => undefined,
@@ -311,6 +324,80 @@ function bulletin(
 	return [`📋 ${words.heading}`, ...body, p.link].filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n\n')
 }
 
+/**
+ * The batch receipt's parts (fase 4, item 5): the code, how many items, how many went to each destination and the
+ * reasons the declined/deferred ones carry. The order of the parts is `BATCH_RECEIPT_ORDER`.
+ */
+export interface BatchReceiptParams {
+	code: string
+	total: number
+	counts: Readonly<Record<BatchItemDestinationKind, number>>
+	/** The reasons of the items whose destination carries one (declined, deferred) — already bounded by the batch. */
+	reasons: Readonly<Record<BatchItemDestinationKind, { readonly shown: readonly string[]; readonly more: number }>>
+	link?: string
+}
+
+/** The order the receipt names the destinations in — where the work went first, what did not go anywhere last. */
+export const BATCH_RECEIPT_ORDER: readonly BatchItemDestinationKind[] = [
+	BatchItemDestinationKind.NEW_ISSUE,
+	BatchItemDestinationKind.ATTACHED,
+	BatchItemDestinationKind.ALREADY_LIVE,
+	BatchItemDestinationKind.NEEDS_DECISION,
+	BatchItemDestinationKind.DEFERRED,
+	BatchItemDestinationKind.DECLINED,
+]
+
+const BATCH_PART_PT: Record<BatchItemDestinationKind, (n: number) => string> = {
+	[BatchItemDestinationKind.NEW_ISSUE]: n => `${n} ${n === 1 ? 'tarefa nova' : 'tarefas novas'}`,
+	[BatchItemDestinationKind.ATTACHED]: n => `${n} em ${n === 1 ? 'tarefa existente' : 'tarefas existentes'}`,
+	[BatchItemDestinationKind.ALREADY_LIVE]: n => `${n} já no ar`,
+	[BatchItemDestinationKind.NEEDS_DECISION]: n => `${n} esperando decisão`,
+	[BatchItemDestinationKind.DEFERRED]: n => `${n} ${n === 1 ? 'adiado' : 'adiados'}`,
+	[BatchItemDestinationKind.DECLINED]: n => `${n} ${n === 1 ? 'recusado' : 'recusados'}`,
+}
+
+const BATCH_PART_EN: Record<BatchItemDestinationKind, (n: number) => string> = {
+	[BatchItemDestinationKind.NEW_ISSUE]: n => `${n} new ${n === 1 ? 'task' : 'tasks'}`,
+	[BatchItemDestinationKind.ATTACHED]: n => `${n} in existing ${n === 1 ? 'task' : 'tasks'}`,
+	[BatchItemDestinationKind.ALREADY_LIVE]: n => `${n} already live`,
+	[BatchItemDestinationKind.NEEDS_DECISION]: n => `${n} waiting on a decision`,
+	[BatchItemDestinationKind.DEFERRED]: n => `${n} deferred`,
+	[BatchItemDestinationKind.DECLINED]: n => `${n} declined`,
+}
+
+function batchReceipt(p: BatchReceiptParams, heading: string, part: Record<BatchItemDestinationKind, (n: number) => string>): string {
+	const parts = BATCH_RECEIPT_ORDER.filter(kind => p.counts[kind] > 0).map(kind => {
+		const { shown, more } = p.reasons[kind]
+		const said = [...shown, ...(more > 0 ? [`+${more}`] : [])]
+		return `${part[kind](p.counts[kind])}${said.length > 0 ? ` (${said.join('; ')})` : ''}`
+	})
+	return lines(`${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`, p.link)
+}
+
+/**
+ * The group's line after the workspace's publish command ran for a task (fase 4, item 6c) — total over
+ * `PublishRunOutcome`. A cancelled run says nothing in the group (the session wakes and speaks), so its line is the
+ * empty string and the caller never sends it. Never the command, never its output: those are the console's.
+ */
+const PUBLISH_RAN_PT: Record<PublishRunOutcome, (key: string) => string> = {
+	[PublishRunOutcome.SUCCEEDED]: key => `${key}: publicado.`,
+	[PublishRunOutcome.FAILED]: key => `${key}: a publicação falhou — a tarefa vai ver o erro e corrigir.`,
+	[PublishRunOutcome.TIMED_OUT]: key => `${key}: a publicação passou do tempo e foi interrompida — a tarefa vai ver o que aconteceu.`,
+	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
+	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+	[PublishRunOutcome.UNKNOWN]: key =>
+		`${key}: a publicação foi interrompida (o codm parou no meio) e o resultado é desconhecido — ela não foi repetida. É preciso conferir se foi ao ar; a tarefa vai verificar.`,
+}
+const PUBLISH_RAN_EN: Record<PublishRunOutcome, (key: string) => string> = {
+	[PublishRunOutcome.SUCCEEDED]: key => `${key}: published.`,
+	[PublishRunOutcome.FAILED]: key => `${key}: publishing failed — the task will look at the error and fix it.`,
+	[PublishRunOutcome.TIMED_OUT]: key => `${key}: publishing ran past its time and was stopped — the task will look at what happened.`,
+	[PublishRunOutcome.CANCELLED_BY_STEER]: () => '',
+	[PublishRunOutcome.CANCELLED_BY_PAUSE]: () => '',
+	[PublishRunOutcome.UNKNOWN]: key =>
+		`${key}: publishing was interrupted (codm stopped midway) and its result is unknown — it was not run again. It must be checked whether it went live; the task will verify.`,
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -335,6 +422,15 @@ const PT_MESSAGES = {
 	 */
 	providerPausedNotice: (p: ProviderPausedParams) =>
 		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}.`,
+	/**
+	 * O aviso de que o orçamento de cota segurou as tarefas novas (fase 4, `BlockCause.BUDGET_HELD`) — um por
+	 * conversa enquanto a pista de tarefas está segurada, só com o orçamento LIGADO (em observação nada é dito). O
+	 * orquestrador continua respondendo: é isso que a reserva compra. A hora é a estimativa de volta do orçamento.
+	 */
+	budgetHeldNotice: (p: { until?: Date; now: Date }) =>
+		p.until
+			? `Segurei as tarefas novas para não estourar a cota da conta — continuo respondendo aqui, e elas voltam a rodar ${whenPt(p.until, p.now)}.`
+			: 'Segurei as tarefas novas para não estourar a cota da conta — continuo respondendo aqui, e elas voltam a rodar quando a cota folgar.',
 	/**
 	 * O código que confirma, no painel da nuvem, quem a pessoa é (fase 2, item 6a). Vai por DM só para
 	 * ela; nunca entra no transcript nem na fila de comandos.
@@ -376,6 +472,22 @@ const PT_MESSAGES = {
 	 * decisão, o que parou, o que está andando e o que terminou nas últimas 24 h; uma linha por tarefa, no
 	 * máximo 8 por seção, e o link do painel no fim.
 	 */
+	/**
+	 * O recibo do lote (fase 4, item 5) — determinístico, sem modelo, uma vez por lote, só quando todo item tem
+	 * destino: quantos itens foram para cada destino, os motivos dos recusados/adiados e o link do lote no painel.
+	 */
+	batchReceipt: (p: BatchReceiptParams) => batchReceipt(p, 'Lote', BATCH_PART_PT),
+	/**
+	 * O lembrete ao orquestrador de um lote que ficou sem destino (fase 4, item 5) — linha só para os agentes
+	 * (sussurro), nunca no grupo. O como registrar vem na dica do lote que o item leva (o nome da ferramenta é do
+	 * prompt, derivado da classe).
+	 */
+	/** O aviso STALLED da conversa quando o lote seguiu sem destino depois do lembrete (fase 4, item 5). */
+	batchStalled: (p: { code: string; total: number }) =>
+		`O lote ${p.code} (${p.total} itens) seguiu sem destino registrado depois do lembrete.`,
+	batchReminder: (p: { code: string; total: number }) => `O lote ${p.code} (${p.total} itens) ainda não tem destino registrado.`,
+	/** A linha no grupo depois do comando de publicação do workspace (fase 4, item 6c), por desfecho. */
+	publishRan: (p: { outcome: PublishRunOutcome; key: string }) => PUBLISH_RAN_PT[p.outcome](p.key),
 	boardBulletin: (p: BoardBulletinParams) =>
 		bulletin(
 			p,
@@ -393,6 +505,10 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
 		providerPausedNotice: p =>
 			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
+		budgetHeldNotice: p =>
+			p.until
+				? `I held new tasks so the account's quota is not exhausted — I keep answering here, and they run again ${whenEn(p.until, p.now)}.`
+				: "I held new tasks so the account's quota is not exhausted — I keep answering here, and they run again when the quota frees up.",
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
@@ -402,6 +518,10 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
 		approvalYes: () => 'Yes',
 		approvalNo: () => 'No',
+		batchReceipt: p => batchReceipt(p, 'Batch', BATCH_PART_EN),
+		batchStalled: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded after the reminder.`,
+		batchReminder: p => `Batch ${p.code} (${p.total} items) still has no destinations recorded.`,
+		publishRan: p => PUBLISH_RAN_EN[p.outcome](p.key),
 		boardBulletin: p =>
 			bulletin(
 				p,

@@ -11,6 +11,12 @@ export { CompleteOnboardingController } from './CompleteOnboarding'
 export { SaveOnboardingStepController } from './SaveOnboardingStep'
 export { GetIssueTimelineController } from './GetIssueTimeline'
 export { GetThreadPanelLinkController } from './GetThreadPanelLink'
+// Fase 4 (S0b) — quota health and the batch screen, in mock mode until S9.
+export { GetSystemHealthController } from './GetSystemHealth'
+export { GetBatchController } from './GetBatch'
+// Fase 4 (item 6c) — console-only reads, NO `mcpScopes`: the workspace's publish command and what one run printed.
+export { GetWorkspacePublishCommandController } from './GetWorkspacePublishCommand'
+export { GetPublishRunOutputController } from './GetPublishRunOutput'
 
 import { ListenEventsController } from './ListenEvents'
 import { GetUserInfoController } from './GetUserInfo'
@@ -25,6 +31,10 @@ import { CompleteOnboardingController } from './CompleteOnboarding'
 import { SaveOnboardingStepController } from './SaveOnboardingStep'
 import { GetIssueTimelineController } from './GetIssueTimeline'
 import { GetThreadPanelLinkController } from './GetThreadPanelLink'
+import { GetSystemHealthController } from './GetSystemHealth'
+import { GetBatchController } from './GetBatch'
+import { GetWorkspacePublishCommandController } from './GetWorkspacePublishCommand'
+import { GetPublishRunOutputController } from './GetPublishRunOutput'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10). Todo contexto expõe o mesmo símbolo, e é isso que deixa o
@@ -45,4 +55,8 @@ export default {
 	SaveOnboardingStepController,
 	GetIssueTimelineController,
 	GetThreadPanelLinkController,
+	GetSystemHealthController,
+	GetBatchController,
+	GetWorkspacePublishCommandController,
+	GetPublishRunOutputController,
 }

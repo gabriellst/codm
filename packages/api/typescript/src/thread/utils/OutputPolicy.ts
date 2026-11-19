@@ -112,6 +112,8 @@ export const CAUSE_DEDUPES: Record<BlockCause, boolean> = {
 	[BlockCause.CLI_LOGIN]: true,
 	[BlockCause.STALLED]: false,
 	[BlockCause.CLASSIFICATION]: false,
+	// Fase 4: the budget holds the whole ISSUE lane at once — one fact for the group, like the provider's limit.
+	[BlockCause.BUDGET_HELD]: true,
 }
 
 /** Whether a stop of `kind` is already told by another open stop of the same (grouping) cause. */
@@ -134,3 +136,12 @@ export function routeSignal(mode: GroupOutputMode, level: IssueSignalLevel, alre
 	if (answersPerson) return OutputRouting.GROUP
 	return alreadyTold ? OutputRouting.PANEL : ROUTING_BY_MODE[mode][level]
 }
+
+/**
+ * THE LEVEL THE BATCH RECEIPT SPEAKS AT (fase 4, item 5) — it goes through the policy like what an issue says, so
+ * the group's mode decides: the receipt is the ANSWER to whoever listed the requests ("where did each one go"), the
+ * same thing a closing is to whoever asked for a task — and like a closing it quotes the message it answers
+ * (`QUOTES_ORIGIN`). A closing never routes to `DIGEST` in any mode, so a receipt is always ONE message of its own
+ * (the group) or the panel's line (`DECISIONS_ONLY`), never merged into somebody's digest.
+ */
+export const BATCH_RECEIPT_LEVEL = IssueSignalLevel.CLOSING
