@@ -37,7 +37,7 @@ O volume de dados está com 3,4 GiB livres (`df -h`, 20/11); a regra desta fase 
 
 - Objetivo, fase 5: **empurrão automático só para "parada sem motivo", até 2 vezes, depois bloqueio visível; quem declarou espera não é incomodado**; **nova tentativa com espera crescente para erro do provedor antes de pedir alguém**; **supervisor com modelo pequeno a cada 15–30 min, só sobre tarefas suspeitas, decidindo empurrar, reiniciar com as notas de passagem ou escalar**; **levar ao dono os números de segunda conta/API, sem decidir**.
 - Grupo enxuto, um aviso por causa, `STALLED` não agrupa (fase 3). Resposta a quem falou continua no grupo.
-- Orçamento observa antes de agir (fase 4, 19/11). Esta fase segue a mesma postura para o que é novo e arriscado (supervisor).
+- Orçamento observa antes de agir (fase 4, 19/11). **O supervisor não segue essa postura** (decisão do dono, 20/11): age desde a instalação, dentro das travas de segurança do item 3; a observação fica como registro de auditoria de todo veredito.
 - Reserva do orquestrador `max(5%, medido)` (fase 4); o gasto do supervisor entra nela.
 - O que ninguém pediu roda em AUTO e nunca eleva (participant-permission-posture; `RESUMES_WITH_RESOLVER_POSTURE`).
 
@@ -158,7 +158,7 @@ Na pista ISSUE ninguém espera em tempo real e uma sobrecarga do provedor passa 
 **Suspeita por regra, sem modelo** — `agent/services/SuspectIssueReader` (porta + `LibSql…` + `Mock…`), só dados persistidos, disjunto do que o reconciliador vê:
 - `STALLED_OPEN` / `PROVIDER_ERROR_OPEN`: stop aberto do kind há ≥ `SUSPECT_STOP_AGE_MS` (30 min — tempo de uma pessoa ver o aviso primeiro). `SERVER_ERROR` de issue só nasce do envenenamento, então o motivo é bem definido.
 - `NUDGE_LOOP`: ≥ `NUDGE_LOOP_EPISODES` (3) fatos `agent.issue.nudged` com `ordinal = 1` em 24 h.
-- `SILENT_TURN`: item da issue com lease vivo há ≥ `SILENT_TURN_MIN_MS` (30 min) e última `issue_terminal_lines.at` há ≥ `SILENT_TURN_QUIET_MS` (20 min). O supervisor **não** mata o turno (PERGUNTAR AO DONO).
+- `SILENT_TURN`: item da issue com lease vivo há ≥ `SILENT_TURN_MIN_MS` (30 min) e última `issue_terminal_lines.at` há ≥ `SILENT_TURN_QUIET_MS` (20 min). O supervisor **nunca** para um turno vivo (decisão do dono, 20/11): o vigia de inatividade continua sendo o único que mata um turno; o supervisor só sinaliza (`ESCALATE` ou `LEAVE`).
 - **Nunca suspeitas:** issue ou conversa pausada (`IssueHold`), stop de pessoa aberto, espera declarada por feedback (`DeclaredWaitReader`), adiada por qualquer causa, concluída, arquivada. Com o provedor pausado (`QuotaStatusReader.providerPausedUntil()`, novo) ou o orçamento segurando de fato, a passada inteira é pulada.
 - Esfriamento: a mesma `(issue, reason)` não é revista antes de `SUPERVISOR_COOLDOWN_MS` (60 min), lido do último `agent.supervisor.reviewed`.
 
@@ -179,11 +179,19 @@ Na pista ISSUE ninguém espera em tempo real e uma sobrecarga do provedor passa 
 - `NUDGE` com stop aberto ⇒ `thread/usecases/ApplySupervisorRetry` (irmã do `ApplyDueQuestionDefaults`) resolve com `AUTO_RETRY`. O aviso de bloqueio fecha pela política da fase 3; a retomada sai pelo `ResumeIssueOnStopResolved` com `RESUME_CLAIM_CLASS[AUTO_RETRY] = REMINDER`, payload `nudge: { ordinal: NUDGES_BEFORE_STALL, source: SUPERVISOR }` e `RESUME_TEXT[AUTO_RETRY]` = texto do empurrão 2, em AUTO. **A corrente fica limitada:** como a retomada já é o último empurrão do episódio, um turno calado depois dela vira `STALLED` direto na passada seguinte — um turno automático a mais por ação do supervisor, nunca um par novo de empurrões.
 - `PROVIDER_ERROR_OPEN` + `NUDGE`: o item morto **não** é revivido (o texto dele, possivelmente um recado de pessoa, continua morto e visível na linha do tempo); a retomada diz que o trabalho parou por erro e pede para continuar de onde estava. Reviver o item é seguimento, não esta fase.
 - `RESTART_WITH_NOTES` ⇒ `AgentSession.requestHandoff(at)` (coluna `agent_agent_sessions.handoff_requested_at`), depois o mesmo caminho do `NUDGE` quando há stop; **sem stop** (`NUDGE_LOOP`) ⇒ o `agent` enfileira ele mesmo o empurrão `REMINDER` com `ordinal = NUDGES_BEFORE_STALL`, `source: SUPERVISOR` (mesma porta do reconciliador). No turno seguinte: `resumeDecision` checa o pedido **antes** do orçamento de contexto e devolve `HANDOFF_REQUESTED`; `SEEDS_FROM_NOTES[HANDOFF_REQUESTED] = true` leva ao caminho de troca da fase 4 (notas da sessão, se houver, e as derivadas); `completeHandoff` limpa `handoff_requested_at`; fato `handed_off` com `reason`. Issue sem linha de sessão: não há o que trocar, o turno já é novo — o pedido é ignorado e registrado no fato do supervisor.
-- `ESCALATE` ⇒ item `SUPERVISOR_REVIEWED` na linha do tempo e `escalatedAt` no cartão (console e painel). **Nenhuma mensagem nova a ninguém** até o dono decidir a quem escalar (PERGUNTAR AO DONO).
+- `ESCALATE` ⇒ item `SUPERVISOR_REVIEWED` na linha do tempo e `escalatedAt` no cartão (console e painel). **Nenhuma mensagem nova a ninguém** (decisão do dono, 20/11): só selo e linha do tempo — o aviso de bloqueio já foi ao grupo uma vez.
 - `LEAVE` ⇒ só o fato.
-- Teto por issue: `SUPERVISOR_ACTIONS_PER_DAY: Record<SupervisorVerdict, number>` (`NUDGE` 2, `RESTART_WITH_NOTES` 1, `ESCALATE` 1, `LEAVE` sem teto); passou do teto ⇒ `ESCALATE` uma vez, depois `LEAVE`. Com o teto, o máximo automático por issue por dia é 3 turnos do supervisor, cada um seguido no máximo de um `STALLED`.
+- Teto por issue: `SUPERVISOR_ACTIONS_PER_DAY: Record<SupervisorVerdict, number>` (`NUDGE` 2, `RESTART_WITH_NOTES` 1, `ESCALATE` 1, `LEAVE` sem teto) **e** o teto total `SUPERVISOR_MAX_ACTIONS_PER_ISSUE_PER_DAY = 3` (soma das ações agidas que geram turno — `NUDGE` e `RESTART_WITH_NOTES` — em 24 h, contadas pelos fatos `agent.supervisor.reviewed` com `acted: true`); passou de qualquer teto ⇒ `ESCALATE` uma vez, depois `LEAVE`. Com o teto, o máximo automático por issue por dia é 3 turnos do supervisor, cada um seguido no máximo de um `STALLED`.
+- **Um turno automático por ação** (decisão do dono, 20/11): a retomada depois de uma ação do supervisor é contada como o último empurrão do episódio (`ordinal = NUDGES_BEFORE_STALL`); se não der em nada, a tarefa aparece como bloqueada (`STALLED`) — nunca um par novo de empurrões.
 
-**Modo** — `CODM_AGENT_SUPERVISOR_MODE` (`SupervisorMode`; entrada no manifesto de env de `template.config.ts` com consumidores, `.env.example` e `ProductConfig`, como `CODM_AGENT_QUOTA_ENFORCE`), padrão **`OBSERVE`**: `OFF` não registra o job; `OBSERVE` roda o modelo e grava `acted: false` — sem linha do tempo, sem selo, nada no grupo; `ACT` executa.
+**Travas de segurança** (o supervisor age desde a instalação, então elas são parte do desenho, cada uma com teste):
+- **Só três ações:** nova tentativa (`AUTO_RETRY` sobre o stop), reinício com notas (`requestHandoff`) e escalada por selo/linha do tempo. O supervisor **nunca** faz merge, publica, muda prioridade, responde decisão/pergunta/aprovação de pessoa, nem fala com ninguém (grupo, pessoa ou dono). Rail `tests/architecture/supervisor-reach.test.ts`: `ActOnSupervisorVerdict` e `SuperviseSuspectIssues` só importam as portas listadas em `SUPERVISOR_ALLOWED_PORTS` (fixture negativa com uma porta de publicação/envio).
+- **Turnos dele são `REMINDER` em AUTO:** nunca passam à frente de `DECISION_ANSWER`, nunca disparam o gatilho de publicação (`PUBLISH_AUTHORIZED_BY[AUTO_RETRY] = () => false`), nunca herdam a postura de quem resolveu antes; o texto da retomada proíbe publicar, merge e o que for irreversível.
+- **Toda ação registrada com o motivo:** cada veredito — agido ou não — grava `agent.supervisor.reviewed { issueId, reason, verdict, confidence?, mode, acted, fallback? }`; as ações agidas aparecem também na linha do tempo (`SUPERVISOR_REVIEWED` com `reason` e `verdict`).
+- **Teto por tarefa:** `SUPERVISOR_ACTIONS_PER_DAY` e `SUPERVISOR_MAX_ACTIONS_PER_ISSUE_PER_DAY` (acima).
+- **Falha fechada:** saída inválida, prazo, confiança baixa ou veredito fora de `VERDICTS_BY_REASON` ⇒ `LEAVE`; issue ou conversa pausada, espera declarada, stop de pessoa aberto e turno vivo nunca são tocados.
+
+**Modo** — `CODM_AGENT_SUPERVISOR_MODE` (`SupervisorMode`; entrada no manifesto de env de `template.config.ts` com consumidores, `.env.example` e `ProductConfig`, como `CODM_AGENT_QUOTA_ENFORCE`), padrão **`ACT`** (decisão do dono, 20/11): `ACT` executa dentro das travas; `OBSERVE` roda o modelo e grava `acted: false` — sem linha do tempo, sem selo, nada no grupo; `OFF` não registra o job. Em qualquer modo que roda, todo veredito fica no fato `agent.supervisor.reviewed` (auditoria).
 
 ### Item 4 — números para a decisão "segunda conta ou API"
 
@@ -246,8 +254,8 @@ Regeneração: `bun contracts` (antes das migrações — os CHECKs derivam dos 
 
 - Ordem: **nuvem antes do daemon** — pg 0009 e o `SyncPanel` que aceita `WAITING_RETRY`, `retryingAt`, `escalatedAt`; depois o daemon (SQLite 0038 no boot, testada antes numa cópia do banco real quando houver disco — a reconstrução de `issue_stops` torna esse teste obrigatório).
 - Itens 1 e 2 entram **ligados**: são as regras que o objetivo aprovou; mudam quantas vezes e quando o sistema tenta antes de pedir alguém, e nada novo vai ao grupo.
-- Supervisor entra em **`OBSERVE`**; ligar `ACT` é decisão do dono com os fatos `agent.supervisor.reviewed` da semana (PERGUNTAR AO DONO).
-- Reverter sem build: `CODM_AGENT_SUPERVISOR_MODE=OFF`. O calendário é constante de código, como o `MAX_ATTEMPTS` de hoje.
+- Supervisor entra em **`ACT`** (decisão do dono, 20/11), com as travas do item 3; os fatos `agent.supervisor.reviewed` são a auditoria de todo veredito. `OBSERVE` e `OFF` ficam como ajuste.
+- Desligar sem build: `CODM_AGENT_SUPERVISOR_MODE=OFF` (ou `OBSERVE` para só registrar). O calendário é constante de código, como o `MAX_ATTEMPTS` de hoje.
 
 ## Como medi (antes)
 
@@ -314,9 +322,9 @@ Fixture (item 4): `python3 -I` sobre `tests/fixtures/quota/usage-2026-11.json` �
 
 - Empurrão 2 que trabalha pode fazer algo que ninguém pediu: sempre AUTO, filtro de permissão e janela de arrependimento valem, o texto proíbe publicar/merge; no pior caso é um "continue" de quem não tem "pode liberar".
 - Espera de nova tentativa atrasa o aviso de erro em ~1h20 na pista de tarefas; aceito porque hoje o aviso vem em segundos e a resolução em ~17 h.
-- Feedback pedido vira espera sem prazo (ver PERGUNTAR AO DONO).
+- Feedback pedido vira espera sem prazo (decisão do dono, 20/11): nunca empurrada nem bloqueada por esperar pessoa.
 - Reconstrução de `issue_stops` na 0038: risco de perder linha ou índice; mitigado pelo teste com o driver real e pela cópia do banco real antes do PR.
-- Supervisor errado: observação primeiro, vereditos fechados por motivo, sem texto livre, teto por issue, falha fechada em `LEAVE`.
+- Supervisor errado agindo desde a instalação (sem semana de observação, decisão do dono): só três ações reversíveis, vereditos fechados por motivo, sem texto livre, teto por issue, falha fechada em `LEAVE`, todo veredito registrado; `OFF`/`OBSERVE` sem build.
 
 ## Fora de escopo
 
@@ -326,14 +334,16 @@ Fixture (item 4): `python3 -I` sobre `tests/fixtures/quota/usage-2026-11.json` �
 - Batimento declarado pela tarefa (C3) como suspeita.
 - Segunda conta ou API: só os números (item 4).
 
-## PERGUNTAR AO DONO
+## Decisões do dono (20/11, finais)
 
-1. **Supervisor: observar antes de agir?** (a) uma semana em `OBSERVE`, depois decidir com os vereditos registrados (padrão deste spec, mesma regra do orçamento); (b) `ACT` desde o início, só com `NUDGE`; (c) `ACT` com os três vereditos.
-2. **"Escalar" fala com quem?** (a) ninguém além do que já existe — selo no cartão e linha do tempo; o aviso de bloqueio já foi ao grupo (padrão); (b) uma linha no grupo mencionando quem pediu a tarefa; (c) mensagem direta para o dono do codm; (d) (b) em horário comercial e (c) fora dele.
-3. **O supervisor pode parar um turno vivo mudo há muito tempo** (`SILENT_TURN`)? (a) nunca — só escala (padrão); (b) pode, e o próximo turno retoma a mesma sessão com um empurrão; (c) pode, e o próximo turno abre sessão nova com as notas.
-4. **Tarefa que pediu feedback e ninguém respondeu:** (a) espera sem prazo, sem empurrão (padrão — "quem declarou espera não é incomodado"); (b) depois de N horas, um lembrete no grupo para quem pediu; (c) depois de N horas, empurrão para a tarefa seguir sozinha.
-5. **Depois de uma ação do supervisor, quantos turnos automáticos a tarefa ganha?** (a) um — a retomada já é o último empurrão; calada, vira `STALLED` (padrão); (b) um par novo de empurrões, como um episódio novo.
-6. **Segunda conta ou API** (item 4): (a) não por agora — esperar a semana do orçamento em observação e remedir as horas paradas; (b) API só para a pista de tarefas quando a conta recusar, com teto semanal de gasto definido pelo dono; (c) segunda conta do provedor alternada na recusa; (d) mudar o modelo padrão das tarefas para um mais barato antes de comprar teto.
+Substituem as perguntas abertas deste spec; não reabrir.
+
+1. **Supervisor age desde a instalação** (`ACT` por padrão), com nova tentativa (`AUTO_RETRY`), reinício com notas e escalada — sem semana de observação. O modo continua ajustável (`OFF`/`OBSERVE`); o registro de todo veredito (`agent.supervisor.reviewed`) fica como auditoria.
+2. **Escalar não fala com ninguém novo:** selo no cartão e linha do tempo; o aviso de bloqueio já foi ao grupo uma vez.
+3. **Turno vivo mudo nunca é parado pelo supervisor:** o vigia de inatividade continua sendo o único que mata; o supervisor só sinaliza.
+4. **Feedback sem resposta espera sem prazo:** nunca empurrado nem bloqueado por esperar pessoa.
+5. **Um turno automático por ação do supervisor**, contado como o último empurrão; sem efeito, a tarefa aparece como bloqueada.
+6. **Segunda conta ou API: ainda não** — remedir depois da semana de observação do orçamento da fase 4.
 
 ## Revisão (skill `spec-review`, 2026-11-20)
 
@@ -349,4 +359,4 @@ Passada independente (agente sem o contexto do autor, protocolo da skill: `CLAUD
 - Corrente do supervisor limitada (retomada = último empurrão); restart sem stop definido; nota do modelo removida da saída (texto de modelo não entra em turno AUTO).
 - `retryingAt`/`escalatedAt` com DTO, `SyncPanel`, colunas pg e regeneração.
 - Baixos: fato da tentativa atômico com o `fail`; env no manifesto e `ProductConfig`; `PROVIDER_ERROR_OPEN` não revive o item (escrito); redação de texto livre; desvio do aceite em `integration` registrado; `NUDGED` substitui o item `STEER` do lembrete.
-- Nenhum achado rejeitado. Pergunta aberta da revisão que virou pergunta ao dono: a 5 (turnos depois de uma ação do supervisor). As demais foram respondidas no desenho (retomada não solta `RETRY`; Go conferido no S0a). Assumido e a conferir no S3: `RequestFeedback` chamado pela execução de outra issue (`actingIssueId` diferente) não deveria contar como espera declarada desta — o `DeclaredWaitReader` filtra pelo `entity_id` do fato.
+- Nenhum achado rejeitado. Pergunta aberta da revisão que virou pergunta ao dono: a 5 (turnos depois de uma ação do supervisor) — decidida em 20/11 (um turno). As demais foram respondidas no desenho (retomada não solta `RETRY`; Go conferido no S0a). Assumido e a conferir no S3: `RequestFeedback` chamado pela execução de outra issue (`actingIssueId` diferente) não deveria contar como espera declarada desta — o `DeclaredWaitReader` filtra pelo `entity_id` do fato.

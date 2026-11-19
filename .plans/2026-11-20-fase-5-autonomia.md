@@ -2,7 +2,7 @@
 
 > **For agentic workers:** cada slice é um commit (ou poucos) independentemente testável, com RED→GREEN por comportamento. Slices `parallel-*` só saem para subagente com o handoff do slice colado inteiro.
 
-**Goal:** nenhuma tarefa fica parada sem que o sistema tente antes de pedir alguém — a tarefa que se calou recebe até dois empurrões e só então vira bloqueio visível; quem declarou espera (decisão, pergunta, feedback, pausa, cota, nova tentativa) nunca é empurrado; erro do provedor tenta de novo com espera crescente e, esgotado, pede alguém com a causa certa; um supervisor no modelo pequeno olha as suspeitas a cada 20 min e decide empurrar, reiniciar com as notas ou escalar — primeiro só observando.
+**Goal:** nenhuma tarefa fica parada sem que o sistema tente antes de pedir alguém — a tarefa que se calou recebe até dois empurrões e só então vira bloqueio visível; quem declarou espera (decisão, pergunta, feedback, pausa, cota, nova tentativa) nunca é empurrado; erro do provedor tenta de novo com espera crescente e, esgotado, pede alguém com a causa certa; um supervisor no modelo pequeno olha as suspeitas a cada 20 min e decide empurrar, reiniciar com as notas ou escalar — agindo desde a instalação, dentro das travas de segurança do spec, com todo veredito registrado.
 
 **Spec:** `.specs/2026-11-20-autonomia-design.md` (revisado por `spec-review` independente, achados aplicados — ver "Revisão" no spec; ler inteiro antes de qualquer slice).
 **Branch:** `feat/fase-5-autonomia` (a partir de `feat/fase-4-vazao` 08b7bbe0; PR empilhado).
@@ -14,7 +14,7 @@
 
 **Antes do S2 (pré-condição de medição, não slice):** com ≥ 5 GiB livres, rodar as consultas de "Como medi (antes)" numa cópia `sqlite3 -readonly … .backup` fora do repo, apagar a cópia, registrar os agregados no spec. Se a medição contradisser o calendário de tentativas ou os limiares de suspeita, ajustar as constantes no spec antes do S2/S4. Sem disco, seguir com os valores do spec e registrar "não medido". A 0038 reconstrói `issue_stops`: aplicá-la numa cópia do banco real antes do PR é obrigatório (mesma regra de disco).
 
-**Perguntas ao dono abertas (não travam slice):** (1) supervisor observar antes de agir — padrão `OBSERVE`, S5 entrega `ACT` desligado; (2) a quem escalar — padrão não fala com ninguém; (3) parar turno vivo mudo — padrão nunca; (4) feedback sem resposta — padrão espera sem prazo; (5) turnos depois de uma ação do supervisor — padrão um (a retomada é o último empurrão); (6) segunda conta/API — só números. Resposta diferente do padrão vira slice de seguimento, nunca mudança silenciosa.
+**Decisões do dono (20/11, finais — ver spec):** (1) supervisor age desde a instalação — `ACT` é o padrão a partir do S5 (o S4 entrega o job só registrando, com `OBSERVE` como padrão provisório; o S5 vira o padrão para `ACT`), `OFF`/`OBSERVE` ficam como ajuste e o registro de todo veredito do S4 fica como auditoria; (2) escalar não fala com ninguém novo — selo e linha do tempo; (3) turno vivo mudo nunca é parado pelo supervisor (o vigia de inatividade é o único que mata); (4) feedback sem resposta espera sem prazo; (5) um turno automático por ação do supervisor, contado como o último empurrão; (6) segunda conta/API: ainda não — remedir depois da semana do orçamento.
 
 ---
 
@@ -31,7 +31,7 @@
 | S2 Nova tentativa com espera crescente | 2.W2 | S1 | serial (núcleo) |
 | S3 Empurrão até 2 vezes, identidade pela coluna, espera por feedback, pausa da conversa | 2.W2 | S1 (merge depois do S2 por causa do `issueLifeState.ts`) | parallel-after-contract |
 | S4 Supervisor: suspeita + decisão em observação | 2.W2 | S0a (S3 para `DeclaredWaitReader` real; antes, `Mock`) | parallel-after-contract |
-| S5 Supervisor age (`ACT`, desligado por padrão) | 2.W3 | S4, S3 | serial depois de S4 |
+| S5 Supervisor age (`ACT` ligado por padrão, travas de segurança) | 2.W3 | S4, S3 | serial depois de S4 |
 | S6 Telas: estado, linha do tempo, selo (console e painel) | 1 | S0a (SDK); dados reais depois de S2, S3, S5 | parallel-after-contract |
 | S7 Aceite + medição | 3 | todos | serial |
 
@@ -148,16 +148,16 @@ Handoff:
 - **gates:** `bun test src/agent src/issue` + `bun run test` + `bun run detect`.
 - **discretion:** redação do prompt (curta, só os vereditos admitidos para o motivo), formato da entrada.
 
-## S5 — Supervisor age (serial depois de S4; `ACT` desligado por padrão)
+## S5 — Supervisor age (serial depois de S4; `ACT` ligado por padrão)
 
-**Comportamento:** em `ACT`, `NUDGE` resolve o `STALLED`/`SERVER_ERROR` por `AUTO_RETRY` e a tarefa retoma em AUTO como último empurrão do episódio; `RESTART_WITH_NOTES` faz o próximo turno abrir sessão nova com as notas; `ESCALATE` aparece no cartão e na linha do tempo; teto por issue por dia. Em `OBSERVE` (padrão) nada disso acontece.
+**Comportamento:** em `ACT`, `NUDGE` resolve o `STALLED`/`SERVER_ERROR` por `AUTO_RETRY` e a tarefa retoma em AUTO como último empurrão do episódio; `RESTART_WITH_NOTES` faz o próximo turno abrir sessão nova com as notas; `ESCALATE` aparece no cartão e na linha do tempo; teto por issue por dia. `ACT` passa a ser o padrão (decisão do dono, 20/11); em `OBSERVE` nada disso acontece e em `OFF` o job não roda. O supervisor nunca faz merge, publica, muda prioridade nem fala com ninguém.
 
 Entregáveis:
 1. `thread/usecases/ApplySupervisorRetry.ts` (porta do job, irmã do `ApplyDueQuestionDefaults`; recusa stop fechado ou kind fora de `RESOLUTIONS_BY_KIND`; primeira resolução vence); a retomada sai `REMINDER` com `nudge { ordinal: NUDGES_BEFORE_STALL, source: SUPERVISOR }`; entrada nova em `packages/api/typescript/composition/policy.ts` `POLICY_EXCEPTIONS` para `agent/usecases/ActOnSupervisorVerdict.ts` → `thread` usecases, com a justificativa do spec.
 2. `agent/entities/AgentSession.ts`: `requestHandoff(at)` (`handoff_requested_at`), `resumeDecision` checa o pedido **antes** do orçamento e devolve `HANDOFF_REQUESTED`; `RunIssueTurn`: `SEEDS_FROM_NOTES: Record<ResumeInvalidationReason, boolean>` no lugar do `if (decision.reason !== CONTEXT_BUDGET_EXCEEDED)`; `completeHandoff` limpa o pedido; `handed_off` grava `reason`.
-3. `agent/usecases/ActOnSupervisorVerdict.ts`: mapa veredito → porta (spec, item 3); restart **sem stop** enfileira o empurrão `REMINDER` com `ordinal = NUDGES_BEFORE_STALL`; issue sem sessão ⇒ pedido ignorado e registrado; `SUPERVISOR_ACTIONS_PER_DAY`, passou do teto ⇒ `ESCALATE` uma vez, depois `LEAVE`; nunca age em issue pausada; nenhum texto do modelo vai à sessão.
+3. `agent/usecases/ActOnSupervisorVerdict.ts`: mapa veredito → porta (spec, item 3); restart **sem stop** enfileira o empurrão `REMINDER` com `ordinal = NUDGES_BEFORE_STALL`; issue sem sessão ⇒ pedido ignorado e registrado; `SUPERVISOR_ACTIONS_PER_DAY` e `SUPERVISOR_MAX_ACTIONS_PER_ISSUE_PER_DAY = 3`, passou de qualquer teto ⇒ `ESCALATE` uma vez, depois `LEAVE`; nunca age em issue pausada nem em turno vivo; nenhum texto do modelo vai à sessão; padrão de `CODM_AGENT_SUPERVISOR_MODE` vira `ACT` (manifesto, `.env.example`, `ProductConfig`).
 4. `SUPERVISOR_REVIEWED` na linha do tempo só com `acted: true`; `escalatedAt` em `GetIssuesOverview`/`GetIssueDetail` e no snapshot do painel (último `ESCALATE` agido sem stop resolvido nem turno declarado depois).
-5. Testes: `ApplySupervisorRetry.test.ts`, `AgentSession.test.ts` (`HANDOFF_REQUESTED` e ordem), `RunIssueTurn.handoff.test.ts` (troca pedida com contexto pequeno; `reason`), `ActOnSupervisorVerdict.test.ts` (cada veredito; AUTO mesmo depois de um `APPROVE` de quem pode liberar; não passa à frente de `DECISION_ANSWER` nem dispara publicação; calado depois da retomada ⇒ `STALLED` direto; teto; pausada), `SuperviseSuspectIssues.test.ts` (`ACT`), rail de `POLICY_EXCEPTIONS`.
+5. Testes: `ApplySupervisorRetry.test.ts`, `AgentSession.test.ts` (`HANDOFF_REQUESTED` e ordem), `RunIssueTurn.handoff.test.ts` (troca pedida com contexto pequeno; `reason`), `ActOnSupervisorVerdict.test.ts` (cada veredito; AUTO mesmo depois de um `APPROVE` de quem pode liberar; não passa à frente de `DECISION_ANSWER` nem dispara publicação; calado depois da retomada ⇒ `STALLED` direto; teto; pausada), `SuperviseSuspectIssues.test.ts` (`ACT`), rail de `POLICY_EXCEPTIONS`; rail `tests/architecture/supervisor-reach.test.ts` (`SUPERVISOR_ALLOWED_PORTS`; fixture negativa com porta de publicação/envio); teste de que cada ação agida grava o fato com `reason` e `verdict`.
 
 ## S6 — Telas: estado, linha do tempo, selo (parallel-after-contract)
 
@@ -185,7 +185,7 @@ Entregáveis:
 1. `tests/flows/fase5-acceptance.test.ts` (modo `integration` — precedente do aceite da fase 4 —, dispatcher real, runner roteirizado, relógio injetado): os quatro casos do spec, "Testes → Aceite".
 2. Spec: "Como medi (depois)" — o que o aceite imprime e as consultas para depois da instalação (empurrões por ordinal e o que veio depois, `STALLED` por semana, tentativas por classe e quantas passaram antes do stop, tempo do stop à resolução, vereditos em observação por motivo, horas paradas pelo provedor).
 3. Se houver disco: rodar o "antes" se ainda não rodou, e a 0038 numa cópia do banco real; registrar.
-4. `~/Desktop/Projetos/codm-goal-progresso.md` atualizado (fora do repo); PR em rascunho com "Como medi", os números do item 4 e as perguntas ao dono.
+4. `~/Desktop/Projetos/codm-goal-progresso.md` atualizado (fora do repo); PR em rascunho com "Como medi", os números do item 4 e as decisões do dono de 20/11.
 
 ---
 
