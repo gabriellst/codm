@@ -120,7 +120,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		expect(first).toBeDefined()
 		expect(await repo.claimNext('worker-1', 60_000)).toBeUndefined()
 
-		await repo.complete(first?.id ?? '')
+		await repo.complete([first?.id ?? ''])
 
 		// The re-poll the dispatcher performs at the end of a turn. No time has passed.
 		const second = await repo.claimNext('worker-1', 60_000)
@@ -158,7 +158,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 
 		// The turn is still running, so its heartbeat pushes the lease forward before it lapses.
 		await new Promise(resolve => setTimeout(resolve, 100))
-		await repo.renewLease(claimed?.id ?? '', 'worker-long-turn', 10_000)
+		await repo.renewLease([claimed?.id ?? ''], 'worker-long-turn', 10_000)
 		// Bring total elapsed since the claim safely PAST the original 400ms expiry (~500ms total).
 		await new Promise(resolve => setTimeout(resolve, 400))
 
@@ -176,7 +176,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 
 		// The stalled worker wakes up and heartbeats. It must NOT extend a lease it no longer holds,
 		// or two runs would believe they own the same target.
-		await repo.renewLease(lapsed?.id ?? '', 'worker-that-stalled', 60_000)
+		await repo.renewLease([lapsed?.id ?? ''], 'worker-that-stalled', 60_000)
 
 		expect(await repo.claimNext('worker-third', 60_000)).toBeUndefined()
 	})
@@ -219,7 +219,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		for (let attempt = 0; attempt < 3; attempt++) {
 			const item = await repo.claimNext('worker-1', 60_000)
 			expect(item?.id ?? 'a-1').toBeDefined()
-			await repo.fail(item?.id ?? '', 'boom', 3)
+			await repo.fail(item?.id ?? '', [], 'boom', 3)
 		}
 
 		// The poisoned item is gone from the queue, and the one BEHIND it now runs.
@@ -305,13 +305,14 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const dispatcher = testBed.resolve(SequencingDispatcher)
 		const mailbox = testBed.resolve(MailboxRepository)
 
+		// The brief and a steer: two turns (a brief never carries steers — fase 4, 6b), so the lease alone orders them.
 		for (const seq of ['first', 'second']) {
 			await mailbox.enqueue({
 				ownerId,
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: issueId,
-				kind: MailboxItemKind.STEER,
-				claimClass: MailboxClaimClass.STEER,
+				kind: seq === 'first' ? MailboxItemKind.WORK : MailboxItemKind.STEER,
+				claimClass: seq === 'first' ? MailboxClaimClass.WORK : MailboxClaimClass.STEER,
 				posture: PermissionPosture.AUTO,
 				payload: { threadId: uuidv7(), key: 'ISS-1', title: 'lease only', text: seq, provider: 'CLAUDE' },
 				dedupKey: `${issueId}:${seq}`,
@@ -528,7 +529,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
 		const parkAsAPreviousRunDid = async () => {
 			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-			await mailbox.defer(claimed!.id, new Date(weeklyReset))
+			await mailbox.defer([claimed!.id], new Date(weeklyReset))
 		}
 		await mailbox.enqueue({
 			ownerId: testBed.ownerId,
@@ -581,7 +582,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await operatorMessage(paused.id.value, 'pausado-antes')
 		const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-		await mailbox.defer(claimed!.id, new Date(Date.now() + 5 * 24 * 60 * 60_000))
+		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000))
 		await operatorMessage(spokeThenLimited.id.value, 'falou-e-bateu')
 
 		await dispatcher.drain()
@@ -1131,13 +1132,13 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: { error: string; maxAttempts: number }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls.push({ error, maxAttempts })
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1196,13 +1197,13 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: { error: string; maxAttempts: number }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls.push({ error, maxAttempts })
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1401,23 +1402,23 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
-		const realClaimNext = mailbox.claimNext.bind(mailbox)
+		const realClaimBundle = mailbox.claimBundle.bind(mailbox)
 		const realFail = mailbox.fail.bind(mailbox)
 		const realComplete = mailbox.complete.bind(mailbox)
 		let claimCalls = 0
 		let failCalls = 0
 		let completeCalls = 0
-		mailbox.claimNext = async (claimedBy, leaseMs, tx) => {
+		mailbox.claimBundle = async (claimedBy, leaseMs, lanes, tx) => {
 			claimCalls++
-			return realClaimNext(claimedBy, leaseMs, tx)
+			return realClaimBundle(claimedBy, leaseMs, lanes, tx)
 		}
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls++
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls++
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1449,7 +1450,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			expect(claimCalls).toBeGreaterThan(0)
 			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
 		} finally {
-			mailbox.claimNext = realClaimNext
+			mailbox.claimBundle = realClaimBundle
 			mailbox.fail = realFail
 			mailbox.complete = realComplete
 		}

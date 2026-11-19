@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import {
@@ -143,7 +143,7 @@ for (const env of ['libsql', 'mock'] as const) {
 			// The lifted task is leased; the other runs beside it, and the answer waits behind its own older item.
 			expect((await claim())?.targetId).toBe(other)
 			expect(await claim()).toBeUndefined()
-			await mailbox.complete(first?.id ?? '')
+			await mailbox.complete([first?.id ?? ''])
 			expect(keyOf(await claim())).toBe(answer)
 		})
 
@@ -153,7 +153,7 @@ for (const env of ['libsql', 'mock'] as const) {
 			const held = await claim()
 			expect(held?.targetId).toBe(paused)
 			// What the dispatcher does with a held issue's item: given back deferred, attempt refunded.
-			await mailbox.defer(held?.id ?? '', new Date(Date.now() + 30_000))
+			await mailbox.defer([held?.id ?? ''], new Date(Date.now() + 30_000))
 
 			const normal = await task(IssuePriority.LOW)
 			await enqueue(paused, MailboxClaimClass.DECISION_ANSWER)
@@ -216,6 +216,24 @@ for (const env of ['libsql', 'mock'] as const) {
 				expect(byId).toEqual([a, b])
 
 				expect([await claim(), await claim()].map(item => item?.targetId)).toEqual([a, b])
+			})
+
+			it('…and it is the id deciding, not the insertion: the later row with the lower id goes first', async () => {
+				const a = await task(IssuePriority.NORMAL)
+				const b = await task(IssuePriority.NORMAL)
+				await enqueue(a, MailboxClaimClass.STEER)
+				await enqueue(b, MailboxClaimClass.STEER)
+				const driver = testBed.resolve(LibSqlDatabaseDriver)
+				await driver.transaction(async tx => {
+					await tx
+						.update(agentMailbox)
+						.set({ createdAt: new Date(1_700_000_000_000) })
+						.where(inArray(agentMailbox.targetId, [a, b]))
+					// A uuid v7 minted before every other: the row inserted LAST now has the lowest id.
+					await tx.update(agentMailbox).set({ id: '00000000-0000-7000-8000-000000000001' }).where(eq(agentMailbox.targetId, b))
+				})
+
+				expect([await claim(), await claim()].map(item => item?.targetId)).toEqual([b, a])
 			})
 		}
 	})

@@ -54,7 +54,7 @@ describe('ResumeIssueOnStopResolved — an answer always reaches the session', (
 		const texts: string[] = []
 		for (let item = await mailbox.claimNext('test', 60_000); item; item = await mailbox.claimNext('test', 60_000)) {
 			if (item.targetId === issueId) texts.push((item.payload as { text: string }).text)
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 		}
 		return texts
 	}
@@ -127,7 +127,7 @@ describe('ResumeIssueOnStopResolved — an answer always reaches the session', (
 		const items: { claimClass: MailboxClaimClass; payload: unknown }[] = []
 		for (let item = await mailbox.claimNext('test', 60_000); item; item = await mailbox.claimNext('test', 60_000)) {
 			if (item.targetId === issueId) items.push({ claimClass: item.claimClass, payload: item.payload })
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 		}
 		return items
 	}

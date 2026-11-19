@@ -99,7 +99,9 @@ export class LibSqlStalledIssueReader extends StalledIssueReader {
 						isNotNull(agentMailbox.consumedAt),
 					),
 				)
-				.orderBy(desc(agentMailbox.consumedAt))
+				// `id` (uuid v7) breaks a tie in arrival order: steers that rode one turn (fase 4, 6b) are consumed by one write,
+				// in one millisecond — the turn's LAST item is its cursor, and stays the answer sweep after sweep.
+				.orderBy(desc(agentMailbox.consumedAt), desc(agentMailbox.id))
 				.limit(5)
 			// TIES GO TO THE REMINDER. `consumed_at` is millisecond-grained, and a reminder can finish in the
 			// same millisecond as the turn it follows (measured in the test hook). The reminder is always

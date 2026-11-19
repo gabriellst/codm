@@ -70,7 +70,10 @@ export const RunIssueTurnInputSchema = z.object({
 	firedByLoop: z.string().trim().min(1).optional(),
 	/** A instrução permanente da thread — repassada ao prompt do agente. */
 	customPrompt: z.string().trim().min(1).optional(),
-	/** The transcript entry being fed — becomes the session's cursor once the turn commits. */
+	/**
+	 * The item being fed — becomes the session's cursor once the turn commits, and keys the result's dedup. When several
+	 * steers ride one turn (fase 4, item 6b) it is the LAST of them: the session has read up to there.
+	 */
 	messageId: z.uuid(),
 	/**
 	 * The conversation position this turn continues FROM: the issue transcript's latest entry BEFORE

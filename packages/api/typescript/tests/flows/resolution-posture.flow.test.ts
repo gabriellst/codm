@@ -66,7 +66,7 @@ describe('INVARIANT — a resolution never grants more than the resolver holds',
 		for (;;) {
 			const item = await mailbox.claimNext('resolution-invariant', 60_000)
 			if (!item) return undefined
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 			if (item.targetKind === MailboxTargetKind.ISSUE && item.targetId === issueId) return item
 		}
 	}

@@ -79,6 +79,21 @@ export interface ClaimedMailboxItem {
 }
 
 /**
+ * ONE TURN'S WORTH OF A TARGET'S QUEUE (fase 4, item 6b — recados juntos): the item the claim picked (`head`, the
+ * target's oldest ready item, in the S4 order) and the steers that RIDE with it — the contiguous prefix behind it that
+ * `coalescedPrefix` admits (same posture, same loop origin, class `STEER`, up to `MAX_COALESCED`), in arrival order.
+ *
+ * Every member is a row of its own and stays one: each is leased, charged an attempt and stamped `first_claimed_at` by
+ * the same write, carries its own `firstClaim` (its own ☑️), and is consumed by its own row (its own ✅, its own line on
+ * the timeline). What they share is the TURN — and so every write that settles the turn settles all of them at once
+ * (`complete`, `defer`, `renewLease` take the set; `fail` takes the head apart).
+ */
+export interface ClaimedMailboxBundle {
+	head: ClaimedMailboxItem
+	followers: readonly ClaimedMailboxItem[]
+}
+
+/**
  * An item waiting out a `defer` — what the dispatcher needs to decide WHOSE pause it is.
  *
  * The provider is not here, and that is the model, not an omission: which CLI an item runs on is a
@@ -136,6 +151,18 @@ export abstract class MailboxRepository {
 	): Promise<ClaimedMailboxItem | undefined>
 
 	/**
+	 * `claimNext`, and the steers that ride with its item (fase 4, item 6b) — the head is exactly the item `claimNext`
+	 * would hand, and the followers are leased by the SAME write: one transaction, so a crash never leaves half a group
+	 * claimed. The dispatcher's claim; `claimNext` stays the one-item shape every other caller wants.
+	 */
+	abstract claimBundle(
+		claimedBy: string,
+		leaseMs: number,
+		lanes?: readonly MailboxTargetKind[],
+		tx?: Transaction,
+	): Promise<ClaimedMailboxBundle | undefined>
+
+	/**
 	 * Give a CLAIMED item back WITHOUT spending the attempt its claim charged, and keep it unclaimable
 	 * until `until` — the instant a retry can first succeed.
 	 *
@@ -162,7 +189,7 @@ export abstract class MailboxRepository {
 	 * find it. A second writer of an ownerless lease would have to give the release a way to tell the two
 	 * apart — that is the condition under which a marker becomes necessary.
 	 */
-	abstract defer(id: string, until: Date, tx?: Transaction): Promise<void>
+	abstract defer(ids: readonly string[], until: Date, tx?: Transaction): Promise<void>
 
 	/**
 	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
@@ -209,17 +236,21 @@ export abstract class MailboxRepository {
 	 * alive and nothing more; whether the WORK is alive is the caller's to bound (see the dispatcher's
 	 * renewal ceiling) and the runner's to detect (a dead child now ends its own turn).
 	 */
-	abstract renewLease(id: string, claimedBy: string, leaseMs: number, tx?: Transaction): Promise<void>
+	abstract renewLease(ids: readonly string[], claimedBy: string, leaseMs: number, tx?: Transaction): Promise<void>
 
-	/** Mark a turn done. The item never runs again. */
-	abstract complete(id: string, tx?: Transaction): Promise<void>
+	/** Mark a turn done — every item it carried, in one write. They never run again. */
+	abstract complete(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
 	 * Record a failed turn: attempts++, lease released. Past `maxAttempts` the item is POISONED
 	 * (`dead_at`) rather than retried forever — a turn that keeps dying must stop being scheduled, or
 	 * it starves every later item for the same target.
+	 *
+	 * ONLY THE HEAD PAYS (fase 4, item 6b): the steers that rode with it (`followers`) get the attempt their claim
+	 * charged back and are released beside it, never poisoned — a turn that died is the head's failure to run, and a
+	 * steer that arrived while it was queued must not die of it. One write for the whole group.
 	 */
-	abstract fail(id: string, error: string, maxAttempts: number, tx?: Transaction): Promise<void>
+	abstract fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: Transaction): Promise<void>
 
 	/**
 	 * Release every lease held by a daemon boot that is PROVABLY gone — the boot sweep, made honest.

@@ -299,7 +299,7 @@ describe('RunIssueTurn use case', () => {
 		const first = await mailbox.claimNext('run-issue-turn-test', 60_000)
 		expect(first?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
 		// Consumido, senão o lease por alvo esconderia o segundo item em vez do dedupKey.
-		await mailbox.complete(first?.id ?? '')
+		await mailbox.complete([first?.id ?? ''])
 
 		// A issue é retomada e conclui DE NOVO — turno novo, cursor novo.
 		await useCase.execute({ ...baseInput(issueId), ...answering, messageId: testId('run-issue-turn', 'entry-second') })

@@ -82,7 +82,7 @@ describe('ReconcileStalledIssues', () => {
 		await enqueueSteer(issue.ownerId, issue.id.value, thread.id.value)
 		const quiet = await mailbox.claimNext('reconcile-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!quiet) throw new Error('no turn claimed')
-		await mailbox.complete(quiet.id)
+		await mailbox.complete([quiet.id])
 
 		const first = await usecase.execute({})
 		expect(first.remindedIssueIds).toEqual([issue.id.value])
@@ -96,7 +96,7 @@ describe('ReconcileStalledIssues', () => {
 		expect(await usecase.execute({})).toEqual({ stalledIssueIds: [], remindedIssueIds: [] })
 
 		// The reminder turn ALSO ended without declaring.
-		await mailbox.complete(reminder.id)
+		await mailbox.complete([reminder.id])
 
 		const second = await usecase.execute({})
 		expect(second.stalledIssueIds).toEqual([issue.id.value])
