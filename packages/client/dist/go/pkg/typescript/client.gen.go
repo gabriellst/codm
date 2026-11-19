@@ -1047,6 +1047,7 @@ const (
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
 	IssueLifeStateSTALLED         IssueLifeState = "STALLED"
+	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
 )
@@ -1066,9 +1067,32 @@ func (e IssueLifeState) Valid() bool {
 		return true
 	case IssueLifeStateSTALLED:
 		return true
+	case IssueLifeStateWAITINGBUDGET:
+		return true
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuePriority.
+const (
+	HIGH   IssuePriority = "HIGH"
+	LOW    IssuePriority = "LOW"
+	NORMAL IssuePriority = "NORMAL"
+)
+
+// Valid indicates whether the value is a known member of the IssuePriority enum.
+func (e IssuePriority) Valid() bool {
+	switch e {
+	case HIGH:
+		return true
+	case LOW:
+		return true
+	case NORMAL:
 		return true
 	default:
 		return false
@@ -1130,10 +1154,12 @@ func (e IssueStatus) Valid() bool {
 const (
 	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
 	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
 	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
 	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
@@ -1149,6 +1175,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindARTIFACT:
 		return true
+	case IssueTimelineItemKindBATCHLINKED:
+		return true
 	case IssueTimelineItemKindCOMPLETED:
 		return true
 	case IssueTimelineItemKindCREATED:
@@ -1156,6 +1184,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindMESSAGE:
 		return true
 	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindPUBLISHRAN:
 		return true
 	case IssueTimelineItemKindREGRETWINDOW:
 		return true
@@ -1168,6 +1198,24 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindSTOPRESOLVED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueWorkKind.
+const (
+	CHANGE    IssueWorkKind = "CHANGE"
+	DIAGNOSIS IssueWorkKind = "DIAGNOSIS"
+)
+
+// Valid indicates whether the value is a known member of the IssueWorkKind enum.
+func (e IssueWorkKind) Valid() bool {
+	switch e {
+	case CHANGE:
+		return true
+	case DIAGNOSIS:
 		return true
 	default:
 		return false
@@ -1339,6 +1387,27 @@ func (e OutputRouting) Valid() bool {
 	}
 }
 
+// Defines values for PriorityReason.
+const (
+	CLIENTBUG PriorityReason = "CLIENT_BUG"
+	DECLARED  PriorityReason = "DECLARED"
+	DEFAULT   PriorityReason = "DEFAULT"
+)
+
+// Valid indicates whether the value is a known member of the PriorityReason enum.
+func (e PriorityReason) Valid() bool {
+	switch e {
+	case CLIENTBUG:
+		return true
+	case DECLARED:
+		return true
+	case DEFAULT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderKind.
 const (
 	CLAUDECODE ProviderKind = "CLAUDE_CODE"
@@ -1378,21 +1447,66 @@ func (e ProviderStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublishFollowUpKind.
+const (
+	COMPLETE PublishFollowUpKind = "COMPLETE"
+	CONTINUE PublishFollowUpKind = "CONTINUE"
+)
+
+// Valid indicates whether the value is a known member of the PublishFollowUpKind enum.
+func (e PublishFollowUpKind) Valid() bool {
+	switch e {
+	case COMPLETE:
+		return true
+	case CONTINUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublishRunOutcome.
+const (
+	PublishRunOutcomeCANCELLEDBYPAUSE PublishRunOutcome = "CANCELLED_BY_PAUSE"
+	PublishRunOutcomeCANCELLEDBYSTEER PublishRunOutcome = "CANCELLED_BY_STEER"
+	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
+	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
+	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+)
+
+// Valid indicates whether the value is a known member of the PublishRunOutcome enum.
+func (e PublishRunOutcome) Valid() bool {
+	switch e {
+	case PublishRunOutcomeCANCELLEDBYPAUSE:
+		return true
+	case PublishRunOutcomeCANCELLEDBYSTEER:
+		return true
+	case PublishRunOutcomeFAILED:
+		return true
+	case PublishRunOutcomeSUCCEEDED:
+		return true
+	case PublishRunOutcomeTIMEDOUT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegretWindowOutcome.
 const (
-	CANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
-	CANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
-	PROCEEDED        RegretWindowOutcome = "PROCEEDED"
+	RegretWindowOutcomeCANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+	RegretWindowOutcomeCANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	RegretWindowOutcomePROCEEDED        RegretWindowOutcome = "PROCEEDED"
 )
 
 // Valid indicates whether the value is a known member of the RegretWindowOutcome enum.
 func (e RegretWindowOutcome) Valid() bool {
 	switch e {
-	case CANCELLEDBYPAUSE:
+	case RegretWindowOutcomeCANCELLEDBYPAUSE:
 		return true
-	case CANCELLEDBYSTEER:
+	case RegretWindowOutcomeCANCELLEDBYSTEER:
 		return true
-	case PROCEEDED:
+	case RegretWindowOutcomePROCEEDED:
 		return true
 	default:
 		return false
@@ -1646,8 +1760,9 @@ type AskEffect string
 
 // AskOption defines model for AskOption.
 type AskOption struct {
-	Id    string `json:"id"`
-	Label string `json:"label"`
+	Authorizes *[]AskEffect `json:"authorizes,omitempty"`
+	Id         string       `json:"id"`
+	Label      string       `json:"label"`
 }
 
 // BufferSize defines model for BufferSize.
@@ -1692,6 +1807,9 @@ type IssueControlSource string
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
+// IssuePriority defines model for IssuePriority.
+type IssuePriority string
+
 // IssueSignalLevel defines model for IssueSignalLevel.
 type IssueSignalLevel string
 
@@ -1700,6 +1818,9 @@ type IssueStatus string
 
 // IssueTimelineItemKind defines model for IssueTimelineItemKind.
 type IssueTimelineItemKind string
+
+// IssueWorkKind defines model for IssueWorkKind.
+type IssueWorkKind string
 
 // Language defines model for Language.
 type Language string
@@ -1719,11 +1840,36 @@ type OnboardingStep string
 // OutputRouting defines model for OutputRouting.
 type OutputRouting string
 
+// PriorityReason defines model for PriorityReason.
+type PriorityReason string
+
 // ProviderKind defines model for ProviderKind.
 type ProviderKind string
 
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
+
+// PublishFollowUp defines model for PublishFollowUp.
+type PublishFollowUp struct {
+	union json.RawMessage
+}
+
+// PublishFollowUp0 defines model for .
+type PublishFollowUp0 struct {
+	Kind    string `json:"kind"`
+	Summary string `json:"summary"`
+}
+
+// PublishFollowUp1 defines model for .
+type PublishFollowUp1 struct {
+	Kind string `json:"kind"`
+}
+
+// PublishFollowUpKind defines model for PublishFollowUpKind.
+type PublishFollowUpKind string
+
+// PublishRunOutcome defines model for PublishRunOutcome.
+type PublishRunOutcome string
 
 // RegretWindowOutcome defines model for RegretWindowOutcome.
 type RegretWindowOutcome string
@@ -1888,6 +2034,25 @@ type GetIssueTimeline200JSONResponseBodyItems11 struct {
 	WaitedMs   int                    `json:"waitedMs"`
 }
 
+// GetIssueTimeline200JSONResponseBodyItems12 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems12 struct {
+	At        string `json:"at"`
+	BatchCode string `json:"batchCode"`
+	Id        string `json:"id"`
+	Kind      string `json:"kind"`
+	N         int    `json:"n"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems13 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems13 struct {
+	At         string            `json:"at"`
+	DurationMs int               `json:"durationMs"`
+	ExitCode   *int              `json:"exitCode,omitempty"`
+	Id         string            `json:"id"`
+	Kind       string            `json:"kind"`
+	Outcome    PublishRunOutcome `json:"outcome"`
+}
+
 // GetIssueTimeline200JSONResponseBody_Items_Item defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBody_Items_Item struct {
 	union json.RawMessage
@@ -2033,11 +2198,12 @@ type ReportProgressJSONBody struct {
 
 // AskQuestionJSONBody defines parameters for AskQuestion.
 type AskQuestionJSONBody struct {
-	AddresseeId *string     `json:"addresseeId,omitempty"`
-	Default     AskDefault  `json:"default"`
-	Effects     []AskEffect `json:"effects"`
-	Options     []AskOption `json:"options"`
-	Question    string      `json:"question"`
+	AddresseeId *string          `json:"addresseeId,omitempty"`
+	Default     AskDefault       `json:"default"`
+	Effects     []AskEffect      `json:"effects"`
+	OnPublished *PublishFollowUp `json:"onPublished,omitempty"`
+	Options     []AskOption      `json:"options"`
+	Question    string           `json:"question"`
 }
 
 // TransitionIssueStatusJSONBody defines parameters for TransitionIssueStatus.
@@ -2476,6 +2642,68 @@ func (t *AskDefault) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsPublishFollowUp0 returns the union data inside the PublishFollowUp as a PublishFollowUp0
+func (t PublishFollowUp) AsPublishFollowUp0() (PublishFollowUp0, error) {
+	var body PublishFollowUp0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishFollowUp0 overwrites any union data inside the PublishFollowUp as the provided PublishFollowUp0
+func (t *PublishFollowUp) FromPublishFollowUp0(v PublishFollowUp0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishFollowUp0 performs a merge with any union data inside the PublishFollowUp, using the provided PublishFollowUp0
+func (t *PublishFollowUp) MergePublishFollowUp0(v PublishFollowUp0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublishFollowUp1 returns the union data inside the PublishFollowUp as a PublishFollowUp1
+func (t PublishFollowUp) AsPublishFollowUp1() (PublishFollowUp1, error) {
+	var body PublishFollowUp1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishFollowUp1 overwrites any union data inside the PublishFollowUp as the provided PublishFollowUp1
+func (t *PublishFollowUp) FromPublishFollowUp1(v PublishFollowUp1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishFollowUp1 performs a merge with any union data inside the PublishFollowUp, using the provided PublishFollowUp1
+func (t *PublishFollowUp) MergePublishFollowUp1(v PublishFollowUp1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PublishFollowUp) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PublishFollowUp) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsGetIssueTimeline200JSONResponseBodyItems0 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems0
 func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems0() (GetIssueTimeline200JSONResponseBodyItems0, error) {
 	var body GetIssueTimeline200JSONResponseBodyItems0
@@ -2778,6 +3006,58 @@ func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200
 
 // MergeGetIssueTimeline200JSONResponseBodyItems11 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems11
 func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems11(v GetIssueTimeline200JSONResponseBodyItems11) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems12 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems12
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems12() (GetIssueTimeline200JSONResponseBodyItems12, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems12
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems12 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems12
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems12(v GetIssueTimeline200JSONResponseBodyItems12) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems12 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems12
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems12(v GetIssueTimeline200JSONResponseBodyItems12) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems13 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems13
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems13() (GetIssueTimeline200JSONResponseBodyItems13, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems13
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems13 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems13
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems13(v GetIssueTimeline200JSONResponseBodyItems13) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems13 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems13
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems13(v GetIssueTimeline200JSONResponseBodyItems13) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

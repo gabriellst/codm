@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const blockCauseSchema = z.enum(["PROVIDER_LIMIT", "PROVIDER_ERROR", "CLI_LOGIN", "STALLED", "CLASSIFICATION"])
+export const blockCauseSchema = z.enum(["PROVIDER_LIMIT", "PROVIDER_ERROR", "CLI_LOGIN", "STALLED", "CLASSIFICATION", "BUDGET_HELD"])

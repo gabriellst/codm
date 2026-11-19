@@ -1788,6 +1788,12 @@ pub mod types {
     ///    "label"
     ///  ],
     ///  "properties": {
+    ///    "authorizes": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskEffect"
+    ///      }
+    ///    },
     ///    "id": {
     ///      "type": "string",
     ///      "maxLength": 40,
@@ -1804,6 +1810,8 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct AskOption {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub authorizes: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
         pub id: AskOptionId,
         pub label: AskOptionLabel,
     }
@@ -2001,6 +2009,13 @@ pub mod types {
     ///        "$ref": "#/components/schemas/AskEffect"
     ///      }
     ///    },
+    ///    "onPublished": {
+    ///      "allOf": [
+    ///        {
+    ///          "$ref": "#/components/schemas/PublishFollowUp"
+    ///        }
+    ///      ]
+    ///    },
     ///    "options": {
     ///      "type": "array",
     ///      "items": {
@@ -2027,6 +2042,12 @@ pub mod types {
         pub addressee_id: ::std::option::Option<AskQuestionBodyAddresseeId>,
         pub default: AskDefault,
         pub effects: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
+        #[serde(
+            rename = "onPublished",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub on_published: ::std::option::Option<PublishFollowUp>,
         pub options: ::std::vec::Vec<AskOption>,
         pub question: AskQuestionBodyQuestion,
     }
@@ -6162,6 +6183,77 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "batchCode",
+    ///              "id",
+    ///              "kind",
+    ///              "n"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "batchCode": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "BATCH_LINKED"
+    ///                ]
+    ///              },
+    ///              "n": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "durationMs",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "durationMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              },
+    ///              "exitCode": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": -9007199254740991.0
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PUBLISH_RAN"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/PublishRunOutcome"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -6612,6 +6704,77 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "batchCode",
+    ///        "id",
+    ///        "kind",
+    ///        "n"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "batchCode": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "BATCH_LINKED"
+    ///          ]
+    ///        },
+    ///        "n": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "durationMs",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "durationMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "exitCode": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": -9007199254740991.0
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PUBLISH_RAN"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/PublishRunOutcome"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -6730,6 +6893,28 @@ pub mod types {
             outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
             #[serde(rename = "waitedMs")]
             waited_ms: i64,
+        },
+        #[serde(rename = "BATCH_LINKED")]
+        BatchLinked {
+            at: ::std::string::String,
+            #[serde(rename = "batchCode")]
+            batch_code: ::std::string::String,
+            id: ::std::string::String,
+            n: ::std::num::NonZeroU64,
+        },
+        #[serde(rename = "PUBLISH_RAN")]
+        PublishRan {
+            at: ::std::string::String,
+            #[serde(rename = "durationMs")]
+            duration_ms: i64,
+            #[serde(
+                rename = "exitCode",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            exit_code: ::std::option::Option<i64>,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::PublishRunOutcome,
         },
     }
     impl ::std::convert::From<&Self> for GetIssueTimelineResponseItemsItem {
@@ -11991,6 +12176,150 @@ pub mod types {
     for ListWorkspacesResponseWorkspacesItem {
         fn from(value: &ListWorkspacesResponseWorkspacesItem) -> Self {
             value.clone()
+        }
+    }
+    ///`PublishFollowUp`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "summary"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "COMPLETE"
+    ///          ]
+    ///        },
+    ///        "summary": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "CONTINUE"
+    ///          ]
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", content = "summary")]
+    pub enum PublishFollowUp {
+        #[serde(rename = "COMPLETE")]
+        Complete(PublishFollowUpSummary),
+        #[serde(rename = "CONTINUE")]
+        Continue,
+    }
+    impl ::std::convert::From<&Self> for PublishFollowUp {
+        fn from(value: &PublishFollowUp) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::convert::From<PublishFollowUpSummary> for PublishFollowUp {
+        fn from(value: PublishFollowUpSummary) -> Self {
+            Self::Complete(value)
+        }
+    }
+    ///`PublishFollowUpSummary`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct PublishFollowUpSummary(::std::string::String);
+    impl ::std::ops::Deref for PublishFollowUpSummary {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<PublishFollowUpSummary> for ::std::string::String {
+        fn from(value: PublishFollowUpSummary) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&PublishFollowUpSummary> for PublishFollowUpSummary {
+        fn from(value: &PublishFollowUpSummary) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for PublishFollowUpSummary {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for PublishFollowUpSummary {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for PublishFollowUpSummary {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for PublishFollowUpSummary {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for PublishFollowUpSummary {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`RaiseStopBody`

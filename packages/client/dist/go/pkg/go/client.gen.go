@@ -170,8 +170,57 @@ func (e AttachFlowStyle) Valid() bool {
 	}
 }
 
+// Defines values for BatchItemDestinationKind.
+const (
+	BatchItemDestinationKindALREADYLIVE   BatchItemDestinationKind = "ALREADY_LIVE"
+	BatchItemDestinationKindATTACHED      BatchItemDestinationKind = "ATTACHED"
+	BatchItemDestinationKindDECLINED      BatchItemDestinationKind = "DECLINED"
+	BatchItemDestinationKindDEFERRED      BatchItemDestinationKind = "DEFERRED"
+	BatchItemDestinationKindNEEDSDECISION BatchItemDestinationKind = "NEEDS_DECISION"
+	BatchItemDestinationKindNEWISSUE      BatchItemDestinationKind = "NEW_ISSUE"
+)
+
+// Valid indicates whether the value is a known member of the BatchItemDestinationKind enum.
+func (e BatchItemDestinationKind) Valid() bool {
+	switch e {
+	case BatchItemDestinationKindALREADYLIVE:
+		return true
+	case BatchItemDestinationKindATTACHED:
+		return true
+	case BatchItemDestinationKindDECLINED:
+		return true
+	case BatchItemDestinationKindDEFERRED:
+		return true
+	case BatchItemDestinationKindNEEDSDECISION:
+		return true
+	case BatchItemDestinationKindNEWISSUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BatchStatus.
+const (
+	BatchStatusINCOMPLETE BatchStatus = "INCOMPLETE"
+	BatchStatusRECORDED   BatchStatus = "RECORDED"
+)
+
+// Valid indicates whether the value is a known member of the BatchStatus enum.
+func (e BatchStatus) Valid() bool {
+	switch e {
+	case BatchStatusINCOMPLETE:
+		return true
+	case BatchStatusRECORDED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BlockCause.
 const (
+	BlockCauseBUDGETHELD     BlockCause = "BUDGET_HELD"
 	BlockCauseCLASSIFICATION BlockCause = "CLASSIFICATION"
 	BlockCauseCLILOGIN       BlockCause = "CLI_LOGIN"
 	BlockCausePROVIDERERROR  BlockCause = "PROVIDER_ERROR"
@@ -182,6 +231,8 @@ const (
 // Valid indicates whether the value is a known member of the BlockCause enum.
 func (e BlockCause) Valid() bool {
 	switch e {
+	case BlockCauseBUDGETHELD:
+		return true
 	case BlockCauseCLASSIFICATION:
 		return true
 	case BlockCauseCLILOGIN:
@@ -1015,6 +1066,7 @@ const (
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
 	IssueLifeStateSTALLED         IssueLifeState = "STALLED"
+	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
 )
@@ -1034,9 +1086,32 @@ func (e IssueLifeState) Valid() bool {
 		return true
 	case IssueLifeStateSTALLED:
 		return true
+	case IssueLifeStateWAITINGBUDGET:
+		return true
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuePriority.
+const (
+	IssuePriorityHIGH   IssuePriority = "HIGH"
+	IssuePriorityLOW    IssuePriority = "LOW"
+	IssuePriorityNORMAL IssuePriority = "NORMAL"
+)
+
+// Valid indicates whether the value is a known member of the IssuePriority enum.
+func (e IssuePriority) Valid() bool {
+	switch e {
+	case IssuePriorityHIGH:
+		return true
+	case IssuePriorityLOW:
+		return true
+	case IssuePriorityNORMAL:
 		return true
 	default:
 		return false
@@ -1098,10 +1173,12 @@ func (e IssueStatus) Valid() bool {
 const (
 	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
 	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
 	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
 	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
@@ -1117,6 +1194,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindARTIFACT:
 		return true
+	case IssueTimelineItemKindBATCHLINKED:
+		return true
 	case IssueTimelineItemKindCOMPLETED:
 		return true
 	case IssueTimelineItemKindCREATED:
@@ -1124,6 +1203,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindMESSAGE:
 		return true
 	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindPUBLISHRAN:
 		return true
 	case IssueTimelineItemKindREGRETWINDOW:
 		return true
@@ -1136,6 +1217,24 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindSTOPRESOLVED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueWorkKind.
+const (
+	IssueWorkKindCHANGE    IssueWorkKind = "CHANGE"
+	IssueWorkKindDIAGNOSIS IssueWorkKind = "DIAGNOSIS"
+)
+
+// Valid indicates whether the value is a known member of the IssueWorkKind enum.
+func (e IssueWorkKind) Valid() bool {
+	switch e {
+	case IssueWorkKindCHANGE:
+		return true
+	case IssueWorkKindDIAGNOSIS:
 		return true
 	default:
 		return false
@@ -1196,6 +1295,39 @@ func (e LoopScheduleKind) Valid() bool {
 	case LoopScheduleKindDAILY:
 		return true
 	case LoopScheduleKindINTERVAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailboxClaimClass.
+const (
+	MailboxClaimClassDECISIONANSWER MailboxClaimClass = "DECISION_ANSWER"
+	MailboxClaimClassINTERRUPT      MailboxClaimClass = "INTERRUPT"
+	MailboxClaimClassOPERATOR       MailboxClaimClass = "OPERATOR"
+	MailboxClaimClassREMINDER       MailboxClaimClass = "REMINDER"
+	MailboxClaimClassRESULT         MailboxClaimClass = "RESULT"
+	MailboxClaimClassSTEER          MailboxClaimClass = "STEER"
+	MailboxClaimClassWORK           MailboxClaimClass = "WORK"
+)
+
+// Valid indicates whether the value is a known member of the MailboxClaimClass enum.
+func (e MailboxClaimClass) Valid() bool {
+	switch e {
+	case MailboxClaimClassDECISIONANSWER:
+		return true
+	case MailboxClaimClassINTERRUPT:
+		return true
+	case MailboxClaimClassOPERATOR:
+		return true
+	case MailboxClaimClassREMINDER:
+		return true
+	case MailboxClaimClassRESULT:
+		return true
+	case MailboxClaimClassSTEER:
+		return true
+	case MailboxClaimClassWORK:
 		return true
 	default:
 		return false
@@ -1571,6 +1703,27 @@ func (e PresenceType) Valid() bool {
 	}
 }
 
+// Defines values for PriorityReason.
+const (
+	PriorityReasonCLIENTBUG PriorityReason = "CLIENT_BUG"
+	PriorityReasonDECLARED  PriorityReason = "DECLARED"
+	PriorityReasonDEFAULT   PriorityReason = "DEFAULT"
+)
+
+// Valid indicates whether the value is a known member of the PriorityReason enum.
+func (e PriorityReason) Valid() bool {
+	switch e {
+	case PriorityReasonCLIENTBUG:
+		return true
+	case PriorityReasonDECLARED:
+		return true
+	case PriorityReasonDEFAULT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderKind.
 const (
 	ProviderKindCLAUDECODE ProviderKind = "CLAUDE_CODE"
@@ -1586,6 +1739,27 @@ func (e ProviderKind) Valid() bool {
 	case ProviderKindCODEX:
 		return true
 	case ProviderKindOPENCODE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLimitWindow.
+const (
+	ProviderLimitWindowFIVEHOUR ProviderLimitWindow = "FIVE_HOUR"
+	ProviderLimitWindowUNKNOWN  ProviderLimitWindow = "UNKNOWN"
+	ProviderLimitWindowWEEKLY   ProviderLimitWindow = "WEEKLY"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLimitWindow enum.
+func (e ProviderLimitWindow) Valid() bool {
+	switch e {
+	case ProviderLimitWindowFIVEHOUR:
+		return true
+	case ProviderLimitWindowUNKNOWN:
+		return true
+	case ProviderLimitWindowWEEKLY:
 		return true
 	default:
 		return false
@@ -1628,6 +1802,75 @@ func (e ProxyProtocol) Valid() bool {
 	case ProxyProtocolSOCKS4:
 		return true
 	case ProxyProtocolSOCKS5:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublishFollowUpKind.
+const (
+	PublishFollowUpKindCOMPLETE PublishFollowUpKind = "COMPLETE"
+	PublishFollowUpKindCONTINUE PublishFollowUpKind = "CONTINUE"
+)
+
+// Valid indicates whether the value is a known member of the PublishFollowUpKind enum.
+func (e PublishFollowUpKind) Valid() bool {
+	switch e {
+	case PublishFollowUpKindCOMPLETE:
+		return true
+	case PublishFollowUpKindCONTINUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublishRunOutcome.
+const (
+	PublishRunOutcomeCANCELLEDBYPAUSE PublishRunOutcome = "CANCELLED_BY_PAUSE"
+	PublishRunOutcomeCANCELLEDBYSTEER PublishRunOutcome = "CANCELLED_BY_STEER"
+	PublishRunOutcomeFAILED           PublishRunOutcome = "FAILED"
+	PublishRunOutcomeSUCCEEDED        PublishRunOutcome = "SUCCEEDED"
+	PublishRunOutcomeTIMEDOUT         PublishRunOutcome = "TIMED_OUT"
+)
+
+// Valid indicates whether the value is a known member of the PublishRunOutcome enum.
+func (e PublishRunOutcome) Valid() bool {
+	switch e {
+	case PublishRunOutcomeCANCELLEDBYPAUSE:
+		return true
+	case PublishRunOutcomeCANCELLEDBYSTEER:
+		return true
+	case PublishRunOutcomeFAILED:
+		return true
+	case PublishRunOutcomeSUCCEEDED:
+		return true
+	case PublishRunOutcomeTIMEDOUT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QuotaState.
+const (
+	QuotaStateHOLDING QuotaState = "HOLDING"
+	QuotaStateNEAR    QuotaState = "NEAR"
+	QuotaStateOK      QuotaState = "OK"
+	QuotaStateREFUSED QuotaState = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the QuotaState enum.
+func (e QuotaState) Valid() bool {
+	switch e {
+	case QuotaStateHOLDING:
+		return true
+	case QuotaStateNEAR:
+		return true
+	case QuotaStateOK:
+		return true
+	case QuotaStateREFUSED:
 		return true
 	default:
 		return false
@@ -1763,6 +2006,27 @@ func (e ServerEventName) Valid() bool {
 	case IntegrationChannelSyncProgress:
 		return true
 	case IntegrationChannelSyncStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlotLimit.
+const (
+	SlotLimitBUDGET  SlotLimit = "BUDGET"
+	SlotLimitMACHINE SlotLimit = "MACHINE"
+	SlotLimitMAX     SlotLimit = "MAX"
+)
+
+// Valid indicates whether the value is a known member of the SlotLimit enum.
+func (e SlotLimit) Valid() bool {
+	switch e {
+	case SlotLimitBUDGET:
+		return true
+	case SlotLimitMACHINE:
+		return true
+	case SlotLimitMAX:
 		return true
 	default:
 		return false
@@ -2855,6 +3119,27 @@ func (e TranscriptKind) Valid() bool {
 	}
 }
 
+// Defines values for UsageRole.
+const (
+	UsageRoleISSUE        UsageRole = "ISSUE"
+	UsageRoleORCHESTRATOR UsageRole = "ORCHESTRATOR"
+	UsageRoleTRIAGE       UsageRole = "TRIAGE"
+)
+
+// Valid indicates whether the value is a known member of the UsageRole enum.
+func (e UsageRole) Valid() bool {
+	switch e {
+	case UsageRoleISSUE:
+		return true
+	case UsageRoleORCHESTRATOR:
+		return true
+	case UsageRoleTRIAGE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceBadge.
 const (
 	WorkspaceBadgeCLAUDEPROJECT WorkspaceBadge = "CLAUDE_PROJECT"
@@ -2900,6 +3185,12 @@ type AudioMessageData struct {
 	Seconds    *int    `json:"seconds,omitempty"`
 	Url        *string `json:"url,omitempty"`
 }
+
+// BatchItemDestinationKind defines model for BatchItemDestinationKind.
+type BatchItemDestinationKind string
+
+// BatchStatus defines model for BatchStatus.
+type BatchStatus string
 
 // BlockCause defines model for BlockCause.
 type BlockCause string
@@ -4192,6 +4483,9 @@ type IssueControlSource string
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
+// IssuePriority defines model for IssuePriority.
+type IssuePriority string
+
 // IssueSignalLevel defines model for IssueSignalLevel.
 type IssueSignalLevel string
 
@@ -4200,6 +4494,9 @@ type IssueStatus string
 
 // IssueTimelineItemKind defines model for IssueTimelineItemKind.
 type IssueTimelineItemKind string
+
+// IssueWorkKind defines model for IssueWorkKind.
+type IssueWorkKind string
 
 // Language defines model for Language.
 type Language string
@@ -4253,6 +4550,9 @@ type LogoutChannelOutput struct {
 
 // LoopScheduleKind defines model for LoopScheduleKind.
 type LoopScheduleKind string
+
+// MailboxClaimClass defines model for MailboxClaimClass.
+type MailboxClaimClass string
 
 // MailboxItemKind defines model for MailboxItemKind.
 type MailboxItemKind string
@@ -4310,14 +4610,29 @@ type PollOption struct {
 // PresenceType defines model for PresenceType.
 type PresenceType string
 
+// PriorityReason defines model for PriorityReason.
+type PriorityReason string
+
 // ProviderKind defines model for ProviderKind.
 type ProviderKind string
+
+// ProviderLimitWindow defines model for ProviderLimitWindow.
+type ProviderLimitWindow string
 
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
 
 // ProxyProtocol defines model for ProxyProtocol.
 type ProxyProtocol string
+
+// PublishFollowUpKind defines model for PublishFollowUpKind.
+type PublishFollowUpKind string
+
+// PublishRunOutcome defines model for PublishRunOutcome.
+type PublishRunOutcome string
+
+// QuotaState defines model for QuotaState.
+type QuotaState string
 
 // ReactionKeyData defines model for ReactionKeyData.
 type ReactionKeyData struct {
@@ -4449,6 +4764,9 @@ type ServerEvent struct {
 // ServerEventName defines model for ServerEventName.
 type ServerEventName string
 
+// SlotLimit defines model for SlotLimit.
+type SlotLimit string
+
 // StickerMessageData defines model for StickerMessageData.
 type StickerMessageData struct {
 	FileLength   *int    `json:"fileLength,omitempty"`
@@ -4476,6 +4794,9 @@ type Timezone string
 
 // TranscriptKind defines model for TranscriptKind.
 type TranscriptKind string
+
+// UsageRole defines model for UsageRole.
+type UsageRole string
 
 // VideoMessageData defines model for VideoMessageData.
 type VideoMessageData struct {

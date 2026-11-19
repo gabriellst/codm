@@ -1,6 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { z, type LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { agentMailbox, artifacts, events, issues, stops, transcriptEntries } from '@codm/contracts/db'
+import { agentMailbox, artifacts, batchItems, batches, events, issues, stops, transcriptEntries } from '@codm/contracts/db'
 import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
 import { askCode, labelOfAnswer } from '@shared/utils/askCode'
 import {
@@ -11,7 +11,7 @@ import {
 	type StopKind,
 	type TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import { RegretWindowSchema, type IssueTimelineItem } from '@shared/schemas'
+import { PublishRunSchema, RegretWindowSchema, type IssueTimelineItem } from '@shared/schemas'
 import { IssuePausedEventSchema } from '../events/IssuePausedEvent'
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
@@ -23,6 +23,8 @@ const EVENT_KINDS = {
 	'issue.paused': IssueTimelineItemKind.PAUSED,
 	'issue.resumed': IssueTimelineItemKind.RESUMED,
 	'agent.regret_window_closed': IssueTimelineItemKind.REGRET_WINDOW,
+	// Fase 4 (item 6c): the workspace's declared publish command ran — written from slice S11 on.
+	'agent.publish.ran': IssueTimelineItemKind.PUBLISH_RAN,
 } as const satisfies Record<string, IssueTimelineItemKind>
 type EventName = keyof typeof EVENT_KINDS
 const EVENT_NAMES = Object.keys(EVENT_KINDS) as EventName[]
@@ -45,7 +47,7 @@ const ControlPayloadSchema = IssuePausedEventSchema.shape.payload.pick({ source:
  */
 export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueId: string, title: string): Promise<IssueTimelineItem[]> {
 	const db = driver.db
-	const [facts, entries, steers, files, stopRows, issueRow] = await Promise.all([
+	const [facts, entries, steers, files, stopRows, issueRow, batchLinks] = await Promise.all([
 		db
 			.select({ id: events.id, name: events.name, occurredAt: events.occurredAt, payload: events.payload })
 			.from(events)
@@ -64,6 +66,12 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 		db.select().from(artifacts).where(eq(artifacts.issueId, issueId)),
 		db.select().from(stops).where(eq(stops.issueId, issueId)),
 		db.select({ key: issues.key }).from(issues).where(eq(issues.id, issueId)).limit(1),
+		// Fase 4 (item 5): the batch items whose recorded destination names this issue — written from slice S8 on.
+		db
+			.select({ batchId: batchItems.batchId, n: batchItems.n, recordedAt: batchItems.recordedAt, code: batches.code })
+			.from(batchItems)
+			.innerJoin(batches, eq(batches.id, batchItems.batchId))
+			.where(eq(batchItems.issueId, issueId)),
 	])
 	// The key the ask codes are spelled with (`APP-12 · D1`) — read here, so neither caller has to pass it.
 	const issueKey = issueRow[0]?.key ?? ''
@@ -82,6 +90,10 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			// Same posture as above: a window whose record does not parse is skipped, not guessed at.
 			const window = RegretWindowSchema.safeParse(fact.payload)
 			if (window.success) items.push({ kind, id: fact.id, at: when, ...window.data })
+		} else if (kind === IssueTimelineItemKind.PUBLISH_RAN) {
+			// Outcome, exit code and duration only — the fact never carries the command line nor the output.
+			const run = PublishRunSchema.safeParse(fact.payload)
+			if (run.success) items.push({ kind, id: fact.id, at: when, ...run.data })
 		} else items.push({ kind, id: fact.id, at: when })
 	}
 	for (const entry of entries) {
@@ -149,6 +161,18 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 				answer: answer && { kind: answer.kind, label: labelOfAnswer(ask, answer) },
 			})
 		}
+	}
+
+	for (const link of batchLinks) {
+		// A destination not recorded yet has no instant and no moment on the timeline.
+		if (!link.recordedAt) continue
+		items.push({
+			kind: IssueTimelineItemKind.BATCH_LINKED,
+			id: `${link.batchId}:${link.n}`,
+			at: link.recordedAt.toISOString(),
+			batchCode: link.code,
+			n: link.n,
+		})
 	}
 
 	items.sort((a, b) => a.at.localeCompare(b.at))

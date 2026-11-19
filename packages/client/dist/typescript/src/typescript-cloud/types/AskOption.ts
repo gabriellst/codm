@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { AskEffect } from "./AskEffect.ts";
 
 export type AskOption = {
     /**
@@ -17,4 +18,8 @@ export type AskOption = {
      * @type string
     */
     label: string;
+    /**
+     * @type array | undefined
+    */
+    authorizes?: AskEffect[];
 };

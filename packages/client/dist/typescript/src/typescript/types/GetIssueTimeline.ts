@@ -11,6 +11,7 @@ import type { IrreversibleActionKind } from "./IrreversibleActionKind.ts";
 import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { OutputRouting } from "./OutputRouting.ts";
+import type { PublishRunOutcome } from "./PublishRunOutcome.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
@@ -94,6 +95,18 @@ export const ItemsKindEnum12 = {
 } as const;
 
 export type ItemsKindEnum12Key = (typeof ItemsKindEnum12)[keyof typeof ItemsKindEnum12];
+
+export const ItemsKindEnum13 = {
+    BATCH_LINKED: "BATCH_LINKED"
+} as const;
+
+export type ItemsKindEnum13Key = (typeof ItemsKindEnum13)[keyof typeof ItemsKindEnum13];
+
+export const ItemsKindEnum14 = {
+    PUBLISH_RAN: "PUBLISH_RAN"
+} as const;
+
+export type ItemsKindEnum14Key = (typeof ItemsKindEnum14)[keyof typeof ItemsKindEnum14];
 
 /**
  * @description An issue\'s timeline: created, turns, messages, steers, artifacts, stops, completion
@@ -398,6 +411,58 @@ export type GetIssueTimeline200 = {
          * @type integer
         */
         waitedMs: number;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum13Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        batchCode: string;
+        /**
+         * @minLength 1
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        n: number;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum14Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        outcome: PublishRunOutcome;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer | undefined
+        */
+        exitCode?: number;
+        /**
+         * @minLength 0
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        durationMs: number;
     })[];
 };
 

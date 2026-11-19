@@ -15,3 +15,6 @@ export * from './MessageVia'
 export * from './TurnAbortReason'
 // The parallel triage's verdict on one inbound message (fase 2, triagem paralela).
 export * from './TriageDecision'
+// Fase 4 ("vazão") — what the provider said about a usage window, and where a fresh session's notes came from.
+export * from './ProviderLimitStatus'
+export * from './HandoffNotesSource'

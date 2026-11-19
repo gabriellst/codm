@@ -8,6 +8,7 @@ import {
 	IssueSignalLevel,
 	IssueTimelineItemKind,
 	OutputRouting,
+	PublishRunOutcome,
 	RegretWindowOutcome,
 	StopKind,
 	StopResolution,
@@ -26,6 +27,19 @@ export const RegretWindowSchema = z.object({
 	actionKind: z.enum(IrreversibleActionKind),
 	outcome: z.enum(RegretWindowOutcome),
 	waitedMs: z.number().int().nonnegative(),
+})
+
+/**
+ * One run of a workspace's declared PUBLISH COMMAND (fase 4, item 6c): how it ended, its exit code when it
+ * ran to an exit, and how long it took. Shared because two contexts speak it: `agent` records it as a fact
+ * (`agent.publish.ran`), and `issue` reads that fact back into the timeline. NEVER the command line nor its
+ * output — the timeline reaches the cloud panel, and an argument can carry a credential; the output stays in
+ * the task's local terminal log, linked to this item by `issue_terminal_lines.timeline_item_id`.
+ */
+export const PublishRunSchema = z.object({
+	outcome: z.enum(PublishRunOutcome),
+	exitCode: z.number().int().optional(),
+	durationMs: z.number().int().nonnegative(),
 })
 
 const at = z.string()
@@ -113,5 +127,9 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal(IssueTimelineItemKind.RESUMED), id, at, source: z.enum(IssueControlSource), by: z.string().optional() }),
 	// Janela de arrependimento (fase 2, item 3): the session waited before a push/merge/publish/deploy.
 	z.object({ kind: z.literal(IssueTimelineItemKind.REGRET_WINDOW), id, at, ...RegretWindowSchema.shape }),
+	// Lote (fase 4, item 5): item `n` of the conversation's batch `batchCode` (`L-31`) was sent to this issue.
+	z.object({ kind: z.literal(IssueTimelineItemKind.BATCH_LINKED), id, at, batchCode: z.string(), n: z.number().int().min(1) }),
+	// "Pode publicar" (fase 4, item 6c): the workspace's declared publish command ran — outcome only.
+	z.object({ kind: z.literal(IssueTimelineItemKind.PUBLISH_RAN), id, at, ...PublishRunSchema.shape }),
 ])
 export type IssueTimelineItem = Z.output<typeof IssueTimelineItemSchema>

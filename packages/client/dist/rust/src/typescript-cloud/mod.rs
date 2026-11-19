@@ -1007,6 +1007,12 @@ pub mod types {
     ///    "label"
     ///  ],
     ///  "properties": {
+    ///    "authorizes": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskEffect"
+    ///      }
+    ///    },
     ///    "id": {
     ///      "type": "string",
     ///      "maxLength": 40,
@@ -1023,6 +1029,8 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct AskOption {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub authorizes: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
         pub id: AskOptionId,
         pub label: AskOptionLabel,
     }
@@ -2822,6 +2830,77 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "batchCode",
+    ///              "id",
+    ///              "kind",
+    ///              "n"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "batchCode": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "BATCH_LINKED"
+    ///                ]
+    ///              },
+    ///              "n": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "durationMs",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "durationMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              },
+    ///              "exitCode": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": -9007199254740991.0
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PUBLISH_RAN"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/PublishRunOutcome"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -3800,6 +3879,77 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "batchCode",
+    ///        "id",
+    ///        "kind",
+    ///        "n"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "batchCode": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "BATCH_LINKED"
+    ///          ]
+    ///        },
+    ///        "n": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "durationMs",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "durationMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "exitCode": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": -9007199254740991.0
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PUBLISH_RAN"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/PublishRunOutcome"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -3918,6 +4068,28 @@ pub mod types {
             outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
             #[serde(rename = "waitedMs")]
             waited_ms: i64,
+        },
+        #[serde(rename = "BATCH_LINKED")]
+        BatchLinked {
+            at: ::std::string::String,
+            #[serde(rename = "batchCode")]
+            batch_code: ::std::string::String,
+            id: ::std::string::String,
+            n: ::std::num::NonZeroU64,
+        },
+        #[serde(rename = "PUBLISH_RAN")]
+        PublishRan {
+            at: ::std::string::String,
+            #[serde(rename = "durationMs")]
+            duration_ms: i64,
+            #[serde(
+                rename = "exitCode",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            exit_code: ::std::option::Option<i64>,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::PublishRunOutcome,
         },
     }
     impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
@@ -6031,6 +6203,75 @@ pub mod types {
     ///                      "minimum": 0.0
     ///                    }
     ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "batchCode",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "n"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "batchCode": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "BATCH_LINKED"
+    ///                      ]
+    ///                    },
+    ///                    "n": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "durationMs",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "outcome"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "durationMs": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 0.0
+    ///                    },
+    ///                    "exitCode": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": -9007199254740991.0
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "PUBLISH_RAN"
+    ///                      ]
+    ///                    },
+    ///                    "outcome": {
+    ///                      "$ref": "#/components/schemas/PublishRunOutcome"
+    ///                    }
+    ///                  }
     ///                }
     ///              ]
     ///            },
@@ -6645,6 +6886,75 @@ pub mod types {
     ///                "minimum": 0.0
     ///              }
     ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "batchCode",
+    ///              "id",
+    ///              "kind",
+    ///              "n"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "batchCode": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "BATCH_LINKED"
+    ///                ]
+    ///              },
+    ///              "n": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "durationMs",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "durationMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              },
+    ///              "exitCode": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": -9007199254740991.0
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PUBLISH_RAN"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/PublishRunOutcome"
+    ///              }
+    ///            }
     ///          }
     ///        ]
     ///      },
@@ -7196,6 +7506,75 @@ pub mod types {
     ///          "minimum": 0.0
     ///        }
     ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "batchCode",
+    ///        "id",
+    ///        "kind",
+    ///        "n"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "batchCode": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "BATCH_LINKED"
+    ///          ]
+    ///        },
+    ///        "n": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "durationMs",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "durationMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        },
+    ///        "exitCode": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": -9007199254740991.0
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PUBLISH_RAN"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/PublishRunOutcome"
+    ///        }
+    ///      }
     ///    }
     ///  ]
     ///}
@@ -7314,6 +7693,28 @@ pub mod types {
             outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
             #[serde(rename = "waitedMs")]
             waited_ms: i64,
+        },
+        #[serde(rename = "BATCH_LINKED")]
+        BatchLinked {
+            at: ::std::string::String,
+            #[serde(rename = "batchCode")]
+            batch_code: ::std::string::String,
+            id: ::std::string::String,
+            n: ::std::num::NonZeroU64,
+        },
+        #[serde(rename = "PUBLISH_RAN")]
+        PublishRan {
+            at: ::std::string::String,
+            #[serde(rename = "durationMs")]
+            duration_ms: i64,
+            #[serde(
+                rename = "exitCode",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            exit_code: ::std::option::Option<i64>,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::PublishRunOutcome,
         },
     }
     impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {

@@ -25,6 +25,8 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	PAUSED: ({ item }) => <ControlDetail item={item} />,
 	RESUMED: ({ item }) => <ControlDetail item={item} />,
 	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
+	BATCH_LINKED: ({ item }) => <BatchLinkedDetail item={item} />,
+	PUBLISH_RAN: ({ item }) => <PublishRanDetail item={item} />,
 }
 
 /**
@@ -159,6 +161,26 @@ function RegretWindowDetail({ item }: { item: ItemOf<'REGRET_WINDOW'> }) {
 			{item.waitedMs > 0
 				? t('session.timelineRegretWindow', { seconds: Math.round(item.waitedMs / 1000), action, outcome })
 				: t('session.timelineRegretWindowNoWait', { action, outcome })}
+		</>
+	)
+}
+
+/** "L-31 · item 4" — which item of which batch was sent to this issue (fase 4, item 5). */
+function BatchLinkedDetail({ item }: { item: ItemOf<'BATCH_LINKED'> }) {
+	const { t } = useTranslation()
+	return <>{t('session.timelineBatchLinked', { code: item.batchCode, n: item.n })}</>
+}
+
+/** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command. */
+function PublishRanDetail({ item }: { item: ItemOf<'PUBLISH_RAN'> }) {
+	const { t } = useTranslation()
+	const outcome = enumLabel('PublishRunOutcome', item.outcome)
+	const seconds = Math.round(item.durationMs / 1000)
+	return (
+		<>
+			{item.exitCode === undefined
+				? t('session.timelinePublishRan', { outcome, seconds })
+				: t('session.timelinePublishRanExit', { outcome, seconds, exitCode: item.exitCode })}
 		</>
 	)
 }

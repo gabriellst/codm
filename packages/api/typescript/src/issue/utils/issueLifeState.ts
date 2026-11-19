@@ -23,6 +23,8 @@ export interface PendingItem {
  *     state below would describe work that is not going to happen until somebody resumes it.
  *  2. A turn holds a lease → RUNNING (or REMINDED, when that turn is the reminder).
  *  3. Its next turn is deferred by the provider → WAITING_PROVIDER.
+ *  3b. (fase 4, slice S3 — declared in the contract, not produced yet) work is queued but the quota budget
+ *     is holding the ISSUE lane, and only while the budget is ENFORCED → WAITING_BUDGET.
  *  4. Work is queued for a slot → QUEUED (or REMINDED for a queued reminder).
  *  5. An open stop asks someone → WAITING_PERSON.
  *  6. Nothing at all → STALLED.

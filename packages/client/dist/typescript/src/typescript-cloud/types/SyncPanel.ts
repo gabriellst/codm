@@ -13,6 +13,7 @@ import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 import type { OutputRouting } from "./OutputRouting.ts";
+import type { PublishRunOutcome } from "./PublishRunOutcome.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
@@ -108,6 +109,18 @@ export const TimelineKindEnum12 = {
 } as const;
 
 export type TimelineKindEnum12Key = (typeof TimelineKindEnum12)[keyof typeof TimelineKindEnum12];
+
+export const TimelineKindEnum13 = {
+    BATCH_LINKED: "BATCH_LINKED"
+} as const;
+
+export type TimelineKindEnum13Key = (typeof TimelineKindEnum13)[keyof typeof TimelineKindEnum13];
+
+export const TimelineKindEnum14 = {
+    PUBLISH_RAN: "PUBLISH_RAN"
+} as const;
+
+export type TimelineKindEnum14Key = (typeof TimelineKindEnum14)[keyof typeof TimelineKindEnum14];
 
 export type SyncPanelMutationRequest = {
     /**
@@ -463,6 +476,58 @@ export type SyncPanelMutationRequest = {
              * @type integer
             */
             waitedMs: number;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum13Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            batchCode: string;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            n: number;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum14Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            outcome: PublishRunOutcome;
+            /**
+             * @minLength -9007199254740991
+             * @maxLength 9007199254740991
+             * @type integer | undefined
+            */
+            exitCode?: number;
+            /**
+             * @minLength 0
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            durationMs: number;
         })[];
         /**
          * @type string, date-time

@@ -1234,6 +1234,13 @@
                   "addresseeId": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "onPublished": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PublishFollowUp"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -8374,6 +8381,9 @@
                             },
                             "finalArtifactId": {
                               "type": "string"
+                            },
+                            "answersEntryId": {
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -8426,6 +8436,18 @@
                             },
                             "provider": {
                               "$ref": "#/components/schemas/ProviderKind"
+                            },
+                            "priority": {
+                              "$ref": "#/components/schemas/IssuePriority"
+                            },
+                            "priorityReason": {
+                              "$ref": "#/components/schemas/PriorityReason"
+                            },
+                            "workKind": {
+                              "$ref": "#/components/schemas/IssueWorkKind"
+                            },
+                            "model": {
+                              "$ref": "#/components/schemas/AgentModelId"
                             }
                           },
                           "required": [
@@ -10458,6 +10480,73 @@
                               "waitedMs"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "BATCH_LINKED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "batchCode": {
+                                "type": "string"
+                              },
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "batchCode",
+                              "n"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "PUBLISH_RAN"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "outcome": {
+                                "$ref": "#/components/schemas/PublishRunOutcome"
+                              },
+                              "exitCode": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "durationMs": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "outcome",
+                              "durationMs"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -10705,6 +10794,14 @@
           "STALLED"
         ]
       },
+      "AskEffect": {
+        "type": "string",
+        "enum": [
+          "PUBLISH",
+          "IRREVERSIBLE",
+          "CLIENT_DATA"
+        ]
+      },
       "AskOption": {
         "type": "object",
         "properties": {
@@ -10717,19 +10814,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200
+          },
+          "authorizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AskEffect"
+            }
           }
         },
         "required": [
           "id",
           "label"
-        ]
-      },
-      "AskEffect": {
-        "type": "string",
-        "enum": [
-          "PUBLISH",
-          "IRREVERSIBLE",
-          "CLIENT_DATA"
         ]
       },
       "AskDefault": {
@@ -10772,6 +10867,47 @@
           }
         ]
       },
+      "PublishFollowUpKind": {
+        "type": "string",
+        "enum": [
+          "COMPLETE",
+          "CONTINUE"
+        ]
+      },
+      "PublishFollowUp": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "COMPLETE"
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "kind",
+              "summary"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "CONTINUE"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ]
+      },
       "ArtifactKind": {
         "type": "string",
         "enum": [
@@ -10788,6 +10924,7 @@
           "RUNNING",
           "QUEUED",
           "WAITING_PROVIDER",
+          "WAITING_BUDGET",
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
@@ -10983,6 +11120,29 @@
           "THREAD_DETACHED"
         ]
       },
+      "IssuePriority": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "NORMAL",
+          "LOW"
+        ]
+      },
+      "PriorityReason": {
+        "type": "string",
+        "enum": [
+          "CLIENT_BUG",
+          "DECLARED",
+          "DEFAULT"
+        ]
+      },
+      "IssueWorkKind": {
+        "type": "string",
+        "enum": [
+          "CHANGE",
+          "DIAGNOSIS"
+        ]
+      },
       "IssueSignalLevel": {
         "type": "string",
         "enum": [
@@ -11108,10 +11268,12 @@
         "enum": [
           "ARCHIVED",
           "ARTIFACT",
+          "BATCH_LINKED",
           "COMPLETED",
           "CREATED",
           "MESSAGE",
           "PAUSED",
+          "PUBLISH_RAN",
           "REGRET_WINDOW",
           "RESUMED",
           "STEER",
@@ -11151,6 +11313,16 @@
         "type": "string",
         "enum": [
           "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
+        ]
+      },
+      "PublishRunOutcome": {
+        "type": "string",
+        "enum": [
+          "SUCCEEDED",
+          "FAILED",
+          "TIMED_OUT",
           "CANCELLED_BY_STEER",
           "CANCELLED_BY_PAUSE"
         ]

@@ -112,6 +112,8 @@ export const CAUSE_DEDUPES: Record<BlockCause, boolean> = {
 	[BlockCause.CLI_LOGIN]: true,
 	[BlockCause.STALLED]: false,
 	[BlockCause.CLASSIFICATION]: false,
+	// Fase 4: the budget holds the whole ISSUE lane at once — one fact for the group, like the provider's limit.
+	[BlockCause.BUDGET_HELD]: true,
 }
 
 /** Whether a stop of `kind` is already told by another open stop of the same (grouping) cause. */

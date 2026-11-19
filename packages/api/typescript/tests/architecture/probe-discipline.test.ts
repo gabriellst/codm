@@ -26,6 +26,10 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve LibSqlDatabaseDriver — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
+		path: 'src/ui/usecases/GetIssueTimeline.test.ts',
+		why: 'WRITE-ONLY SEED (fase 4, S0a): the timeline reader learns two sources whose writers land in later slices — `thread_batch_items` (S8, RecordBatch) and the `agent.publish.ran` fact (S11) — so the only way to give the reader those rows today is a raw INSERT. Every read goes through the use case under test; nothing is read back from the driver',
+	},
+	{
 		path: 'src/agent/repositories/MailboxRepository/MailboxRepository.test.ts',
 		why: 'the LEASE COLUMNS are the subject: the boot-sweep cases stamp `claimed_boot`/`claimed_pid` on a claimed row (standing in for a daemon that crashed) and then read them back — a write AND a read of columns the probe deliberately does not expose (it counts rows, it does not read them). Same exception class as tests/kernel/LibSqlCommandQueue.test.ts, whose lease/claim behaviour this table mirrors',
 	},

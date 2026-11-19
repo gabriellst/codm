@@ -3,6 +3,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, s
 import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { CLAIM_CLASS_OF_KIND } from '../../utils/ClaimClassOfKind'
 import {
 	MailboxRepository,
 	type ClaimedMailboxItem,
@@ -64,6 +65,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					kind: item.kind,
 					payload: item.payload,
 					posture: item.posture,
+					// The item's class from its kind (fase 4, S0a) — S0c makes it a producer-declared field.
+					claimClass: CLAIM_CLASS_OF_KIND[item.kind],
 					dedupKey: item.dedupKey,
 					// A HOLD is a claim written at birth (`EnqueueMailboxItem.hold`): same three holder columns a
 					// claim stamps, so the boot sweep frees it exactly like a claim of a dead daemon. No attempt is

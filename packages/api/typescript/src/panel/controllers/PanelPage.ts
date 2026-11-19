@@ -81,18 +81,22 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 <script>
 (() => {
   const COLS = [['QUEUED','Na fila'],['RUNNING','Fazendo'],['WAITING_PERSON','Aguardando pessoa'],['WAITING_PROVIDER','Esperando cota'],['STALLED','Parada'],['DONE','Concluída']];
-  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
-  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada',REGRET_WINDOW:'Janela de arrependimento'};
+  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',WAITING_BUDGET:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
+  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada',REGRET_WINDOW:'Janela de arrependimento',BATCH_LINKED:'Item de lote',PUBLISH_RAN:'Publicação'};
   // Janela de arrependimento (fase 2, item 3): the kind of action and how the wait ended — never a command line.
   const ACTION = {GIT_PUSH:'git push',GIT_FORCE_PUSH:'git push forçado',PR_MERGE:'merge de PR',RELEASE:'criar release',PACKAGE_PUBLISH:'publicar pacote',DEPLOY:'deploy'};
   const OUTCOME = {PROCEEDED:'seguiu',CANCELLED_BY_STEER:'cancelado por recado',CANCELLED_BY_PAUSE:'cancelado pela pausa'};
+  // Fase 4: how a declared publish command ended — the outcome only, never the command line nor its output.
+  const PUBLISH = {SUCCEEDED:'publicou',FAILED:'falhou',TIMED_OUT:'passou do prazo',CANCELLED_BY_STEER:'cancelada por recado',CANCELLED_BY_PAUSE:'cancelada pela pausa'};
   // Fase 3: an ask shows its code and question, its answer what was answered, and what an issue said says where it went.
   const ROUTED = {PANEL:'só no painel',DIGEST:'no resumo',GROUP:'no grupo'};
   const DETAIL = {
     STOP_RAISED: i => (i.ask ? i.ask.code + ' — ' + i.ask.question : i.title),
     STOP_RESOLVED: i => (i.answer ? i.answer.label : ''),
     MESSAGE: i => (i.routing ? '[' + (ROUTED[i.routing] || i.routing) + '] ' : '') + i.text,
-    REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome)};
+    REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome),
+    BATCH_LINKED: i => i.batchCode + ' · item ' + i.n,
+    PUBLISH_RAN: i => (PUBLISH[i.outcome] || i.outcome) + (i.exitCode != null ? ' (saída ' + i.exitCode + ')' : '') + ' — ' + Math.round(i.durationMs / 1000) + ' s'};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -120,6 +124,7 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
         if (issue.waitingForProviderUntil) card.append(el('div', 'muted', 'Esperando cota até ' + fmt(issue.waitingForProviderUntil)));
         if (issue.lifeState === 'REMINDED') card.append(el('div', 'muted', 'Lembrada de declarar'));
         if (issue.lifeState === 'PAUSED') card.append(el('div', 'muted', 'Pausada'));
+        if (issue.lifeState === 'WAITING_BUDGET') card.append(el('div', 'muted', 'Segurada pelo orçamento'));
         card.addEventListener('click', () => open(issue.issueId));
         col.append(card);
       }

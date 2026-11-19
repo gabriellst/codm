@@ -1,5 +1,13 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { IssueStatus, ProviderKind, IssueArchiveReason } from '../../../generated/typescript/src/wire/enums'
+import {
+	AgentModelId,
+	IssueArchiveReason,
+	IssuePriority,
+	IssueStatus,
+	IssueWorkKind,
+	PriorityReason,
+	ProviderKind,
+} from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -56,6 +64,15 @@ export const issues = sqliteTable(
 		 * the mailbox dispatcher defers its turns and its external tools refuse with ISSUE_PAUSED.
 		 */
 		paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
+		/**
+		 * Fase 4 — a READ COPY of what the agent runtime fixed at birth (`agent_issue_attributes`, the source),
+		 * carried by `issue.created` for the console, the panel and the board. Nullable, no CHECK: new columns on
+		 * an existing table, and issues from before fase 4 have none.
+		 */
+		priority: text('priority').$type<IssuePriority>(),
+		priorityReason: text('priority_reason').$type<PriorityReason>(),
+		workKind: text('work_kind').$type<IssueWorkKind>(),
+		model: text('model').$type<AgentModelId>(),
 
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
@@ -88,8 +105,17 @@ export const terminalLines = sqliteTable(
 		seq: integer('seq').notNull(),
 		line: text('line').notNull(),
 		at: integer('at', { mode: 'timestamp_ms' }).notNull(),
+		/**
+		 * Fase 4 (item 6c) — the timeline item this line belongs to: the id of the `agent.publish.ran` fact (=
+		 * the `PUBLISH_RAN` item's id) for a publish command's captured output. Null for every session line.
+		 * "The output of this publish" is an equality, never a time window nor a match on the text.
+		 */
+		timelineItemId: text('timeline_item_id'),
 	},
-	t => [uniqueIndex('terminal_lines_issue_seq_unq').on(t.issueId, t.seq)],
+	t => [
+		uniqueIndex('terminal_lines_issue_seq_unq').on(t.issueId, t.seq),
+		index('terminal_lines_timeline_item_idx').on(t.issueId, t.timelineItemId),
+	],
 )
 
 export const stopPolicyConfig = sqliteTable('issue_stop_policy_config', {

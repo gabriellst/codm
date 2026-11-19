@@ -397,6 +397,7 @@
 			"REMINDED": "Reminded to declare",
 			"RUNNING": "Running",
 			"STALLED": "Stalled",
+			"WAITING_BUDGET": "Held by the budget",
 			"WAITING_PERSON": "Waiting on someone",
 			"WAITING_PROVIDER": "Waiting on usage limit"
 		},
@@ -408,10 +409,12 @@
 		"IssueTimelineItemKind": {
 			"ARCHIVED": "Archived",
 			"ARTIFACT": "Artifact",
+			"BATCH_LINKED": "Batch item",
 			"COMPLETED": "Completed",
 			"CREATED": "Created",
 			"MESSAGE": "Message",
 			"PAUSED": "Paused",
+			"PUBLISH_RAN": "Publish",
 			"REGRET_WINDOW": "Regret window",
 			"RESUMED": "Resumed",
 			"STEER": "Steer",
@@ -444,6 +447,13 @@
 		"ProviderStatus": {
 			"DETECTED": "Detected",
 			"NOT_INSTALLED": "Not installed"
+		},
+		"PublishRunOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelled by the pause",
+			"CANCELLED_BY_STEER": "cancelled by a message",
+			"FAILED": "failed",
+			"SUCCEEDED": "published",
+			"TIMED_OUT": "timed out"
 		},
 		"RegretWindowOutcome": {
 			"CANCELLED_BY_PAUSE": "cancelled by the pause",
@@ -825,9 +835,12 @@
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
 		"timeline": "Timeline",
+		"timelineBatchLinked": "{{code}} · item {{n}}",
 		"timelineControlBy": "{{source}} · {{by}}",
 		"timelineFromAgent": "agent",
 		"timelineFromPerson": "person",
+		"timelinePublishRan": "{{outcome}} in {{seconds}} s",
+		"timelinePublishRanExit": "{{outcome}} in {{seconds}} s (exit {{exitCode}})",
 		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
 		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting",
 		"timelineReplyQuote": "replied quoting",

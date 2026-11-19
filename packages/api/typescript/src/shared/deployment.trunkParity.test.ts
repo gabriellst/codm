@@ -270,7 +270,8 @@ describe('trunk-parity (ADR 0005 — dois troncos, e a fronteira entre eles é d
 		// segundo é o que de fato decide em qual schema o INSERT cai.
 		const flat = cloudTables.filter(table => pgNamespaceOf(table) === '').map(table => getTableName(table))
 
-		expect(cloudTables.length, 'sem tabelas no tronco cloud este teste não mediria nada').toBe(19)
+		// 20 desde a fase 4 (pg 0008: `panel_batches`).
+		expect(cloudTables.length, 'sem tabelas no tronco cloud este teste não mediria nada').toBe(20)
 		expect(
 			flat,
 			`estas tabelas do tronco cloud não declaram schema: ${flat.join(', ')}. No pg o namespace é nativo, e ` +

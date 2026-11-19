@@ -247,6 +247,7 @@ const CAUSE_PT: Record<BlockCause, string> = {
 	[BlockCause.CLI_LOGIN]: 'o CLI precisa de login',
 	[BlockCause.STALLED]: 'parou sem dizer o que falta',
 	[BlockCause.CLASSIFICATION]: 'barrada pela classificação',
+	[BlockCause.BUDGET_HELD]: 'segurada para não estourar a cota',
 }
 const CAUSE_EN: Record<BlockCause, string> = {
 	[BlockCause.PROVIDER_LIMIT]: 'provider limit',
@@ -254,6 +255,7 @@ const CAUSE_EN: Record<BlockCause, string> = {
 	[BlockCause.CLI_LOGIN]: 'the CLI needs a login',
 	[BlockCause.STALLED]: 'stopped without saying what it needs',
 	[BlockCause.CLASSIFICATION]: 'blocked by the classification',
+	[BlockCause.BUDGET_HELD]: 'held so the quota is not exhausted',
 }
 
 /** What a line adds about where the issue's work stands — total over `IssueLifeState` (the asks speak for WAITING_PERSON). */
@@ -262,6 +264,8 @@ const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'pausada',
 	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
+	// Fase 4: held by the quota budget (only while it is enforced) — the estimated return is the S3 notice's, not the row's.
+	[IssueLifeState.WAITING_BUDGET]: () => 'esperando cota',
 	[IssueLifeState.RUNNING]: () => undefined,
 	[IssueLifeState.QUEUED]: () => 'na fila',
 	[IssueLifeState.REMINDED]: () => undefined,
@@ -272,6 +276,7 @@ const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'paused',
 	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
+	[IssueLifeState.WAITING_BUDGET]: () => 'waiting for quota',
 	[IssueLifeState.RUNNING]: () => undefined,
 	[IssueLifeState.QUEUED]: () => 'queued',
 	[IssueLifeState.REMINDED]: () => undefined,

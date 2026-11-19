@@ -1,4 +1,4 @@
-import { pgSchema, text, timestamp, boolean, jsonb, index, uniqueIndex, integer } from 'drizzle-orm/pg-core'
+import { pgSchema, text, timestamp, boolean, jsonb, index, uniqueIndex, integer, primaryKey } from 'drizzle-orm/pg-core'
 import {
 	IssueLifeState,
 	IssueStatus,
@@ -99,7 +99,30 @@ export const panelIssues = panelSchema.table(
 export const panelDaemons = panelSchema.table('panel_daemons', {
 	ownerId: text('owner_id').primaryKey(),
 	lastSeenAt: timestamp('last_seen_at', { withTimezone: true, mode: 'date' }).notNull(),
+	/**
+	 * Fase 4 (item 7) — the quota health as the daemon last reported it (`PanelHealthSchema`, JSON owned by the
+	 * TS core, parsed on read): percentages and states only, never an absolute figure of the account. Per OWNER,
+	 * beside `last_seen_at`: the health is the machine's and the account's, the same for every group.
+	 * Null until a fase-4 daemon reported it.
+	 */
+	health: jsonb('health'),
 })
+
+/**
+ * Fase 4 (item 5) — a BATCH of a group as the daemon last reported it (`BatchSchema`, JSON owned by the TS
+ * core): the panel shows it at `/panel/g/<token>#L-31`. Replaced whole on each push, never queried inside.
+ */
+export const panelBatches = panelSchema.table(
+	'panel_batches',
+	{
+		threadId: text('thread_id').notNull(),
+		code: text('code').notNull(),
+		ownerId: text('owner_id').notNull(),
+		batch: jsonb('batch').notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull(),
+	},
+	t => [primaryKey({ columns: [t.threadId, t.code] }), index('panel_batches_owner_idx').on(t.ownerId)],
+)
 
 /**
  * A person asked, from the panel, for a code to prove who they are (fase 2, item 6a). The row is the

@@ -3,15 +3,19 @@
 * Do not edit manually.
 */
 
+import { agentModelIdSchema } from "./agentModelIdSchema.ts";
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { channelKindSchema } from "./channelKindSchema.ts";
 import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
 import { contactKindSchema } from "./contactKindSchema.ts";
 import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
 import { issueArchiveReasonSchema } from "./issueArchiveReasonSchema.ts";
+import { issuePrioritySchema } from "./issuePrioritySchema.ts";
 import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
+import { issueWorkKindSchema } from "./issueWorkKindSchema.ts";
 import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { messageTypeSchema } from "./messageTypeSchema.ts";
+import { priorityReasonSchema } from "./priorityReasonSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
@@ -693,7 +697,8 @@ get "reason"(){
 "key": z.string(),
 "completedAt": z.iso.datetime(),
 "summary": z.optional(z.string()),
-"finalArtifactId": z.optional(z.string())
+"finalArtifactId": z.optional(z.string()),
+"answersEntryId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),
@@ -707,6 +712,18 @@ get "reason"(){
 "originEntryId": z.string(),
 get "provider"(){
                 return providerKindSchema
+              },
+get "priority"(){
+                return issuePrioritySchema.optional()
+              },
+get "priorityReason"(){
+                return priorityReasonSchema.optional()
+              },
+get "workKind"(){
+                return issueWorkKindSchema.optional()
+              },
+get "model"(){
+                return agentModelIdSchema.optional()
               }
     })
     }), z.object({

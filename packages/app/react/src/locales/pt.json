@@ -397,6 +397,7 @@
 			"REMINDED": "Lembrada de declarar",
 			"RUNNING": "Fazendo",
 			"STALLED": "Parada",
+			"WAITING_BUDGET": "Segurada pelo orçamento",
 			"WAITING_PERSON": "Aguardando pessoa",
 			"WAITING_PROVIDER": "Esperando cota"
 		},
@@ -408,10 +409,12 @@
 		"IssueTimelineItemKind": {
 			"ARCHIVED": "Arquivada",
 			"ARTIFACT": "Artefato",
+			"BATCH_LINKED": "Item de lote",
 			"COMPLETED": "Concluída",
 			"CREATED": "Criada",
 			"MESSAGE": "Mensagem",
 			"PAUSED": "Pausada",
+			"PUBLISH_RAN": "Publicação",
 			"REGRET_WINDOW": "Janela de arrependimento",
 			"RESUMED": "Retomada",
 			"STEER": "Orientação",
@@ -444,6 +447,13 @@
 		"ProviderStatus": {
 			"DETECTED": "Detectado",
 			"NOT_INSTALLED": "Não instalado"
+		},
+		"PublishRunOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelada pela pausa",
+			"CANCELLED_BY_STEER": "cancelada por recado",
+			"FAILED": "falhou",
+			"SUCCEEDED": "publicou",
+			"TIMED_OUT": "passou do prazo"
 		},
 		"RegretWindowOutcome": {
 			"CANCELLED_BY_PAUSE": "cancelado pela pausa",
@@ -825,9 +835,12 @@
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
 		"timeline": "Linha do tempo",
+		"timelineBatchLinked": "{{code}} · item {{n}}",
 		"timelineControlBy": "{{source}} · {{by}}",
 		"timelineFromAgent": "agente",
 		"timelineFromPerson": "pessoa",
+		"timelinePublishRan": "{{outcome}} em {{seconds}} s",
+		"timelinePublishRanExit": "{{outcome}} em {{seconds}} s (saída {{exitCode}})",
 		"timelineRegretWindow": "esperou {{seconds}} s antes de {{action}} — {{outcome}}",
 		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} sem esperar",
 		"timelineReplyQuote": "respondeu citando",

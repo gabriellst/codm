@@ -1,5 +1,5 @@
 /**
- * O TRONCO CLOUD — dialeto `postgresql`, 19 tabelas, e **nada mais que isso**.
+ * O TRONCO CLOUD — dialeto `postgresql`, 20 tabelas, e **nada mais que isso**.
  *
  * O ADR 0005 decidiu dois troncos, e a metade que importa da decisão é a segunda: este NÃO é um
  * espelho do tronco SQLite. Ele carrega exatamente as tabelas dos contextos que a `PLACEMENT`
