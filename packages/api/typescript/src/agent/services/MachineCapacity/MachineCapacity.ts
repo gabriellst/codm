@@ -10,13 +10,14 @@ export const ISSUE_SLOTS_FULL_MIN_FREE_BYTES = 20 * GIB
 /**
  * How many task slots the machine affords by free disk on the data volume (fase 4, item 1). Each task turn may build
  * in a worktree; measured 18/11, the data volume was 99% full with 2.3 GiB free — six slots there would take the
- * machine down before the quota. Highest first; the first row the free space reaches wins; the last row reaches 0.
+ * machine down before the quota. Highest first; the first row the free space reaches wins.
+ *
+ * OWNER DECISION (19/11): free disk only OPENS the extra slots 5–6; it never takes away the 4 the daemon ran with
+ * before fase 4. So the floor is today's 4 — a short disk stalls growth, not the work already running.
  */
 export const ISSUE_SLOTS_BY_DISK: readonly { minFreeBytes: number; slots: number }[] = [
 	{ minFreeBytes: ISSUE_SLOTS_FULL_MIN_FREE_BYTES, slots: 6 },
-	{ minFreeBytes: 10 * GIB, slots: 4 },
-	{ minFreeBytes: 5 * GIB, slots: 2 },
-	{ minFreeBytes: 0, slots: 1 },
+	{ minFreeBytes: 0, slots: 4 },
 ]
 
 /** What the machine looks like now. */
@@ -32,7 +33,7 @@ export interface MachineSample {
 
 /** The slots the disk affords — the first row of `ISSUE_SLOTS_BY_DISK` the free space reaches. */
 export function issueSlotsFor(sample: MachineSample): number {
-	return ISSUE_SLOTS_BY_DISK.find(row => sample.diskFreeBytes >= row.minFreeBytes)?.slots ?? 1
+	return ISSUE_SLOTS_BY_DISK.find(row => sample.diskFreeBytes >= row.minFreeBytes)?.slots ?? 4
 }
 
 /**

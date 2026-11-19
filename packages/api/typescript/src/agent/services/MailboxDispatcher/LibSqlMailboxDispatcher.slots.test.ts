@@ -51,11 +51,12 @@ describe('LibSqlMailboxDispatcher — effective task slots', () => {
 
 	const GIB = 1024 ** 3
 
-	it('the disk table: slots 5–6 only above the full-capacity threshold, and never below one', () => {
+	// Owner decision (19/11): free disk only OPENS slots 5–6 — it never takes away the 4 the daemon ran with before.
+	it('the disk table: slots 5–6 only above the full-capacity threshold, and never below the pre-fase-4 four', () => {
 		expect(issueSlotsFor({ diskFreeBytes: ISSUE_SLOTS_FULL_MIN_FREE_BYTES, memoryFreeShare: 0.5 })).toBe(6)
 		expect(issueSlotsFor({ diskFreeBytes: ISSUE_SLOTS_FULL_MIN_FREE_BYTES - 1, memoryFreeShare: 0.5 })).toBe(4)
-		expect(issueSlotsFor({ diskFreeBytes: 6 * GIB, memoryFreeShare: 0.5 })).toBe(2)
-		expect(issueSlotsFor({ diskFreeBytes: 0, memoryFreeShare: 0.5 })).toBe(1)
+		expect(issueSlotsFor({ diskFreeBytes: 6 * GIB, memoryFreeShare: 0.5 })).toBe(4)
+		expect(issueSlotsFor({ diskFreeBytes: 0, memoryFreeShare: 0.5 })).toBe(4)
 		expect(
 			Math.max(...ISSUE_SLOTS_BY_DISK.filter(row => row.minFreeBytes < ISSUE_SLOTS_FULL_MIN_FREE_BYTES).map(row => row.slots)),
 		).toBeLessThan(5)
@@ -80,7 +81,7 @@ describe('LibSqlMailboxDispatcher — effective task slots', () => {
 		return false
 	}
 
-	it('low disk: the task lane runs only what the machine affords — and a conversation still starts', async () => {
+	it('low disk: the task lane stays at the pre-fase-4 four (slots 5–6 closed) — and a conversation still starts', async () => {
 		const machine = new FixedMachineCapacity()
 		machine.script({ diskFreeBytes: 6 * GIB, memoryFreeShare: 0.5 })
 		const status = testBed.resolve(InMemoryQuotaStatus)
@@ -145,7 +146,7 @@ describe('LibSqlMailboxDispatcher — effective task slots', () => {
 
 		dispatcher.start()
 		try {
-			expect(await until(() => inFlight === 2, 2_000)).toBe(true)
+			expect(await until(() => inFlight === 4, 2_000)).toBe(true)
 			await mailbox.enqueue({
 				ownerId: MOCK_CLOUD_OWNER_ID,
 				targetKind: MailboxTargetKind.THREAD,
@@ -157,8 +158,8 @@ describe('LibSqlMailboxDispatcher — effective task slots', () => {
 				dedupKey: 'slots-thread-message',
 			})
 			expect(await until(() => threadStarted, 2_000)).toBe(true)
-			expect(peak).toBe(2)
-			expect(status.current()?.slots).toMatchObject({ max: 6, effective: 2, limitedBy: SlotLimit.MACHINE })
+			expect(peak).toBe(4)
+			expect(status.current()?.slots).toMatchObject({ max: 6, effective: 4, limitedBy: SlotLimit.MACHINE })
 		} finally {
 			release()
 			await dispatcher.stop()
