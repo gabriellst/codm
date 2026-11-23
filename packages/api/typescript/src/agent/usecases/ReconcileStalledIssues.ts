@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { StalledIssueReader, type StalledIssueRef } from '../services/StalledIssueReader'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
@@ -130,6 +130,8 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: orphan.issueId,
 				kind: MailboxItemKind.STEER,
+				// A reminder to declare, not somebody's message: never coalesced with steers, never ahead of them.
+				claimClass: MailboxClaimClass.REMINDER,
 				posture: PermissionPosture.AUTO,
 				payload: {
 					issueId: orphan.issueId,

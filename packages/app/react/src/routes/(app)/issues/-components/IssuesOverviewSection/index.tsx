@@ -43,6 +43,8 @@ const COLUMN_OF: Record<IssueLifeState, (typeof BOARD_COLUMNS)[number]> = {
 	[IssueLifeStateEnum.RUNNING]: IssueLifeStateEnum.RUNNING,
 	[IssueLifeStateEnum.WAITING_PERSON]: IssueLifeStateEnum.WAITING_PERSON,
 	[IssueLifeStateEnum.WAITING_PROVIDER]: IssueLifeStateEnum.WAITING_PROVIDER,
+	// Fase 4: held by the quota budget before the provider refuses — it waits on the quota like the column says.
+	[IssueLifeStateEnum.WAITING_BUDGET]: IssueLifeStateEnum.WAITING_PROVIDER,
 	[IssueLifeStateEnum.REMINDED]: IssueLifeStateEnum.STALLED,
 	[IssueLifeStateEnum.STALLED]: IssueLifeStateEnum.STALLED,
 	// Held on purpose (fase 2, item 2): it is quiet like STALLED, and the card says "paused".

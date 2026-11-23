@@ -13,6 +13,7 @@ import { AskDecisionController } from '../controllers/AskDecision'
 import { AskQuestionController } from '../controllers/AskQuestion'
 import { RequestFeedbackController } from '../controllers/RequestFeedback'
 import { ReportProgressController } from '../controllers/ReportProgress'
+import { WriteHandoffNotesController } from '../controllers/WriteHandoffNotes'
 import { ForkIssueController } from '../controllers/ForkIssue'
 import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 import { RecordArtifactController, SendArtifactController } from '@artifact/controllers'
@@ -30,6 +31,7 @@ import {
 	DeleteThreadLoopController,
 	GetSessionChatController,
 	SendDirectMessageController,
+	RecordBatchController,
 } from '@thread/controllers'
 // The 2026-08-25 founder amendment: `orchestration` grows to a strict superset of `issue-handling` +
 // `system`, and these are the read/config/messaging tools the prompt now names by class. Same license
@@ -127,6 +129,7 @@ const AGENT_CONTROLLER_CLASSES: readonly McpExposedControllerClass[] = [
 	AskQuestionController,
 	RequestFeedbackController,
 	ReportProgressController,
+	WriteHandoffNotesController,
 	ForkIssueController,
 	SteerIssueTurnController,
 ]
@@ -224,6 +227,8 @@ export {
 	// which is the entire reason the prose list exists rather than the prompt builder importing it.
 	ResolveStopController,
 	SteerIssueTurnController,
+	// Fase 4, item 6a — named by `IssueWorkPromptBuilder`'s handoff ask, once the session is past the ask threshold.
+	WriteHandoffNotesController,
 	// Named by `standingInstructions()` — the paragraph that lets the operator record a rule for the
 	// conversation without leaving it. Same context and same license as `ResolveStopController` above.
 	ConfigurePromptController,
@@ -250,4 +255,6 @@ export {
 	// an explicit ask. Same context and same license as the workspace import above.
 	AddWorkspaceController,
 	RemoveWorkspaceController,
+	// Fase 4, item 5 — named by the orchestrator's batch hint under a message that listed several requests.
+	RecordBatchController,
 }

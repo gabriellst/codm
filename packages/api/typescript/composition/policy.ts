@@ -176,6 +176,21 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'exactly-once, the effect and the echo line the group gets must commit in ONE transaction: an eventual effect would ' +
 			'let a re-delivered action act twice, or the group read "Ana pausou APP-12" while nothing was paused.',
 	},
+	{
+		file: 'thread/usecases/RecordBatch.ts',
+		imports: 'issue/usecases',
+		why:
+			'Recibo de lote (fase 4, item 5) — an item of a batch the orchestrator ATTACHED to an existing task becomes that ' +
+			"task's steer, reopening a finished one first. The ladder:\n" +
+			"  degrau 1 (refactor to repositories/services) — NOT TAKEN: reopening is `Issue.reopen()`'s guarded entrypoint " +
+			'(`ReopenIssue`), the one `SteerIssueTurn` and the panel steer compose; doing it through `IssueRepository` would ' +
+			"mutate `Issue` from `thread` and mint `issue.reopened` outside the context that owns it.\n" +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. Same `thread → issue` edge, same surface, the ' +
+			'fourth door to the same reopen-then-steer the console, the tool and the panel already use.\n' +
+			'  degrau 3 (integration event / queued command) — NOT NEEDED, and wrong here: the destinations, the steer and ' +
+			'the receipt commit in ONE transaction — an eventual reopen would let the receipt say "em tarefa existente" ' +
+			'while the steer sat on a closed task.',
+	},
 ]
 
 /**

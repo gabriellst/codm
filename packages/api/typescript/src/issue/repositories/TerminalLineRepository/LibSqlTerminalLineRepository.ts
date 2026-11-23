@@ -25,6 +25,26 @@ export class LibSqlTerminalLineRepository extends TerminalLineRepository {
 		return { id, seq: next, line, at }
 	}
 
+	async appendOfTimelineItem(
+		issueId: string,
+		ownerId: string,
+		timelineItemId: string,
+		lines: readonly string[],
+		tx?: LibSqlTransaction,
+	): Promise<void> {
+		if (lines.length === 0) return
+		const dbc = tx ?? this.driver.db
+		const seqRows = await dbc
+			.select({ next: sql<number>`coalesce(max(${terminalLines.seq}), 0) + 1` })
+			.from(terminalLines)
+			.where(eq(terminalLines.issueId, issueId))
+		const first = seqRows[0]?.next ?? 1
+		const at = new Date()
+		await dbc
+			.insert(terminalLines)
+			.values(lines.map((line, index) => ({ id: Id.value(), ownerId, issueId, seq: first + index, line, at, timelineItemId })))
+	}
+
 	async listByIssue(issueId: string, tx?: LibSqlTransaction): Promise<TerminalLineRow[]> {
 		const dbc = tx ?? this.driver.db
 		const rows = await dbc

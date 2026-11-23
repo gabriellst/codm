@@ -12,6 +12,7 @@ import { recordArtifactHandler } from "./recordArtifact.ts";
 import { reportProgressHandler } from "./reportProgress.ts";
 import { requestFeedbackHandler } from "./requestFeedback.ts";
 import { transitionIssueStatusHandler } from "./transitionIssueStatus.ts";
+import { writeHandoffNotesHandler } from "./writeHandoffNotes.ts";
 import { askDecisionMutationRequestSchema, askDecisionMutationResponseSchema } from "../../../zod/askDecisionSchema.ts";
 import { askOperatorMutationRequestSchema, askOperatorMutationResponseSchema } from "../../../zod/askOperatorSchema.ts";
 import { askQuestionMutationRequestSchema, askQuestionMutationResponseSchema } from "../../../zod/askQuestionSchema.ts";
@@ -21,6 +22,7 @@ import { recordArtifactMutationRequestSchema, recordArtifactMutationResponseSche
 import { reportProgressMutationRequestSchema, reportProgressMutationResponseSchema } from "../../../zod/reportProgressSchema.ts";
 import { requestFeedbackMutationRequestSchema, requestFeedbackMutationResponseSchema } from "../../../zod/requestFeedbackSchema.ts";
 import { transitionIssueStatusMutationRequestSchema, transitionIssueStatusMutationResponseSchema } from "../../../zod/transitionIssueStatusSchema.ts";
+import { writeHandoffNotesMutationRequestSchema, writeHandoffNotesMutationResponseSchema } from "../../../zod/writeHandoffNotesSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -100,6 +102,15 @@ server.registerTool("ReportProgress", {
   inputSchema: { threadId: z.string(), issueId: z.string(), data: reportProgressMutationRequestSchema },
 }, async ({ threadId, issueId, data }) => {
   return reportProgressHandler({ threadId, issueId, data })
+})
+          
+
+server.registerTool("WriteHandoffNotes", {
+  description: "Write handoff notes for this task (goal, state, decisions, files/branch, next step) — a fresh session will continue from them.",
+  outputSchema: { data: writeHandoffNotesMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: writeHandoffNotesMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return writeHandoffNotesHandler({ threadId, issueId, data })
 })
           
 

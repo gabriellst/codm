@@ -1,19 +1,24 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { PUBLISH_AUTHORIZED_BY } from '@agent/objects'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
 import type { Stop, Thread } from '../entities/Thread'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { askCode, labelOfAnswer } from '../utils/askAnswer'
+import { ResumeIssuePayloadSchema } from '../objects'
 
 /**
  * Whether a resolution's resume is queued EVEN WHEN the issue already has work pending (fase 3). Total over
  * `StopResolution`. An answer to an ask (a person's, or the default the deadline applied) carries the one
  * thing the session is waiting for: swallowed because another message was in the queue, the issue would go on
  * without it — the worst outcome here. The dedup key is the stop, so it is still queued once. The older
- * resolutions keep riding a turn already coming (`hasPending`), unchanged.
+ * resolutions keep riding a turn already coming (`hasPending`) — unless the resolution AUTHORIZES PUBLISHING
+ * (`PUBLISH_AUTHORIZED_BY`, fase 4 item 6c): that item is the trigger of the workspace's publish command, and riding
+ * another turn would mean the command never runs. Two declared tables, never "APPROVE ⇒ true" in general (which
+ * would give every approval a second turn).
  */
 const RESUMES_EVEN_WITH_PENDING: Readonly<Record<StopResolution, boolean>> = {
 	[StopResolution.RETRY]: false,
@@ -132,8 +137,10 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 		// coming for this target" and the dispatcher already serializes per target — so when the
 		// orchestrator has already steered this issue (decision 1's path, carrying the operator's own
 		// words) the console's resolution rides that turn instead of scheduling a second one. An ANSWER
-		// to an ask is the exception (`RESUMES_EVEN_WITH_PENDING`): it carries what the session waits for.
-		if (!RESUMES_EVEN_WITH_PENDING[resolution] && (await this.mailbox.hasPending(MailboxTargetKind.ISSUE, issueId))) return
+		// to an ask is the exception (`RESUMES_EVEN_WITH_PENDING`): it carries what the session waits for — and so
+		// is a resolution that authorizes publishing (`PUBLISH_AUTHORIZED_BY`, fase 4): it is the publish trigger.
+		const resumesAnyway = RESUMES_EVEN_WITH_PENDING[resolution] || PUBLISH_AUTHORIZED_BY[resolution](stop)
+		if (!resumesAnyway && (await this.mailbox.hasPending(MailboxTargetKind.ISSUE, issueId))) return
 
 		const thread = stop.answeredBy ? await this.threads.findById(threadId) : undefined
 		const text = RESUME_TEXT[resolution]({
@@ -148,10 +155,15 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			// WHAT IT IS (fase 4, S0c): the answer to a decision the issue was waiting on — claimed first (S4), never
+			// coalesced with ordinary steers (S5), and the trigger the publish command reads (S11).
+			claimClass: MailboxClaimClass.DECISION_ANSWER,
 			// The posture the FACT carries (Decision 7): the resolver's, reduced by the resolution — an APPROVE
 			// from someone who may elevate resumes in BYPASS, a DENY always in AUTO.
 			posture,
-			payload: { issueId, threadId, key: issue.key, title: issue.title, text },
+			// The stop and the resolution are DECLARED in the payload (revisão 2): the dedup key below is idempotency,
+			// never a field anyone parses back.
+			payload: ResumeIssuePayloadSchema.parse({ issueId, threadId, key: issue.key, title: issue.title, text, stopId, resolution }),
 			// THE KEY IS THE STOP, and the choice is the same one `IngestChannelMessage` makes when it
 			// keys on the ENTRY: the dedup key is the unique CAUSE of the work, never the target of it.
 			// A stop is resolved once, so the at-least-once outbox redelivering this fact re-inserts,

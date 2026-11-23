@@ -397,7 +397,7 @@ describe('IngestChannelMessage gate matrix', () => {
 					fromMe: false,
 					senderExternalId: 'stranger-42',
 				})
-				if (first) await testBed.resolve(MailboxRepository).complete(first.id)
+				if (first) await testBed.resolve(MailboxRepository).complete([first.id])
 
 				await ingest('e o rodapé')
 				const second = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
@@ -428,7 +428,7 @@ describe('IngestChannelMessage gate matrix', () => {
 				expect(text).not.toMatch(/agora/i)
 				const facts = await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)
 				expect(facts.map(fact => fact.payload)).toEqual([{ threadId: thread.id.value, issueId: issue.id.value, entryId: out.entryId }])
-				if (steer) await testBed.resolve(MailboxRepository).complete(steer.id)
+				if (steer) await testBed.resolve(MailboxRepository).complete([steer.id])
 
 				await ingest('APP-11 usa o azul')
 				expect(await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)).toHaveLength(1)

@@ -1,6 +1,22 @@
+import type { ProviderLimitWindow } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunOutcome, TransportStopKind } from '../enums'
+import type { ProviderLimitStatus } from '../enums/ProviderLimitStatus'
 import type { AgentTurnFact } from '../events'
-import type { AgentFrame } from './AgentFrame'
+import type { AgentFrame, AgentTurnUsage } from './AgentFrame'
+
+/** What the provider said about one usage window during a run (fase 4, item 2) — the LAST verdict on that window. */
+export interface ObservedProviderLimit {
+	window: ProviderLimitWindow
+	status: ProviderLimitStatus
+	/** When the window resets, when the provider said. */
+	resetsAt?: Date
+}
+
+/** The boundary of one usage window, as the provider reported it during a run (the last `resetsAt` per window). */
+export interface LimitWindowBoundary {
+	window: ProviderLimitWindow
+	resetsAt: Date
+}
 
 /**
  * What ONE `run()` produced, delivered as the last event of the iteration — exactly one per run.
@@ -37,6 +53,16 @@ export interface AgentRunResult {
 	 * the provider reported no per-call usage (codex). See `DecodedLine.contextTokens`.
 	 */
 	contextTokens?: number
+	/**
+	 * The run's token accounting — the terminal `result` frame's aggregate (fase 4, S1: carried HERE instead of as an
+	 * unstamped fact). Absent when the run ended without one. The turn that holds the identity stamps it, with the
+	 * role, provider and model, as `agent.turn.usage`.
+	 */
+	usage?: AgentTurnUsage
+	/** The last usage-limit verdict on EACH window the provider named during the run (absent ⇒ it named none). */
+	providerLimits?: readonly ObservedProviderLimit[]
+	/** Every usage-window boundary the provider reported during the run — `allowed` lines included. */
+	limitWindows?: readonly LimitWindowBoundary[]
 }
 
 /**

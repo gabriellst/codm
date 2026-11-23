@@ -13,6 +13,7 @@
 import { z } from '@codm/core-typescript'
 import { AskAnswerKind, AskEffect } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
+import { PublishFollowUpSchema } from './PublishCommand'
 
 /** The most options an ask may offer — a WhatsApp message lists them one per line. */
 export const ASK_OPTIONS_MAX = 6
@@ -28,6 +29,12 @@ const answerText = z.string().trim().min(1).max(ASK_TEXT_MAX)
 export const AskOptionSchema = z.object({
 	id: optionId,
 	label: z.string().trim().min(1).max(ASK_OPTION_LABEL_MAX),
+	/**
+	 * Fase 4 (item 6c) — what CHOOSING this option authorizes, declared by the issue: an option that declares
+	 * `PUBLISH` lets the workspace's declared publish command run without waking the session. Absent ⇒ the
+	 * option authorizes nothing by itself (the ask's `effects` still say what is at stake).
+	 */
+	authorizes: z.array(z.enum(AskEffect)).optional(),
 })
 export type AskOption = Z.output<typeof AskOptionSchema>
 
@@ -54,6 +61,11 @@ export const StopAskSchema = z.object({
 	effects: z.array(z.enum(AskEffect)),
 	/** The thread participant the issue is talking to — absent ⇒ whoever wrote the message it came from. */
 	addresseeId: z.string().min(1).optional(),
+	/**
+	 * Fase 4 (item 6c) — what follows when the publish command this ask authorized SUCCEEDED: complete the
+	 * task with a summary (no session turn), or tell the session and go on. Absent ⇒ tell the session.
+	 */
+	onPublished: PublishFollowUpSchema.optional(),
 })
 export type StopAsk = Z.output<typeof StopAskSchema>
 

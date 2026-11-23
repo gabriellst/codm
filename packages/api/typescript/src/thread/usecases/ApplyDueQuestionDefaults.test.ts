@@ -6,6 +6,7 @@ import {
 	GroupOutputMode,
 	IssueSignalLevel,
 	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	OutputRouting,
@@ -187,6 +188,7 @@ describe('ApplyDueQuestionDefaults — a delivered question goes on with its def
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issue.id.value,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { issueId: issue.id.value, threadId: thread.id.value, key: 'APP-12', title: 'Test issue', text: 'someone: a note' },
 			dedupKey: 'steer:pending',
@@ -199,7 +201,7 @@ describe('ApplyDueQuestionDefaults — a delivered question goes on with its def
 		const texts: string[] = []
 		for (let item = await mailbox.claimNext('test', 60_000); item; item = await mailbox.claimNext('test', 60_000)) {
 			texts.push((item.payload as { text: string }).text)
-			await mailbox.complete(item.id)
+			await mailbox.complete([item.id])
 		}
 		expect(texts).toHaveLength(2)
 		expect(texts[1]).toContain('Nobody answered your APP-12 · D1')

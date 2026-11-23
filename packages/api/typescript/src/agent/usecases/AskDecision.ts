@@ -17,7 +17,7 @@ export const AskDecisionInputSchema = z.object({
 	actingIssueId: z.uuid().optional(),
 	// A decision has no default and no deadline: it holds the issue until someone answers. Two to six options;
 	// `effects` is required (may be empty) so the model always states what the answer authorizes.
-	...StopAskSchema.pick({ question: true, effects: true, addresseeId: true }).shape,
+	...StopAskSchema.pick({ question: true, effects: true, addresseeId: true, onPublished: true }).shape,
 	options: z.array(AskOptionSchema).min(2).max(ASK_OPTIONS_MAX),
 })
 export const AskDecisionOutputSchema = z.object({ stopId: z.uuid() })
@@ -48,7 +48,13 @@ export class AskDecision extends Handler<typeof AskDecisionInputSchema, typeof A
 			issueId: input.issueId,
 			threadId: input.threadId,
 			requested: StopKind.DECISION_REQUESTED,
-			ask: { question: input.question, options: input.options, effects: input.effects, addresseeId: input.addresseeId },
+			ask: {
+				question: input.question,
+				options: input.options,
+				effects: input.effects,
+				addresseeId: input.addresseeId,
+				onPublished: input.onPublished,
+			},
 		})
 		await this.withTransaction(tx, async tx => {
 			await this.domainEventRepository.save(event, tx)

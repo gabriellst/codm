@@ -17,7 +17,23 @@ import { InboundTriage, ModelInboundTriage, NoInboundTriage } from './services/I
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
 import { IssueSequence, LibSqlIssueSequence, MockIssueSequence } from './services/IssueSequence'
+import {
+	IssueAttributesRepository,
+	LibSqlIssueAttributesRepository,
+	MockIssueAttributesRepository,
+} from './repositories/IssueAttributesRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
+import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
+import { ProcessPublishCommandRunner, PublishCommandRunner, ScriptedPublishCommandRunner } from './services/PublishCommandRunner'
+import { HandoffNotes, LibSqlHandoffNotes, MockHandoffNotes } from './services/HandoffNotes'
+import { WorktreeSightings } from './services/WorktreeSightings'
+import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
+import { LibSqlQuotaLedgerReader, MockQuotaLedgerReader, QuotaLedgerReader } from './services/QuotaBudget'
+import { IssueWorktreeJanitor } from './services/IssueWorktreeJanitor'
+import { FixedMachineCapacity, MachineCapacity, SystemMachineCapacity } from './services/MachineCapacity'
+import { InMemoryQuotaStatus, QuotaStatusReader } from './services/QuotaStatusReader'
+import { ThroughputGate } from './services/ThroughputGate'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -104,6 +120,71 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		mock: MockIssueSequence,
 		integration: LibSqlIssueSequence,
 		real: LibSqlIssueSequence,
+	},
+	// What a task was born with (fase 4, S0c) — priority, reason, kind of work, model — plus the worktree its
+	// session registered and when it closed. Written in the birth's own transaction (`ForkIssue`, `DeclareIssueOpen`).
+	{
+		token: IssueAttributesRepository,
+		mock: MockIssueAttributesRepository,
+		integration: LibSqlIssueAttributesRepository,
+		real: LibSqlIssueAttributesRepository,
+	},
+	// "Is this issue of this conversation?" over the attributes table (fase 4, S0c) — for the batch receipt (S8).
+	// One implementation everywhere: the environment split already lives in the repository it reads.
+	{
+		token: ForkedIssueReader,
+		mock: AttributesForkedIssueReader,
+		integration: AttributesForkedIssueReader,
+		real: AttributesForkedIssueReader,
+	},
+	// What git says about a workspace's worktrees (fase 4, item 1). Scripted in `mock` AND `integration`: no test
+	// spawns git through the container; only `real` asks the real one.
+	{ token: GitWorktreeProbe, mock: MockGitWorktreeProbe, integration: MockGitWorktreeProbe, real: SystemGitWorktreeProbe },
+	// The workspace's publish command (fase 4, item 6c): spawned only in `real`; scripted everywhere a test or the e2e
+	// stand-in runs — no suite ever runs somebody's deploy.
+	{
+		token: PublishCommandRunner,
+		mock: ScriptedPublishCommandRunner,
+		integration: ScriptedPublishCommandRunner,
+		real: ProcessPublishCommandRunner,
+		e2e: ScriptedPublishCommandRunner,
+	},
+	// The derived handoff notes (fase 4, item 6a): the task's durable state, read from the store wherever there is a
+	// database (git through the probe above, so `integration` stays scripted); the title alone in `mock`.
+	{ token: HandoffNotes, mock: MockHandoffNotes, integration: LibSqlHandoffNotes, real: LibSqlHandoffNotes },
+	// The hook's worktree sightings (fase 4, item 1): one in-memory instance per process, like the kill switch above.
+	{ token: WorktreeSightings, mock: WorktreeSightings, integration: WorktreeSightings, real: WorktreeSightings },
+	// What a triage run spent (fase 4, S1): `agent.turn.usage` with role TRIAGE, in its own unit of work. The same
+	// in every env — the env split lives in the database driver under it.
+	{
+		token: TriageUsageRecorder,
+		mock: FactTriageUsageRecorder,
+		integration: FactTriageUsageRecorder,
+		real: FactTriageUsageRecorder,
+	},
+	// The worktree janitor (fase 4, item 1). One class everywhere: what it may touch is decided by the git probe bound
+	// above, and the scripted probe never judges a tree clean nor removes one — only `real` can delete a folder.
+	{ token: IssueWorktreeJanitor, mock: IssueWorktreeJanitor, integration: IssueWorktreeJanitor, real: IssueWorktreeJanitor },
+	// The machine under the task slots (fase 4, item 1): the data volume's free disk in `real`; a roomy fixed machine in
+	// the test environments (scriptable), so no suite depends on the disk it runs on.
+	{ token: MachineCapacity, mock: FixedMachineCapacity, integration: FixedMachineCapacity, real: SystemMachineCapacity },
+	// The quota's live status (fase 4, S3): one in-memory board per process — the dispatcher's gate writes it, `issue`
+	// (WAITING_BUDGET) and `ui` (health) read it through the read port, which resolves to the same instance.
+	{ token: InMemoryQuotaStatus, mock: InMemoryQuotaStatus, integration: InMemoryQuotaStatus, real: InMemoryQuotaStatus },
+	{
+		token: QuotaStatusReader,
+		mock: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+		integration: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+		real: { useFactory: (c: DependencyContainer) => c.resolve(InMemoryQuotaStatus) },
+	},
+	// The task lane's gate (fase 4, S3): max × machine × budget, asked by the dispatcher before every claim.
+	{ token: ThroughputGate, mock: ThroughputGate, integration: ThroughputGate, real: ThroughputGate },
+	// The quota budget's facts (fase 4, S2) — read from `shared_events` wherever there is a database; scripted in `mock`.
+	{
+		token: QuotaLedgerReader,
+		mock: MockQuotaLedgerReader,
+		integration: LibSqlQuotaLedgerReader,
+		real: LibSqlQuotaLedgerReader,
 	},
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do

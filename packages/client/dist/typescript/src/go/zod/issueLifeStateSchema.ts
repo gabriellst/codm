@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const issueLifeStateSchema = z.enum(["RUNNING", "QUEUED", "WAITING_PROVIDER", "WAITING_PERSON", "REMINDED", "STALLED", "PAUSED", "DONE"])
+export const issueLifeStateSchema = z.enum(["RUNNING", "QUEUED", "WAITING_PROVIDER", "WAITING_BUDGET", "WAITING_PERSON", "REMINDED", "STALLED", "PAUSED", "DONE"])

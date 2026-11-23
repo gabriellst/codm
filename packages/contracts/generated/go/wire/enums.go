@@ -114,6 +114,42 @@ func ParseAttachFlowStyle(s string) (AttachFlowStyle, error) {
 	}
 }
 
+type BatchItemDestinationKind string
+
+const (
+	BatchItemDestinationKindNEW_ISSUE BatchItemDestinationKind = "NEW_ISSUE"
+	BatchItemDestinationKindATTACHED BatchItemDestinationKind = "ATTACHED"
+	BatchItemDestinationKindALREADY_LIVE BatchItemDestinationKind = "ALREADY_LIVE"
+	BatchItemDestinationKindDECLINED BatchItemDestinationKind = "DECLINED"
+	BatchItemDestinationKindDEFERRED BatchItemDestinationKind = "DEFERRED"
+	BatchItemDestinationKindNEEDS_DECISION BatchItemDestinationKind = "NEEDS_DECISION"
+)
+
+func ParseBatchItemDestinationKind(s string) (BatchItemDestinationKind, error) {
+	switch BatchItemDestinationKind(s) {
+	case BatchItemDestinationKindNEW_ISSUE, BatchItemDestinationKindATTACHED, BatchItemDestinationKindALREADY_LIVE, BatchItemDestinationKindDECLINED, BatchItemDestinationKindDEFERRED, BatchItemDestinationKindNEEDS_DECISION:
+		return BatchItemDestinationKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid BatchItemDestinationKind: %q", s)
+	}
+}
+
+type BatchStatus string
+
+const (
+	BatchStatusINCOMPLETE BatchStatus = "INCOMPLETE"
+	BatchStatusRECORDED BatchStatus = "RECORDED"
+)
+
+func ParseBatchStatus(s string) (BatchStatus, error) {
+	switch BatchStatus(s) {
+	case BatchStatusINCOMPLETE, BatchStatusRECORDED:
+		return BatchStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid BatchStatus: %q", s)
+	}
+}
+
 type BlockCause string
 
 const (
@@ -122,11 +158,12 @@ const (
 	BlockCauseCLI_LOGIN BlockCause = "CLI_LOGIN"
 	BlockCauseSTALLED BlockCause = "STALLED"
 	BlockCauseCLASSIFICATION BlockCause = "CLASSIFICATION"
+	BlockCauseBUDGET_HELD BlockCause = "BUDGET_HELD"
 )
 
 func ParseBlockCause(s string) (BlockCause, error) {
 	switch BlockCause(s) {
-	case BlockCausePROVIDER_LIMIT, BlockCausePROVIDER_ERROR, BlockCauseCLI_LOGIN, BlockCauseSTALLED, BlockCauseCLASSIFICATION:
+	case BlockCausePROVIDER_LIMIT, BlockCausePROVIDER_ERROR, BlockCauseCLI_LOGIN, BlockCauseSTALLED, BlockCauseCLASSIFICATION, BlockCauseBUDGET_HELD:
 		return BlockCause(s), nil
 	default:
 		return "", fmt.Errorf("invalid BlockCause: %q", s)
@@ -479,6 +516,7 @@ const (
 	IssueLifeStateRUNNING IssueLifeState = "RUNNING"
 	IssueLifeStateQUEUED IssueLifeState = "QUEUED"
 	IssueLifeStateWAITING_PROVIDER IssueLifeState = "WAITING_PROVIDER"
+	IssueLifeStateWAITING_BUDGET IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITING_PERSON IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateREMINDED IssueLifeState = "REMINDED"
 	IssueLifeStateSTALLED IssueLifeState = "STALLED"
@@ -488,10 +526,27 @@ const (
 
 func ParseIssueLifeState(s string) (IssueLifeState, error) {
 	switch IssueLifeState(s) {
-	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
+	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_BUDGET, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
 		return IssueLifeState(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueLifeState: %q", s)
+	}
+}
+
+type IssuePriority string
+
+const (
+	IssuePriorityHIGH IssuePriority = "HIGH"
+	IssuePriorityNORMAL IssuePriority = "NORMAL"
+	IssuePriorityLOW IssuePriority = "LOW"
+)
+
+func ParseIssuePriority(s string) (IssuePriority, error) {
+	switch IssuePriority(s) {
+	case IssuePriorityHIGH, IssuePriorityNORMAL, IssuePriorityLOW:
+		return IssuePriority(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssuePriority: %q", s)
 	}
 }
 
@@ -547,14 +602,32 @@ const (
 	IssueTimelineItemKindPAUSED IssueTimelineItemKind = "PAUSED"
 	IssueTimelineItemKindRESUMED IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindREGRET_WINDOW IssueTimelineItemKind = "REGRET_WINDOW"
+	IssueTimelineItemKindBATCH_LINKED IssueTimelineItemKind = "BATCH_LINKED"
+	IssueTimelineItemKindPUBLISH_RAN IssueTimelineItemKind = "PUBLISH_RAN"
 )
 
 func ParseIssueTimelineItemKind(s string) (IssueTimelineItemKind, error) {
 	switch IssueTimelineItemKind(s) {
-	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW:
+	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW, IssueTimelineItemKindBATCH_LINKED, IssueTimelineItemKindPUBLISH_RAN:
 		return IssueTimelineItemKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueTimelineItemKind: %q", s)
+	}
+}
+
+type IssueWorkKind string
+
+const (
+	IssueWorkKindCHANGE IssueWorkKind = "CHANGE"
+	IssueWorkKindDIAGNOSIS IssueWorkKind = "DIAGNOSIS"
+)
+
+func ParseIssueWorkKind(s string) (IssueWorkKind, error) {
+	switch IssueWorkKind(s) {
+	case IssueWorkKindCHANGE, IssueWorkKindDIAGNOSIS:
+		return IssueWorkKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueWorkKind: %q", s)
 	}
 }
 
@@ -587,6 +660,27 @@ func ParseLoopScheduleKind(s string) (LoopScheduleKind, error) {
 		return LoopScheduleKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid LoopScheduleKind: %q", s)
+	}
+}
+
+type MailboxClaimClass string
+
+const (
+	MailboxClaimClassDECISION_ANSWER MailboxClaimClass = "DECISION_ANSWER"
+	MailboxClaimClassINTERRUPT MailboxClaimClass = "INTERRUPT"
+	MailboxClaimClassSTEER MailboxClaimClass = "STEER"
+	MailboxClaimClassWORK MailboxClaimClass = "WORK"
+	MailboxClaimClassREMINDER MailboxClaimClass = "REMINDER"
+	MailboxClaimClassRESULT MailboxClaimClass = "RESULT"
+	MailboxClaimClassOPERATOR MailboxClaimClass = "OPERATOR"
+)
+
+func ParseMailboxClaimClass(s string) (MailboxClaimClass, error) {
+	switch MailboxClaimClass(s) {
+	case MailboxClaimClassDECISION_ANSWER, MailboxClaimClassINTERRUPT, MailboxClaimClassSTEER, MailboxClaimClassWORK, MailboxClaimClassREMINDER, MailboxClaimClassRESULT, MailboxClaimClassOPERATOR:
+		return MailboxClaimClass(s), nil
+	default:
+		return "", fmt.Errorf("invalid MailboxClaimClass: %q", s)
 	}
 }
 
@@ -863,6 +957,23 @@ func ParsePresenceType(s string) (PresenceType, error) {
 	}
 }
 
+type PriorityReason string
+
+const (
+	PriorityReasonCLIENT_BUG PriorityReason = "CLIENT_BUG"
+	PriorityReasonDECLARED PriorityReason = "DECLARED"
+	PriorityReasonDEFAULT PriorityReason = "DEFAULT"
+)
+
+func ParsePriorityReason(s string) (PriorityReason, error) {
+	switch PriorityReason(s) {
+	case PriorityReasonCLIENT_BUG, PriorityReasonDECLARED, PriorityReasonDEFAULT:
+		return PriorityReason(s), nil
+	default:
+		return "", fmt.Errorf("invalid PriorityReason: %q", s)
+	}
+}
+
 type ProviderKind string
 
 const (
@@ -880,6 +991,23 @@ func ParseProviderKind(s string) (ProviderKind, error) {
 	}
 }
 
+type ProviderLimitWindow string
+
+const (
+	ProviderLimitWindowFIVE_HOUR ProviderLimitWindow = "FIVE_HOUR"
+	ProviderLimitWindowWEEKLY ProviderLimitWindow = "WEEKLY"
+	ProviderLimitWindowUNKNOWN ProviderLimitWindow = "UNKNOWN"
+)
+
+func ParseProviderLimitWindow(s string) (ProviderLimitWindow, error) {
+	switch ProviderLimitWindow(s) {
+	case ProviderLimitWindowFIVE_HOUR, ProviderLimitWindowWEEKLY, ProviderLimitWindowUNKNOWN:
+		return ProviderLimitWindow(s), nil
+	default:
+		return "", fmt.Errorf("invalid ProviderLimitWindow: %q", s)
+	}
+}
+
 type ProviderStatus string
 
 const (
@@ -893,6 +1021,60 @@ func ParseProviderStatus(s string) (ProviderStatus, error) {
 		return ProviderStatus(s), nil
 	default:
 		return "", fmt.Errorf("invalid ProviderStatus: %q", s)
+	}
+}
+
+type PublishFollowUpKind string
+
+const (
+	PublishFollowUpKindCOMPLETE PublishFollowUpKind = "COMPLETE"
+	PublishFollowUpKindCONTINUE PublishFollowUpKind = "CONTINUE"
+)
+
+func ParsePublishFollowUpKind(s string) (PublishFollowUpKind, error) {
+	switch PublishFollowUpKind(s) {
+	case PublishFollowUpKindCOMPLETE, PublishFollowUpKindCONTINUE:
+		return PublishFollowUpKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid PublishFollowUpKind: %q", s)
+	}
+}
+
+type PublishRunOutcome string
+
+const (
+	PublishRunOutcomeSUCCEEDED PublishRunOutcome = "SUCCEEDED"
+	PublishRunOutcomeFAILED PublishRunOutcome = "FAILED"
+	PublishRunOutcomeTIMED_OUT PublishRunOutcome = "TIMED_OUT"
+	PublishRunOutcomeCANCELLED_BY_STEER PublishRunOutcome = "CANCELLED_BY_STEER"
+	PublishRunOutcomeCANCELLED_BY_PAUSE PublishRunOutcome = "CANCELLED_BY_PAUSE"
+	PublishRunOutcomeUNKNOWN PublishRunOutcome = "UNKNOWN"
+)
+
+func ParsePublishRunOutcome(s string) (PublishRunOutcome, error) {
+	switch PublishRunOutcome(s) {
+	case PublishRunOutcomeSUCCEEDED, PublishRunOutcomeFAILED, PublishRunOutcomeTIMED_OUT, PublishRunOutcomeCANCELLED_BY_STEER, PublishRunOutcomeCANCELLED_BY_PAUSE, PublishRunOutcomeUNKNOWN:
+		return PublishRunOutcome(s), nil
+	default:
+		return "", fmt.Errorf("invalid PublishRunOutcome: %q", s)
+	}
+}
+
+type QuotaState string
+
+const (
+	QuotaStateOK QuotaState = "OK"
+	QuotaStateNEAR QuotaState = "NEAR"
+	QuotaStateHOLDING QuotaState = "HOLDING"
+	QuotaStateREFUSED QuotaState = "REFUSED"
+)
+
+func ParseQuotaState(s string) (QuotaState, error) {
+	switch QuotaState(s) {
+	case QuotaStateOK, QuotaStateNEAR, QuotaStateHOLDING, QuotaStateREFUSED:
+		return QuotaState(s), nil
+	default:
+		return "", fmt.Errorf("invalid QuotaState: %q", s)
 	}
 }
 
@@ -927,6 +1109,23 @@ func ParseRole(s string) (Role, error) {
 		return Role(s), nil
 	default:
 		return "", fmt.Errorf("invalid Role: %q", s)
+	}
+}
+
+type SlotLimit string
+
+const (
+	SlotLimitMAX SlotLimit = "MAX"
+	SlotLimitMACHINE SlotLimit = "MACHINE"
+	SlotLimitBUDGET SlotLimit = "BUDGET"
+)
+
+func ParseSlotLimit(s string) (SlotLimit, error) {
+	switch SlotLimit(s) {
+	case SlotLimitMAX, SlotLimitMACHINE, SlotLimitBUDGET:
+		return SlotLimit(s), nil
+	default:
+		return "", fmt.Errorf("invalid SlotLimit: %q", s)
 	}
 }
 
@@ -1364,6 +1563,23 @@ func ParseTranscriptKind(s string) (TranscriptKind, error) {
 		return TranscriptKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid TranscriptKind: %q", s)
+	}
+}
+
+type UsageRole string
+
+const (
+	UsageRoleORCHESTRATOR UsageRole = "ORCHESTRATOR"
+	UsageRoleISSUE UsageRole = "ISSUE"
+	UsageRoleTRIAGE UsageRole = "TRIAGE"
+)
+
+func ParseUsageRole(s string) (UsageRole, error) {
+	switch UsageRole(s) {
+	case UsageRoleORCHESTRATOR, UsageRoleISSUE, UsageRoleTRIAGE:
+		return UsageRole(s), nil
+	default:
+		return "", fmt.Errorf("invalid UsageRole: %q", s)
 	}
 }
 

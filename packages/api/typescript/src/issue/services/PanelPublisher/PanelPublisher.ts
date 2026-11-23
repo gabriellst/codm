@@ -1,5 +1,6 @@
 import type { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import type { IssueTimelineItem } from '@shared/schemas'
+import type { Batch, PanelHealth } from '@shared/objects'
 
 export interface PanelGroupSnapshot {
 	threadId: string
@@ -19,9 +20,19 @@ export interface PanelIssueSnapshot {
 	updatedAt: string
 }
 
+/** A conversation's batch as the panel shows it at `#L-31` (fase 4, item 5). */
+export interface PanelBatchSnapshot {
+	threadId: string
+	batch: Batch
+}
+
 export interface PanelBatch {
 	groups: PanelGroupSnapshot[]
 	issues: PanelIssueSnapshot[]
+	/** The batches that changed since last sent (fase 4, item 5). */
+	batches?: PanelBatchSnapshot[]
+	/** The owner's health badge — percentages and states only (fase 4, item 7). Absent before the dispatcher's first loop. */
+	health?: PanelHealth
 }
 
 /**

@@ -12,7 +12,7 @@ import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { z } from 'zod'
 import { MockLoggingService } from '@codm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../../enums'
-import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent } from '../../../events'
+import { AgentMessageEvent, AgentToolCallEvent } from '../../../events'
 import { AgentRunOutcome } from '../../../enums'
 import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
@@ -160,18 +160,18 @@ describe('ClaudeAgentRunner — the happy turn', () => {
 		])
 	})
 
-	it('folds the transcript and the terminal usage aggregate into domain facts', async () => {
+	it('folds the transcript into domain facts and carries the terminal usage aggregate on the record', async () => {
 		const { spawner } = fakeSpawner([INIT, TEXT, RESULT])
 
-		const facts = (await drain(makeRunner(spawner).run(request()))).filter(e => e.type === 'fact').map(e => (e as { fact: unknown }).fact)
+		const events = await drain(makeRunner(spawner).run(request()))
+		const facts = events.filter(e => e.type === 'fact').map(e => (e as { fact: unknown }).fact)
 
+		expect(facts).toHaveLength(1)
 		expect(facts[0]).toBeInstanceOf(AgentMessageEvent)
-		expect(facts[1]).toBeInstanceOf(AgentUsageEvent)
-		expect((facts[1] as AgentUsageEvent).payload).toEqual({
-			inputTokens: 2,
-			outputTokens: 10,
-			cacheCreationInputTokens: 9188,
-			cacheReadInputTokens: 15273,
+		// Fase 4 (S1): the usage is no fact here — the turn that knows whose run it was stamps it.
+		expect(events.at(-1)).toMatchObject({
+			type: 'finished',
+			result: { usage: { inputTokens: 2, outputTokens: 10, cacheCreationInputTokens: 9188, cacheReadInputTokens: 15273 } },
 		})
 	})
 

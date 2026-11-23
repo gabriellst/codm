@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BaseDomainEvent } from '@codm/core-typescript'
+import { AgentModelId, ProviderKind, UsageRole } from '@codm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentToolCallStatus } from '../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from './index'
 
@@ -15,7 +16,9 @@ import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnF
 
 const startedAt = new Date('2026-07-27T10:00:00.000Z').toISOString()
 
-const facts = (): AgentTurnFact[] => [
+// The usage fact left the union in fase 4 (S1) — the run carries its buckets on the terminal record and the turn
+// that knows the role mints it once — but it is still a domain event that goes to the outbox, so it stays here.
+const facts = (): (AgentTurnFact | AgentUsageEvent)[] => [
 	new AgentMessageEvent({
 		ownerId: '00000000-0000-4000-8000-000000000001',
 		payload: { messageId: 'msg_01', role: AgentMessageRole.ASSISTANT, text: 'done' },
@@ -33,7 +36,15 @@ const facts = (): AgentTurnFact[] => [
 	}),
 	new AgentUsageEvent({
 		ownerId: '00000000-0000-4000-8000-000000000001',
-		payload: { inputTokens: 1200, outputTokens: 340, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
+		payload: {
+			inputTokens: 1200,
+			outputTokens: 340,
+			cacheCreationInputTokens: 0,
+			cacheReadInputTokens: 0,
+			role: UsageRole.ISSUE,
+			provider: ProviderKind.CLAUDE_CODE,
+			model: AgentModelId.DEFAULT,
+		},
 	}),
 ]
 
@@ -120,7 +131,19 @@ describe('the usage fact is token counts, not money', () => {
 		// `reasoningOutputTokens` is the fifth and OPTIONAL bucket, added when codex landed: it reports
 		// reasoning separately and claude has no counterpart, so absence means "not reported" rather
 		// than zero. Still a token count, which is why it belongs here and not in the guard below.
-		expect(keys).toEqual(['inputTokens', 'outputTokens', 'cacheCreationInputTokens', 'cacheReadInputTokens', 'reasoningOutputTokens'])
+		// Fase 4 (S1) added WHO spent it — `role`, `provider`, `model` — and the window boundaries the run saw:
+		// attribution, not money.
+		expect(keys).toEqual([
+			'inputTokens',
+			'outputTokens',
+			'cacheCreationInputTokens',
+			'cacheReadInputTokens',
+			'reasoningOutputTokens',
+			'role',
+			'provider',
+			'model',
+			'windows',
+		])
 		// Stated as intent as well as as a key list, so a future additive field cannot smuggle money in
 		// by merely updating the list above.
 		expect(keys.some(k => /cost|price|usd|currency|money/i.test(k))).toBe(false)

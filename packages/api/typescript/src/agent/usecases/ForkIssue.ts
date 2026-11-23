@@ -2,13 +2,24 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssuePriority,
+	IssueWorkKind,
+	MailboxClaimClass,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	PriorityReason,
+} from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { issuePrefixOf } from '@workspace/objects'
 import { MailboxRepository } from '../repositories/MailboxRepository'
+import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttributes'
 import { IssueSequence } from '../services/IssueSequence'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
+import { modelForWork } from '../utils/ModelByWorkKind'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
 export const ForkIssueInputSchema = z.object({
@@ -16,8 +27,20 @@ export const ForkIssueInputSchema = z.object({
 	threadId: z.uuid(),
 	/** What the operator asked for, in their words (§7.2 — `{ goal }` is all the tool takes from the model). */
 	goal: z.string().trim().min(1).max(2000),
-	/** A short human title for the card — the WHAT only. Absent ⇒ the goal, truncated. */
+	/**
+	 * A short title for the issue card, up to 80 characters: WHAT is being done, in plain words — no requester,
+	 * no date, no permission notes (those live in the goal). Absent ⇒ the goal, truncated (long, hard to scan).
+	 */
 	title: z.string().trim().min(1).max(80).optional(),
+	/**
+	 * Fase 4 (items 4 and 6d) — what the orchestrator declares about the task at birth: its priority, why it
+	 * has it (`CLIENT_BUG` — a bug a client is hitting — is claimed first) and what kind of work it is
+	 * (`DIAGNOSIS` runs on a cheaper model). Absent ⇒ `NORMAL` / `DEFAULT` / `CHANGE` (`ISSUE_ATTRIBUTE_DEFAULTS`).
+	 * Recorded in `agent_issue_attributes` in the fork's own transaction and carried on `issue.created`.
+	 */
+	priority: z.enum(IssuePriority).optional(),
+	priorityReason: z.enum(PriorityReason).optional(),
+	workKind: z.enum(IssueWorkKind).optional(),
 	/**
 	 * The transcript entry that asked. INJECTED from the run token's claims, never an argument the
 	 * model supplies (§7.2): a model able to name the message it was "answering" could attribute its
@@ -89,6 +112,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		private readonly workspaces: WorkspaceRepository,
 		private readonly sequences: IssueSequence,
 		private readonly mailbox: MailboxRepository,
+		private readonly attributes: IssueAttributesRepository,
 	) {
 		super()
 	}
@@ -111,18 +135,33 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		// THE TITLE is what a person reads on a card: the orchestrator's short `title` when it gave one, the
 		// goal truncated otherwise (the goal is the CLI's brief and routinely opens with who asked and when).
 		const title = input.title ?? input.goal.slice(0, 200)
+		// WHAT THE TASK IS BORN WITH (fase 4, items 4 and 6d) — the orchestrator's declaration, the defaults for what
+		// it left out, and the MODEL the kind of work runs on (`MODEL_BY_WORK_KIND`): fixed here, for the task's whole
+		// life — the conversation's model changing later no longer moves a task already open, and a resume never meets
+		// `MODEL_CHANGED`.
+		const workKind = input.workKind ?? ISSUE_ATTRIBUTE_DEFAULTS.workKind
+		const born = {
+			priority: input.priority ?? ISSUE_ATTRIBUTE_DEFAULTS.priority,
+			priorityReason: input.priorityReason ?? ISSUE_ATTRIBUTE_DEFAULTS.priorityReason,
+			workKind,
+			model: modelForWork(provider, workKind, thread.modelFor(provider)),
+		}
 
 		const key = await this.withTransaction(tx, async tx => {
 			// THE SHORT KEY (fase 0, item 4): `<PREFIX>-<n>`, numbered per workspace and drawn in this same
 			// transaction, so a rolled-back fork returns its number. It replaced a slug of the goal's first
 			// 40 characters ("pedido-no-grupo-08-11-14-15-sobre-o-banne") that nobody could say back in a chat.
 			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
+			// The attributes row commits WITH the work item and the fact: the queue claims by it and the batch receipt
+			// confirms "this issue is of this conversation" by it in the very turn that forked it (`ForkedIssueReader`).
+			await this.attributes.insertIfNew(IssueAttributes.born({ issueId, ownerId: input.ownerId, threadId: input.threadId, ...born }), tx)
 			await this.mailbox.enqueue(
 				{
 					ownerId: input.ownerId,
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: issueId,
 					kind: MailboxItemKind.WORK,
+					claimClass: MailboxClaimClass.WORK,
 					posture: input.posture,
 					// `originEntryId` rides along so the finished turn can put it on the ISSUE_RESULT without
 					// reading the issue row — the agent context has no runtime read of `issue` (the declared
@@ -154,6 +193,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 						goal: input.goal,
 						originEntryId: input.originEntryId,
 						provider,
+						...born,
 					},
 				}),
 				tx,

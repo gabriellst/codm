@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import type { ZodType } from 'zod'
 import { DomainEventRepository } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture, ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { CLAIM_CLASS_OF_KIND } from '@agent/utils/ClaimClassOfKind'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { InterruptIssueTurnOnSteer } from '@thread/handlers/InterruptIssueTurnOnSteer'
@@ -141,6 +142,7 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind,
+			claimClass: CLAIM_CLASS_OF_KIND[kind],
 			posture: PermissionPosture.AUTO,
 			payload: { issueId, key: 'APP-12', title: 'Prévia do relatório', ...payload },
 			dedupKey: `${kind}:${uuidv7()}`,

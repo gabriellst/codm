@@ -3,9 +3,13 @@
 * Do not edit manually.
 */
 
+import { askEffectSchema } from "./askEffectSchema.ts";
 import { z } from "zod/v4";
 
 export const askOptionSchema = z.object({
     "id": z.string().min(1).max(40),
-"label": z.string().min(1).max(200)
+"label": z.string().min(1).max(200),
+get "authorizes"(){
+                return z.array(askEffectSchema).optional()
+              }
     })

@@ -85,6 +85,22 @@ import "./enums/onboarding-step.tsp";
 // store. Cross-boundary because BOTH backends write rows into that one table and each
 // consumer claims only its own lane — the value is a contract between two processes.
 import "./enums/outbox-source.tsp";
+// Fase 4 ("vazão") — the quota budget, the task slots, the claim order, batches and the declared publish
+// command: who spent quota, which provider window a limit belongs to, a task's priority (and why) and kind
+// of work, what a queued item is, where each batch item went, the health badge and why slots are limited,
+// and how a publish command ended / what follows it.
+import "./enums/usage-role.tsp";
+import "./enums/provider-limit-window.tsp";
+import "./enums/issue-priority.tsp";
+import "./enums/priority-reason.tsp";
+import "./enums/issue-work-kind.tsp";
+import "./enums/mailbox-claim-class.tsp";
+import "./enums/batch-item-destination-kind.tsp";
+import "./enums/batch-status.tsp";
+import "./enums/quota-state.tsp";
+import "./enums/slot-limit.tsp";
+import "./enums/publish-run-outcome.tsp";
+import "./enums/publish-follow-up-kind.tsp";
 
 import "./events/index.tsp";
 

@@ -1,6 +1,6 @@
 import type { ComponentProps, ElementType } from 'react'
 import { Link } from '@tanstack/react-router'
-import { IconBellRinging, IconPlayerPause } from '@tabler/icons-react'
+import { IconBellRinging, IconHourglass, IconPlayerPause } from '@tabler/icons-react'
 import type { IssueLifeState } from '@codm/client-typescript/typescript'
 import { IssueLifeStateEnum } from '@codm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
@@ -14,13 +14,14 @@ export interface IssueCardItem extends IssueRowItem {
 
 /**
  * The life states the card SPELLS OUT, with their glyph — the ones that share a column with another state
- * (REMINDED and PAUSED sit in STALLED's). `null` = the column already says it. Exhaustive by type.
+ * (REMINDED and PAUSED sit in STALLED's, WAITING_BUDGET in WAITING_PROVIDER's). `null` = the column already says it. Exhaustive by type.
  */
 const LIFE_BADGE_ICON: Record<IssueLifeState, ElementType | null> = {
 	[IssueLifeStateEnum.QUEUED]: null,
 	[IssueLifeStateEnum.RUNNING]: null,
 	[IssueLifeStateEnum.WAITING_PERSON]: null,
 	[IssueLifeStateEnum.WAITING_PROVIDER]: null,
+	[IssueLifeStateEnum.WAITING_BUDGET]: IconHourglass,
 	[IssueLifeStateEnum.REMINDED]: IconBellRinging,
 	[IssueLifeStateEnum.STALLED]: null,
 	[IssueLifeStateEnum.PAUSED]: IconPlayerPause,

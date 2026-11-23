@@ -53,7 +53,13 @@ export class LibSqlWorkspaceRepository extends WorkspaceRepository {
 				.values(data)
 				.onConflictDoUpdate({
 					target: workspaces.id,
-					set: { path: data.path, badges: data.badges, updatedAt: new Date(), version: data.version },
+					set: {
+						path: data.path,
+						badges: data.badges,
+						publishCommand: data.publishCommand,
+						updatedAt: new Date(),
+						version: data.version,
+					},
 				})
 			return entity
 		})
@@ -75,6 +81,7 @@ export class LibSqlWorkspaceRepository extends WorkspaceRepository {
 			path: row.path,
 			badges: row.badges as WorkspaceBadge[],
 			addedAt: row.addedAt,
+			publishCommand: row.publishCommand ?? undefined,
 		})
 		return new Workspace({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
 	}
@@ -86,6 +93,8 @@ export class LibSqlWorkspaceRepository extends WorkspaceRepository {
 			path: entity.path,
 			badges: entity.badges,
 			addedAt: entity.addedAt,
+			// `null` clears the column on update: an absent command is a removed one, never "keep the old".
+			publishCommand: entity.publishCommand ?? null,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			version: entity.version,

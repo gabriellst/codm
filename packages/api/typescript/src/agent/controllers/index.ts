@@ -11,6 +11,8 @@ export { AskDecisionController } from './AskDecision'
 export { AskQuestionController } from './AskQuestion'
 export { RequestFeedbackController } from './RequestFeedback'
 export { ReportProgressController } from './ReportProgress'
+// Fase 4 (S0b) — the issue's handoff notes (item 6a), declared ahead of its use case (S6).
+export { WriteHandoffNotesController } from './WriteHandoffNotes'
 // TEST-ONLY (Fase 7). Exported HERE — the WIRE-03 rail requires every controller class to be in its
 // barrel, and a controller hidden from the barrel is indistinguishable from dead wiring — while
 // `agent/index.ts` decides whether it is actually MOUNTED. Same shape as `shared`'s gateway
@@ -34,6 +36,7 @@ import { AskDecisionController } from './AskDecision'
 import { AskQuestionController } from './AskQuestion'
 import { RequestFeedbackController } from './RequestFeedback'
 import { ReportProgressController } from './ReportProgress'
+import { WriteHandoffNotesController } from './WriteHandoffNotes'
 import { TestRunIssueTurnController } from './TestRunIssueTurn'
 import { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 import { ForkIssueController } from './ForkIssue'
@@ -74,6 +77,7 @@ const productionControllers = {
 	AskQuestionController,
 	RequestFeedbackController,
 	ReportProgressController,
+	WriteHandoffNotesController,
 	ForkIssueController,
 	SteerIssueTurnController,
 }

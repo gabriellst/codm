@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq, lte } from 'drizzle-orm'
+import { and, eq, lte, sql } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
 import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
@@ -92,6 +92,14 @@ export class LibSqlIssueRepository extends IssueRepository {
 						archiveReason: data.archiveReason,
 						completedAt: data.completedAt,
 						paused: data.paused,
+						// The birth attributes (fase 4) are a read copy that is WRITE-ONCE per column: the first non-null
+						// value stays (`Issue.recordBirthAttributes`), so a fresh `issue.opened` aggregate that knows none
+						// of them can never blank what `issue.created` recorded — same rule as the omission above, kept
+						// in SQL because these columns may legitimately arrive on the SECOND write.
+						priority: sql`coalesce(${issues.priority}, excluded.priority)`,
+						priorityReason: sql`coalesce(${issues.priorityReason}, excluded.priority_reason)`,
+						workKind: sql`coalesce(${issues.workKind}, excluded.work_kind)`,
+						model: sql`coalesce(${issues.model}, excluded.model)`,
 						updatedAt: new Date(),
 						version: data.version,
 					},
@@ -125,6 +133,10 @@ export class LibSqlIssueRepository extends IssueRepository {
 			paused: row.paused,
 			originEntryId: row.originEntryId ?? undefined,
 			goal: row.goal ?? undefined,
+			priority: row.priority ?? undefined,
+			priorityReason: row.priorityReason ?? undefined,
+			workKind: row.workKind ?? undefined,
+			model: row.model ?? undefined,
 		})
 		return new Issue({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
 	}
@@ -145,6 +157,10 @@ export class LibSqlIssueRepository extends IssueRepository {
 			paused: entity.paused,
 			originEntryId: entity.originEntryId ?? null,
 			goal: entity.goal ?? null,
+			priority: entity.priority ?? null,
+			priorityReason: entity.priorityReason ?? null,
+			workKind: entity.workKind ?? null,
+			model: entity.model ?? null,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			version: entity.version,

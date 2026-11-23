@@ -260,6 +260,13 @@
       "when": 1795031609547,
       "tag": "0036_omniscient_silhouette",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1795056208217,
+      "tag": "0037_smooth_northstar",
+      "breakpoints": true
     }
   ]
 }

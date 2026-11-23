@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { MessageVia } from '@agent/enums'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
@@ -92,6 +98,7 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 						targetKind: MailboxTargetKind.ISSUE,
 						targetId: issue.issueId,
 						kind: MailboxItemKind.STEER,
+						claimClass: MailboxClaimClass.STEER,
 						posture,
 						payload: {
 							issueId: issue.issueId,
@@ -123,6 +130,7 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 						targetKind: MailboxTargetKind.THREAD,
 						targetId: thread.id.value,
 						kind: MailboxItemKind.OPERATOR_MESSAGE,
+						claimClass: MailboxClaimClass.OPERATOR,
 						posture,
 						payload: {
 							kind: MailboxItemKind.OPERATOR_MESSAGE,

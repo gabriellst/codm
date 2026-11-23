@@ -15,6 +15,7 @@ import {
 import type { ApplicationErrors } from '../errors'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
+import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 
 /** A STEER item's payload carries the message as `text` (`SteerIssueTurn`); anything else reads as empty. */
 const SteerPayloadSchema = z.object({ text: z.string() })
@@ -80,7 +81,10 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 	readonly inputSchema = GetIssueDetailInputSchema
 	readonly outputSchema = GetIssueDetailOutputSchema
 
-	constructor(private readonly driver: LibSqlDatabaseDriver) {
+	constructor(
+		private readonly driver: LibSqlDatabaseDriver,
+		private readonly quota: QuotaStatusReader,
+	) {
 		super()
 	}
 
@@ -91,7 +95,9 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 		const lines = await this.driver.db
 			.select()
 			.from(terminalLines)
-			.where(eq(terminalLines.issueId, input.issueId))
+			// A publish command's captured output (fase 4, item 6c) is the console's alone (`GetPublishRunOutput`): this
+			// read is an MCP tool, and a command's output may print a credential.
+			.where(and(eq(terminalLines.issueId, input.issueId), isNull(terminalLines.timelineItemId)))
 			.orderBy(asc(terminalLines.seq))
 		const routed = await this.driver.db
 			.select()
@@ -103,7 +109,11 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
-		const life = await lifeStateByIssue(this.driver, [{ issueId: issue.id, status: issue.status as IssueStatus }])
+		const life = await lifeStateByIssue(
+			this.driver,
+			[{ issueId: issue.id, status: issue.status as IssueStatus }],
+			this.quota.holdsIssueLane(),
+		)
 		const steerRows = await this.driver.db
 			.select()
 			.from(agentMailbox)

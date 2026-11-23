@@ -101,6 +101,8 @@ export class StopAsk extends BaseValueObject<typeof StopAskObjectSchema> {
 			default: this.default,
 			effects: this.effects,
 			addresseeId: this.addresseeId,
+			// Fase 4 (item 6c): what follows a successful publish this ask authorized — kept on the stop for the dispatcher.
+			onPublished: this.onPublished,
 		})
 	}
 }

@@ -119,6 +119,12 @@
 			"resetTitle": "Set a new password"
 		}
 	},
+	"batchDetail": {
+		"noDestination": "No destination yet",
+		"subtitle_one": "{{count}} item listed in one message",
+		"subtitle_other": "{{count}} items listed in one message",
+		"title": "Batch {{code}}"
+	},
 	"calendar": {
 		"presets": {
 			"lastMonth": "Last month",
@@ -265,6 +271,18 @@
 			"OPTION": "option",
 			"TEXT": "text"
 		},
+		"BatchItemDestinationKind": {
+			"ALREADY_LIVE": "Already live",
+			"ATTACHED": "In an existing task",
+			"DECLINED": "Declined",
+			"DEFERRED": "Deferred",
+			"NEEDS_DECISION": "Waiting on a decision",
+			"NEW_ISSUE": "New task"
+		},
+		"BatchStatus": {
+			"INCOMPLETE": "No destinations recorded",
+			"RECORDED": "Every item has a destination"
+		},
 		"ChannelKind": {
 			"INTERNAL": "Internal",
 			"WHATSAPP": "WhatsApp"
@@ -397,6 +415,7 @@
 			"REMINDED": "Reminded to declare",
 			"RUNNING": "Running",
 			"STALLED": "Stalled",
+			"WAITING_BUDGET": "Held by the budget",
 			"WAITING_PERSON": "Waiting on someone",
 			"WAITING_PROVIDER": "Waiting on usage limit"
 		},
@@ -408,10 +427,12 @@
 		"IssueTimelineItemKind": {
 			"ARCHIVED": "Archived",
 			"ARTIFACT": "Artifact",
+			"BATCH_LINKED": "Batch item",
 			"COMPLETED": "Completed",
 			"CREATED": "Created",
 			"MESSAGE": "Message",
 			"PAUSED": "Paused",
+			"PUBLISH_RAN": "Publish",
 			"REGRET_WINDOW": "Regret window",
 			"RESUMED": "Resumed",
 			"STEER": "Steer",
@@ -441,14 +462,38 @@
 			"GROUP": "in the group",
 			"PANEL": "panel only"
 		},
+		"ProviderLimitWindow": {
+			"FIVE_HOUR": "5-hour window",
+			"UNKNOWN": "unknown window",
+			"WEEKLY": "week"
+		},
 		"ProviderStatus": {
 			"DETECTED": "Detected",
 			"NOT_INSTALLED": "Not installed"
+		},
+		"PublishRunOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelled by the pause",
+			"CANCELLED_BY_STEER": "cancelled by a message",
+			"FAILED": "failed",
+			"SUCCEEDED": "published",
+			"TIMED_OUT": "timed out",
+			"UNKNOWN": "interrupted, result unknown"
+		},
+		"QuotaState": {
+			"HOLDING": "Holding new tasks",
+			"NEAR": "Week near the limit",
+			"OK": "Quota ok",
+			"REFUSED": "Provider refusing"
 		},
 		"RegretWindowOutcome": {
 			"CANCELLED_BY_PAUSE": "cancelled by the pause",
 			"CANCELLED_BY_STEER": "cancelled by a message",
 			"PROCEEDED": "went ahead"
+		},
+		"SlotLimit": {
+			"BUDGET": "limited by the quota",
+			"MACHINE": "limited by the machine",
+			"MAX": "configured maximum"
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Approval needed",
@@ -504,6 +549,9 @@
 		"ASK_NOT_DUE": "This question's deadline has not passed yet.",
 		"ASK_OPTIONS_DUPLICATED": "Each option of a question needs its own id.",
 		"ASK_OPTION_UNKNOWN": "That option is not one of the choices of this question.",
+		"BATCH_ISSUE_NOT_IN_THREAD": "That task is not from this conversation.",
+		"BATCH_ITEMS_MISMATCH": "Every item of the batch needs exactly one destination.",
+		"BATCH_NOT_FOUND": "That batch is not from this conversation.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_DEVICE_INVALIDATED": "This channel's connection was invalidated by the messaging platform. Reconnect it to generate a new pairing code.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "This channel cannot deliver media messages.",
@@ -524,6 +572,7 @@
 		"FORBIDDEN": "You do not have permission to perform this action.",
 		"GATEWAY_UNAVAILABLE": "Channel gateway unavailable. Check that the service is running.",
 		"HANDLER_NOT_BOUND": "Internal error while dispatching the operation. Try again shortly.",
+		"HEALTH_NOT_SAMPLED": "The scheduler has not taken its first reading yet.",
 		"INVALIDATED_AUTH_TOKEN": "Your session was invalidated. Sign in again.",
 		"INVALID_AUTH_TOKEN": "Invalid authentication token. Sign in again.",
 		"INVALID_CONTROLLER_EXAMPLES": "Internal API documentation error. Contact support.",
@@ -610,6 +659,7 @@
 		"THREAD_NOT_FOUND": "Thread not found.",
 		"THREAD_NOT_PAUSED": "Pause the thread to talk directly.",
 		"THREAD_PAUSED": "This thread is paused — use direct mode instead.",
+		"THROUGHPUT_NOT_READY": "This part is not ready yet — it comes in a later version.",
 		"TOO_MANY_TERMINAL_STREAMS": "Too many concurrent terminal streams.",
 		"UNAUTHORIZED": "Unauthorized",
 		"UNKNOWN_ERROR": "Unknown error",
@@ -637,6 +687,21 @@
 		"archived": "Archived",
 		"emptyDescription": "Issues appear here once your agents start working on routed messages.",
 		"emptyTitle": "No issues yet",
+		"health": {
+			"disk": "Free disk: {{gib}} GB",
+			"heldByBudget_one": "{{count}} held by the quota",
+			"heldByBudget_other": "{{count}} held by the quota",
+			"notSampled": "Waiting for the scheduler’s first reading…",
+			"queue_one": "{{count}} task queued",
+			"queue_other": "{{count}} tasks queued",
+			"resets": "resets {{at}}",
+			"slots": "Slots: {{inUse}} in use of {{effective}} (max {{max}})",
+			"someWindow": "a window",
+			"title": "System health",
+			"week": "Week: {{percent}}",
+			"window": "5-hour window: {{percent}}",
+			"wouldHold": "Budget in observation: it would hold new tasks now ({{window}}) — nothing is being held."
+		},
 		"hideArchived": "Hide archived",
 		"showArchived": "Show archived",
 		"statsLine": "{{awaitingInput}} awaiting input · {{working}} working · {{completed}} completed · {{archived}} archived",
@@ -644,6 +709,7 @@
 	},
 	"nav": {
 		"account": "My Account",
+		"batches": "Batches",
 		"channels": "Channels",
 		"home": "Home",
 		"issues": "Issues",
@@ -825,9 +891,16 @@
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
 		"timeline": "Timeline",
+		"timelineBatchLinked": "{{code}} · item {{n}}",
 		"timelineControlBy": "{{source}} · {{by}}",
 		"timelineFromAgent": "agent",
 		"timelineFromPerson": "person",
+		"timelinePublishOutputEmpty": "No output recorded.",
+		"timelinePublishOutputHide": "hide output",
+		"timelinePublishOutputShow": "show output",
+		"timelinePublishRan": "{{outcome}} in {{seconds}} s",
+		"timelinePublishRanExit": "{{outcome}} in {{seconds}} s (exit {{exitCode}})",
+		"timelinePublishRanUnseen": "{{outcome}} — check whether it went live",
 		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
 		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting",
 		"timelineReplyQuote": "replied quoting",
@@ -882,6 +955,19 @@
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Project folder",
 		"projectFolders": "Project folders",
+		"publishCommand": {
+			"addArgument": "Add argument",
+			"argument": "Argument {{n}}",
+			"argumentsHint": "One field per argument, in order. Each is passed literally, with no shell: quotes, ; and $( ) are not interpreted.",
+			"argumentsLabel": "Arguments",
+			"description": "When an answer authorizes publishing, CODM runs this command in the task's worktree, without waking the session. Without a command, the session wakes as before.",
+			"open": "Publish command",
+			"remove": "Remove command",
+			"removeArgument": "Remove argument {{n}}",
+			"save": "Save command",
+			"saving": "Saving…",
+			"title": "Publish command"
+		},
 		"remove": "Remove folder",
 		"removeConfirmAction": "Remove",
 		"removeConfirmDescription": "The folder \"{{name}}\" stops being registered in CODM. No files on your computer are deleted.",

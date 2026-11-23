@@ -5,6 +5,7 @@ import {
 	ClassificationMethod,
 	IssueControlSource,
 	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	MessageAuthor,
@@ -21,6 +22,10 @@ import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { RuleRouter, type AnswerTarget } from '../services/RuleRouter'
 import { RoutedSteer } from '../services/RoutedSteer'
+import { BatchSequence } from '../services/BatchSequence'
+import { BatchRepository } from '../repositories/BatchRepository'
+import { Batch } from '../entities/Batch'
+import { detectBatch } from '../utils/BatchDetector'
 import { BoardBulletin } from '../services/BoardBulletin'
 import { BulletinSentEvent } from '../events/BulletinSentEvent'
 import { parseThreadCommand } from '../utils/threadCommand'
@@ -150,6 +155,8 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly session: CloudSession,
 		private readonly bulletin: BoardBulletin,
 		private readonly logging: LoggingService,
+		private readonly batches: BatchRepository,
+		private readonly batchSequence: BatchSequence,
 	) {
 		super()
 	}
@@ -291,7 +298,22 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// media message is not triaged — the model would read only its placeholder. Nor is a message the
 				// rule layer already TIED to an issue and left to the orchestrator on purpose (a reply quoting a
 				// waiting or finished issue: reopening, or answering its question, is the orchestrator's call).
-				const triageable = input.messageType === undefined && !entry.issueId
+				//
+				// A BATCH (fase 4, item 5) — a message that LISTS several requests — is decided here, by rule, and never
+				// goes to the triage: the triage reads one message without state, and a batch needs the orchestrator
+				// to give every item a destination. The batch is opened in this transaction, with the item.
+				const listed = input.messageType === undefined ? detectBatch(thread.textWithoutMention(input.text)) : undefined
+				const batch = listed
+					? Batch.open({
+							ownerId: thread.ownerId,
+							threadId: thread.id.value,
+							seq: await this.batchSequence.next(thread.id.value, tx),
+							sourceEntryId: entry.entryId,
+							items: listed,
+						})
+					: undefined
+				if (batch) await this.batches.save(batch, tx)
+				const triageable = input.messageType === undefined && !entry.issueId && !batch
 				const holdMs = triageable ? this.triage.holdMs : undefined
 				triage = holdMs !== undefined
 				await this.mailbox.enqueue(
@@ -300,6 +322,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 						targetKind: MailboxTargetKind.THREAD,
 						targetId: thread.id.value,
 						kind: MailboxItemKind.OPERATOR_MESSAGE,
+						claimClass: MailboxClaimClass.OPERATOR,
 						// WHO SENT IT decides how far the turn may go (Decision 4): the sender's `canElevate`.
 						posture: thread.postureOf(input.senderExternalId),
 						payload: {
@@ -338,6 +361,8 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 										text: quoted.text,
 									}
 								: undefined,
+							// The batch this message is, with every item still owed a destination (`RecordBatch`).
+							batch: batch ? { batchCode: batch.code, total: batch.items.length, pending: listed ?? [] } : undefined,
 						},
 						dedupKey: entry.entryId,
 						...(holdMs !== undefined && { hold: { holder: TRIAGE_HOLDER, until: new Date(Date.now() + holdMs) } }),

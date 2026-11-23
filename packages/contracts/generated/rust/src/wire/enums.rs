@@ -139,7 +139,51 @@ pub enum AttachFlowStyle {
 	SIDE_PANEL,
 }
 
-/// Why work stopped, as a BLOCK_NOTICE says it (fase 3, item 2) — the key of 'one notice per cause'. Derived from the stop kind (or the provider pause), never stored. PROVIDER_LIMIT: the provider account hit its usage limit. PROVIDER_ERROR: the provider failed the turn. CLI_LOGIN: the agent CLI needs a new sign-in. STALLED: the issue stopped without saying what it needs, even after the reminder. CLASSIFICATION: a reply was blocked by classification.
+/// Where one item of a batch (a message listing several requests) went (fase 4, item 5) — the discriminant of the destination union, one per item. NEW_ISSUE: a new task was forked for it. ATTACHED: it was sent to an existing task as guidance. ALREADY_LIVE: it is already done or live. DECLINED: it will not be done (with the reason). DEFERRED: it waits (with the reason and, maybe, until when). NEEDS_DECISION: a task needs someone's decision about it first.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum BatchItemDestinationKind {
+	#[serde(rename = "NEW_ISSUE")]
+	#[strum(serialize = "NEW_ISSUE")]
+	NEW_ISSUE,
+	#[serde(rename = "ATTACHED")]
+	#[strum(serialize = "ATTACHED")]
+	ATTACHED,
+	#[serde(rename = "ALREADY_LIVE")]
+	#[strum(serialize = "ALREADY_LIVE")]
+	ALREADY_LIVE,
+	#[serde(rename = "DECLINED")]
+	#[strum(serialize = "DECLINED")]
+	DECLINED,
+	#[serde(rename = "DEFERRED")]
+	#[strum(serialize = "DEFERRED")]
+	DEFERRED,
+	#[serde(rename = "NEEDS_DECISION")]
+	#[strum(serialize = "NEEDS_DECISION")]
+	NEEDS_DECISION,
+}
+
+/// Where a batch stands (fase 4, item 5). INCOMPLETE: some item still has no destination — no receipt goes out. RECORDED: every item has exactly one destination and the receipt went out.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum BatchStatus {
+	#[serde(rename = "INCOMPLETE")]
+	#[strum(serialize = "INCOMPLETE")]
+	INCOMPLETE,
+	#[serde(rename = "RECORDED")]
+	#[strum(serialize = "RECORDED")]
+	RECORDED,
+}
+
+/// Why work stopped, as a BLOCK_NOTICE says it (fase 3, item 2) — the key of 'one notice per cause'. Derived from the stop kind (or the provider pause), never stored. PROVIDER_LIMIT: the provider account hit its usage limit. PROVIDER_ERROR: the provider failed the turn. CLI_LOGIN: the agent CLI needs a new sign-in. STALLED: the issue stopped without saying what it needs, even after the reminder. CLASSIFICATION: a reply was blocked by classification. BUDGET_HELD (fase 4): the quota budget is holding new task turns before the provider refuses — announced only while the budget is enforced.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -162,6 +206,9 @@ pub enum BlockCause {
 	#[serde(rename = "CLASSIFICATION")]
 	#[strum(serialize = "CLASSIFICATION")]
 	CLASSIFICATION,
+	#[serde(rename = "BUDGET_HELD")]
+	#[strum(serialize = "BUDGET_HELD")]
+	BUDGET_HELD,
 }
 
 /// Rolling per-thread context buffer size, in messages. A closed set of tiers {25,50,100,200}. Modeled as a STRING enum (the wire codegen carries string enums; numeric-literal unions are not first-class) — the domain narrows it to the numeric tiers and the DB stores it as text via the shared text-column convention.
@@ -704,7 +751,7 @@ pub enum IssueControlSource {
 	PANEL,
 }
 
-/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
+/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_BUDGET, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_BUDGET (fase 4): it would be QUEUED, but the quota budget is holding new task turns so the orchestrator keeps its reserve — only while the budget is enforced, never in observation mode. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -721,6 +768,9 @@ pub enum IssueLifeState {
 	#[serde(rename = "WAITING_PROVIDER")]
 	#[strum(serialize = "WAITING_PROVIDER")]
 	WAITING_PROVIDER,
+	#[serde(rename = "WAITING_BUDGET")]
+	#[strum(serialize = "WAITING_BUDGET")]
+	WAITING_BUDGET,
 	#[serde(rename = "WAITING_PERSON")]
 	#[strum(serialize = "WAITING_PERSON")]
 	WAITING_PERSON,
@@ -736,6 +786,25 @@ pub enum IssueLifeState {
 	#[serde(rename = "DONE")]
 	#[strum(serialize = "DONE")]
 	DONE,
+}
+
+/// The priority a task was declared with when it was born (fase 4, item 4) — one of the keys the queue claims by. HIGH: ahead of normal work. NORMAL: the default. LOW: behind normal work.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssuePriority {
+	#[serde(rename = "HIGH")]
+	#[strum(serialize = "HIGH")]
+	HIGH,
+	#[serde(rename = "NORMAL")]
+	#[strum(serialize = "NORMAL")]
+	NORMAL,
+	#[serde(rename = "LOW")]
+	#[strum(serialize = "LOW")]
+	LOW,
 }
 
 /// The level of something an issue wants to say (fase 3, §6.1) — what decides, per group output mode, whether it becomes its own message in the group, joins a per-person digest, or stays on the panel/timeline. DECISION: an answer is required before the issue goes on (no deadline). QUESTION: an answer is welcome; after the deadline the issue goes on with its declared default. FEEDBACK: a preview to look at — does not hold the issue. CLOSING: the issue is done (the reply to whoever asked). BLOCK_NOTICE: work stopped for a cause someone must clear (one notice per cause). PROGRESS: what the issue did — timeline only by default.
@@ -785,7 +854,7 @@ pub enum IssueStatus {
 	COMPLETED,
 }
 
-/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause. Fase 3 adds fields, not kinds: MESSAGE carries its IssueSignalLevel and OutputRouting (group vs panel only); STOP_RAISED of an ask carries its code (D1), question, options and deadline; STOP_RESOLVED carries the answer (or the default that applied).
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause. Fase 3 adds fields, not kinds: MESSAGE carries its IssueSignalLevel and OutputRouting (group vs panel only); STOP_RAISED of an ask carries its code (D1), question, options and deadline; STOP_RESOLVED carries the answer (or the default that applied). Fase 4: BATCH_LINKED: one item of a batch (by its code and number) was sent to this issue. PUBLISH_RAN: the workspace's declared publish command ran (outcome, exit code, duration — never the command line nor its output).
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -829,6 +898,28 @@ pub enum IssueTimelineItemKind {
 	#[serde(rename = "REGRET_WINDOW")]
 	#[strum(serialize = "REGRET_WINDOW")]
 	REGRET_WINDOW,
+	#[serde(rename = "BATCH_LINKED")]
+	#[strum(serialize = "BATCH_LINKED")]
+	BATCH_LINKED,
+	#[serde(rename = "PUBLISH_RAN")]
+	#[strum(serialize = "PUBLISH_RAN")]
+	PUBLISH_RAN,
+}
+
+/// What a task does (fase 4, item 6d) — declared when it is born, it chooses the model the task runs on. CHANGE: it changes something (code, content, configuration). DIAGNOSIS: it reads and reports without changing anything.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueWorkKind {
+	#[serde(rename = "CHANGE")]
+	#[strum(serialize = "CHANGE")]
+	CHANGE,
+	#[serde(rename = "DIAGNOSIS")]
+	#[strum(serialize = "DIAGNOSIS")]
+	DIAGNOSIS,
 }
 
 /// UI locale the app ships translations for.
@@ -861,6 +952,37 @@ pub enum LoopScheduleKind {
 	#[serde(rename = "INTERVAL")]
 	#[strum(serialize = "INTERVAL")]
 	INTERVAL,
+}
+
+/// What a queued item IS, declared by its producer (fase 4, items 4 and 6b) — a column of the shared agent_mailbox table, read by the claim order and by steer coalescing instead of any payload key or dedup-key prefix. DECISION_ANSWER: the resume of a task after someone answered or resolved its stop. INTERRUPT: the 'agora' (now) steer that cuts a running turn. STEER: guidance for a task. WORK: a new task's first turn. REMINDER: the automatic declaration reminder. RESULT: a task's outcome for the orchestrator to compose. OPERATOR: a message addressed to the orchestrator.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum MailboxClaimClass {
+	#[serde(rename = "DECISION_ANSWER")]
+	#[strum(serialize = "DECISION_ANSWER")]
+	DECISION_ANSWER,
+	#[serde(rename = "INTERRUPT")]
+	#[strum(serialize = "INTERRUPT")]
+	INTERRUPT,
+	#[serde(rename = "STEER")]
+	#[strum(serialize = "STEER")]
+	STEER,
+	#[serde(rename = "WORK")]
+	#[strum(serialize = "WORK")]
+	WORK,
+	#[serde(rename = "REMINDER")]
+	#[strum(serialize = "REMINDER")]
+	REMINDER,
+	#[serde(rename = "RESULT")]
+	#[strum(serialize = "RESULT")]
+	RESULT,
+	#[serde(rename = "OPERATOR")]
+	#[strum(serialize = "OPERATOR")]
+	OPERATOR,
 }
 
 /// Why a turn is being scheduled. OPERATOR_MESSAGE = the operator addressed the orchestrator; ISSUE_RESULT = a subagent finished and its outcome must be composed into a reply; WORK = a newly created issue's first subagent turn; STEER = mid-flight guidance for a running issue. The first two target a THREAD, the last two an ISSUE — the pairing is not encoded here on purpose: a producer states what happened, the dispatcher decides what runs.
@@ -1202,6 +1324,25 @@ pub enum PresenceType {
 	PAUSED,
 }
 
+/// Why a task has the priority it has (fase 4, item 4). CLIENT_BUG: a bug a client is hitting — claimed ahead of every declared priority. DECLARED: the orchestrator declared the priority. DEFAULT: nobody declared one.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PriorityReason {
+	#[serde(rename = "CLIENT_BUG")]
+	#[strum(serialize = "CLIENT_BUG")]
+	CLIENT_BUG,
+	#[serde(rename = "DECLARED")]
+	#[strum(serialize = "DECLARED")]
+	DECLARED,
+	#[serde(rename = "DEFAULT")]
+	#[strum(serialize = "DEFAULT")]
+	DEFAULT,
+}
+
 /// Terminal coding-agent CLI a thread/issue runs against. Harmonized name (source modeling called it ProviderName) — aligns with the *Kind convention across the wire enums.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -1221,6 +1362,25 @@ pub enum ProviderKind {
 	OPENCODE,
 }
 
+/// Which provider usage window a limit (or a reset instant) belongs to (fase 4, item 2) — mapped from the CLI's rateLimitType by a declared table, never by a string prefix. FIVE_HOUR: the rolling five-hour window. WEEKLY: the seven-day window (any of its variants). UNKNOWN: the provider did not say (it only cuts the five-hour window).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum ProviderLimitWindow {
+	#[serde(rename = "FIVE_HOUR")]
+	#[strum(serialize = "FIVE_HOUR")]
+	FIVE_HOUR,
+	#[serde(rename = "WEEKLY")]
+	#[strum(serialize = "WEEKLY")]
+	WEEKLY,
+	#[serde(rename = "UNKNOWN")]
+	#[strum(serialize = "UNKNOWN")]
+	UNKNOWN,
+}
+
 /// Whether a provider CLI was found on the machine. Result of PATH + known-install-dir probing (BC3 detection Service).
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -1235,6 +1395,72 @@ pub enum ProviderStatus {
 	#[serde(rename = "NOT_INSTALLED")]
 	#[strum(serialize = "NOT_INSTALLED")]
 	NOT_INSTALLED,
+}
+
+/// What happens after a publish command succeeded, as the ask declared it (fase 4, item 6c) — the discriminant of StopAsk.onPublished. COMPLETE: the task is completed with the declared summary, with no session turn. CONTINUE: the session is told the outcome and goes on.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PublishFollowUpKind {
+	#[serde(rename = "COMPLETE")]
+	#[strum(serialize = "COMPLETE")]
+	COMPLETE,
+	#[serde(rename = "CONTINUE")]
+	#[strum(serialize = "CONTINUE")]
+	CONTINUE,
+}
+
+/// How a workspace's declared publish command ended (fase 4, item 6c). SUCCEEDED: it exited 0. FAILED: it exited non-zero or could not start. TIMED_OUT: it ran past its deadline and was killed. CANCELLED_BY_STEER: new guidance arrived during the regret window — it never ran. CANCELLED_BY_PAUSE: the task (or its conversation) was paused during the regret window — it never ran. UNKNOWN: the daemon stopped (crash, restart) after the command was started and before its outcome was recorded — it may or may not have run to the end; it is never run again for that authorization, and the task is told to check.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PublishRunOutcome {
+	#[serde(rename = "SUCCEEDED")]
+	#[strum(serialize = "SUCCEEDED")]
+	SUCCEEDED,
+	#[serde(rename = "FAILED")]
+	#[strum(serialize = "FAILED")]
+	FAILED,
+	#[serde(rename = "TIMED_OUT")]
+	#[strum(serialize = "TIMED_OUT")]
+	TIMED_OUT,
+	#[serde(rename = "CANCELLED_BY_STEER")]
+	#[strum(serialize = "CANCELLED_BY_STEER")]
+	CANCELLED_BY_STEER,
+	#[serde(rename = "CANCELLED_BY_PAUSE")]
+	#[strum(serialize = "CANCELLED_BY_PAUSE")]
+	CANCELLED_BY_PAUSE,
+	#[serde(rename = "UNKNOWN")]
+	#[strum(serialize = "UNKNOWN")]
+	UNKNOWN,
+}
+
+/// The badge of the system's quota health (fase 4, item 7). OK: room in both windows. NEAR: at or above 70% of the learned weekly ceiling. HOLDING: new task turns are being held by the budget. REFUSED: the provider is refusing turns (usage limit).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum QuotaState {
+	#[serde(rename = "OK")]
+	#[strum(serialize = "OK")]
+	OK,
+	#[serde(rename = "NEAR")]
+	#[strum(serialize = "NEAR")]
+	NEAR,
+	#[serde(rename = "HOLDING")]
+	#[strum(serialize = "HOLDING")]
+	HOLDING,
+	#[serde(rename = "REFUSED")]
+	#[strum(serialize = "REFUSED")]
+	REFUSED,
 }
 
 /// How an issue's regret window ended (fase 2, item 3). PROCEEDED: nothing new arrived while it waited — the action went ahead. CANCELLED_BY_STEER: the issue had guidance its session had not read yet — the action was refused and the guidance is read next. CANCELLED_BY_PAUSE: the issue (or its conversation) was paused — the action was refused.
@@ -1273,6 +1499,25 @@ pub enum Role {
 	#[serde(rename = "MEMBER")]
 	#[strum(serialize = "MEMBER")]
 	MEMBER,
+}
+
+/// Why the effective number of task slots is what it is (fase 4, item 1). MAX: the configured maximum. MACHINE: free disk or memory pressure on this machine. BUDGET: the quota budget is holding new task turns.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum SlotLimit {
+	#[serde(rename = "MAX")]
+	#[strum(serialize = "MAX")]
+	MAX,
+	#[serde(rename = "MACHINE")]
+	#[strum(serialize = "MACHINE")]
+	MACHINE,
+	#[serde(rename = "BUDGET")]
+	#[strum(serialize = "BUDGET")]
+	BUDGET,
 }
 
 /// Discriminator for a platform-specific out-of-band event carried by channel_special_platform_event.received. Descends the origin channel ChannelSpecialPlatformEventType. Lowercase wire value preserved verbatim. qr_code_updated is realized concretely by the frozen pairing_qr_updated event; this generic envelope + enum is defined-and-dormant for future platform-native events.
@@ -2360,6 +2605,25 @@ pub enum TranscriptKind {
 	#[serde(rename = "ACTION")]
 	#[strum(serialize = "ACTION")]
 	ACTION,
+}
+
+/// Who spent provider quota on a turn (fase 4, item 2). The budget sums spend by role and keeps a free floor for the orchestrator. ORCHESTRATOR: a conversation turn of the orchestrator. ISSUE: a turn of an issue's session. TRIAGE: the small-model triage of an inbound message.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum UsageRole {
+	#[serde(rename = "ORCHESTRATOR")]
+	#[strum(serialize = "ORCHESTRATOR")]
+	ORCHESTRATOR,
+	#[serde(rename = "ISSUE")]
+	#[strum(serialize = "ISSUE")]
+	ISSUE,
+	#[serde(rename = "TRIAGE")]
+	#[strum(serialize = "TRIAGE")]
+	TRIAGE,
 }
 
 /// Detected trait of a registered workspace folder. GIT = a .git repository; CLAUDE_PROJECT = a Claude project marker. A workspace may carry both.

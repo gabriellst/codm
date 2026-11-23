@@ -34,11 +34,15 @@ const CHANNEL_PRODUCERS: Record<string, string> = {
 		'POLICY — a FEEDBACK the policy sent on its own, with its preview (fase 3, item 2); as text when the preview is gone.',
 	'thread/usecases/RaiseStop.ts':
 		"POLICY — a stop's notice: an issue's stop through `recordIssueSignal`; a conversation's stop keeps today's notice.",
+	'thread/usecases/RecordBatch.ts':
+		'POLICY — the batch receipt (fase 4, item 5), at `BATCH_RECEIPT_LEVEL` routed by the group mode, through `enqueueSignalDelivery`.',
 	'thread/usecases/RecordOrchestratorReply.ts':
 		"THE ORCHESTRATOR'S VOICE — its reply to whoever spoke, outside the policy by the owner's decision.",
 	'thread/usecases/SendDirectMessage.ts': 'THE OPERATOR / THE ORCHESTRATOR — a direct message from the console or an orchestration run.',
 	'thread/usecases/NotifyProviderPaused.ts':
 		'POLICY — the PROVIDER_LIMIT block notice; asks `ROUTING_BY_MODE[mode][BLOCK_NOTICE]` before sending.',
+	'thread/usecases/NotifyBudgetHeld.ts':
+		'POLICY — the BUDGET_HELD block notice (fase 4), only with the budget enforced; asks `ROUTING_BY_MODE[mode][BLOCK_NOTICE]` before sending.',
 	'thread/usecases/ExecutePanelAction.ts': 'ECHO — one line per action taken on the cloud panel (fase 2, item 6b).',
 	'thread/usecases/ApplyDueQuestionDefaults.ts':
 		'POLICY — the PROGRESS line "went on with the default" of a question (fase 3, item 1b), routed by `recordIssueSignal`.',

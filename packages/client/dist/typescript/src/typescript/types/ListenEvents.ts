@@ -3,15 +3,19 @@
 * Do not edit manually.
 */
 
+import type { AgentModelId } from "./AgentModelId.ts";
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ChannelKind } from "./ChannelKind.ts";
 import type { ChatPresenceType } from "./ChatPresenceType.ts";
 import type { ContactKind } from "./ContactKind.ts";
 import type { HistorySyncType } from "./HistorySyncType.ts";
 import type { IssueArchiveReason } from "./IssueArchiveReason.ts";
+import type { IssuePriority } from "./IssuePriority.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
+import type { IssueWorkKind } from "./IssueWorkKind.ts";
 import type { MessageAuthor } from "./MessageAuthor.ts";
 import type { MessageType } from "./MessageType.ts";
+import type { PriorityReason } from "./PriorityReason.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
@@ -2584,6 +2588,22 @@ export type ListenEvents200 = ({
          * @type string
         */
         provider: ProviderKind;
+        /**
+         * @type string | undefined
+        */
+        priority?: IssuePriority;
+        /**
+         * @type string | undefined
+        */
+        priorityReason?: PriorityReason;
+        /**
+         * @type string | undefined
+        */
+        workKind?: IssueWorkKind;
+        /**
+         * @type string | undefined
+        */
+        model?: AgentModelId;
     };
 } | {
     /**

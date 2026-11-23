@@ -7,6 +7,7 @@ import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from './MailboxRepository'
+import { CLAIM_CLASS_OF_KIND } from '../../utils/ClaimClassOfKind'
 
 /**
  * Above every platform's pid ceiling, so `kill(pid, 0)` answers ESRCH rather than naming a process
@@ -47,6 +48,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		targetKind: MailboxTargetKind.THREAD,
 		targetId,
 		kind,
+		claimClass: CLAIM_CLASS_OF_KIND[kind],
 		posture: PermissionPosture.AUTO,
 		payload: { note: dedupKey },
 		dedupKey,
@@ -84,7 +86,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		expect((one!.payload as { note: string }).note).toBe('first')
 		expect(await r.claimNext('w1', 60_000)).toBeUndefined()
 
-		await r.complete(one!.id)
+		await r.complete([one!.id])
 		const two = await r.claimNext('w1', 60_000)
 		expect((two!.payload as { note: string }).note).toBe('second')
 	})
@@ -110,7 +112,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		await r.enqueue(item(THREAD_A, 'behind-it'))
 
 		const doomed = await r.claimNext('w1', 60_000)
-		await r.fail(doomed!.id, 'provider exploded', 1)
+		await r.fail(doomed!.id, [], 'provider exploded', 1)
 
 		// Dead, so the queue moves on to what was stuck behind it.
 		const next = await r.claimNext('w1', 60_000)
@@ -121,7 +123,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const r = repo()
 		await r.enqueue(item(THREAD_A, 'flaky'))
 		const first = await r.claimNext('w1', 60_000)
-		await r.fail(first!.id, 'transient', 5)
+		await r.fail(first!.id, [], 'transient', 5)
 
 		const retry = await r.claimNext('w1', 60_000)
 		expect(retry?.id).toBe(first!.id)
@@ -223,13 +225,13 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const claimed = await r.claimNext('w1', 60_000)
 		expect(claimed?.attempts).toBe(1)
 
-		await r.defer(claimed!.id, new Date(Date.now() + 60_000))
+		await r.defer([claimed!.id], new Date(Date.now() + 60_000))
 		expect(await r.claimNext('w1', 60_000)).toBeUndefined()
 		const [row] = await db.select().from(agentMailbox).where(eq(agentMailbox.id, claimed!.id))
 		expect(row?.attempts).toBe(0)
 		expect(row?.claimedBy).toBeNull()
 
-		await r.defer(claimed!.id, new Date(Date.now() - 1))
+		await r.defer([claimed!.id], new Date(Date.now() - 1))
 		expect((await r.claimNext('w1', 60_000))?.attempts).toBe(1)
 	})
 
@@ -255,9 +257,9 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const running = await r.claimNext('w-segurando', 600_000)
 		const lapsed = await r.claimNext('w1', 60_000)
 		const dead = await r.claimNext('w1', 60_000)
-		await r.defer(paused!.id, new Date(Date.now() + 600_000))
-		await r.defer(lapsed!.id, new Date(Date.now() - 1))
-		await r.defer(dead!.id, new Date(Date.now() + 600_000))
+		await r.defer([paused!.id], new Date(Date.now() + 600_000))
+		await r.defer([lapsed!.id], new Date(Date.now() - 1))
+		await r.defer([dead!.id], new Date(Date.now() + 600_000))
 		await db.update(agentMailbox).set({ deadAt: new Date() }).where(eq(agentMailbox.id, dead!.id))
 		// o quinto nunca foi reivindicado: lease nulo
 
@@ -288,8 +290,8 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const released = await r.claimNext('w1', 60_000)
 		const kept = await r.claimNext('w1', 60_000)
 		const held = await r.claimNext('w-segurando', 600_000)
-		await r.defer(released!.id, new Date(Date.now() + 600_000))
-		await r.defer(kept!.id, new Date(Date.now() + 600_000))
+		await r.defer([released!.id], new Date(Date.now() + 600_000))
+		await r.defer([kept!.id], new Date(Date.now() + 600_000))
 
 		expect(await r.releaseDeferred([released!.id, held!.id])).toBe(1)
 
@@ -310,7 +312,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		await r.enqueue(item(THREAD_A, 'a-2'))
 		await r.enqueue(item(THREAD_B, 'b-1'))
 		const done = await r.claimNext('w1', 60_000)
-		await r.complete(done!.id)
+		await r.complete([done!.id])
 
 		expect((await r.pendingTargets(MailboxTargetKind.THREAD)).sort()).toEqual([THREAD_A, THREAD_B].sort())
 		expect(await r.pendingTargets(MailboxTargetKind.ISSUE)).toEqual([])
@@ -322,7 +324,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		await r.enqueue(item(THREAD_A, 'p1'))
 		expect(await r.hasPending(MailboxTargetKind.THREAD, THREAD_A)).toBe(true)
 		const claimed = await r.claimNext('w1', 60_000)
-		await r.complete(claimed!.id)
+		await r.complete([claimed!.id])
 		expect(await r.hasPending(MailboxTargetKind.THREAD, THREAD_A)).toBe(false)
 	})
 
@@ -347,10 +349,10 @@ describe('MailboxRepository — one turn per target, durable', () => {
 			await r.enqueue(item(THREAD_B, 'gated-2'))
 			const claimed = await r.claimNext('w1', 60_000)
 			expect(claimed).toBeDefined()
-			await r.renewLease(claimed!.id, 'w1', 60_000)
-			await r.fail(claimed!.id, 'boom', 3)
+			await r.renewLease([claimed!.id], 'w1', 60_000)
+			await r.fail(claimed!.id, [], 'boom', 3)
 			const again = await r.claimNext('w1', 60_000)
-			await r.complete(again!.id)
+			await r.complete([again!.id])
 			expect(gate).toHaveBeenCalledTimes(6)
 			await r.releaseOrphanedClaims()
 			expect(gate).toHaveBeenCalledTimes(7)

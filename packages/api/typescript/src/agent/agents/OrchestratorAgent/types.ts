@@ -154,6 +154,19 @@ const OperatorMessageItemSchema = z.object({
 			title: z.string().optional(),
 		})
 		.optional(),
+	/**
+	 * THE BATCH this message is (fase 4, item 5) — set by the thread's rule layer when the message listed several
+	 * requests (`BatchDetector`), or by the follow-up of a batch left incomplete: its code, how many items it has,
+	 * and the items still WITHOUT a destination (all of them the first time). The turn records a destination per
+	 * item with `RecordBatch`; the receipt to the group is the thread's, never the turn's prose.
+	 */
+	batch: z
+		.object({
+			batchCode: z.string().min(1),
+			total: z.number().int().min(1),
+			pending: z.array(z.object({ n: z.number().int().min(1), excerpt: z.string() })).min(1),
+		})
+		.optional(),
 })
 
 /**

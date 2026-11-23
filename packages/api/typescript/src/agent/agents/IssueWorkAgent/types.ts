@@ -1,6 +1,6 @@
 import { z } from '@codm/core-typescript'
 import { AgentModelId, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
-import { MessageVia } from '../../enums'
+import { HandoffStep, MessageVia } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 
 /**
@@ -76,4 +76,17 @@ export const IssueWorkInputSchema = z.agentInput({
 	 * builder conta com isso para não renderizar um cabeçalho vazio.
 	 */
 	customPrompt: z.string().min(1).optional(),
+	/**
+	 * THE HANDOFF (fase 4, item 6a), decided by `RunIssueTurn` at the turn boundary from the session's measured context:
+	 *  - `ASK` — the resumed session is past the ask threshold: before ending the turn, it writes its handoff notes;
+	 *  - `SEED` — the old session was past the budget and this turn opens a FRESH one: the notes the old session wrote
+	 *    (when it did) and the task's durable state ride ahead of the turn's message, so the task's thread survives.
+	 * Absent below the ask threshold — the turn is exactly what it was.
+	 */
+	handoff: z
+		.discriminatedUnion('kind', [
+			z.object({ kind: z.literal(HandoffStep.ASK) }),
+			z.object({ kind: z.literal(HandoffStep.SEED), sessionNotes: z.string().min(1).optional(), derived: z.string().min(1) }),
+		])
+		.optional(),
 })

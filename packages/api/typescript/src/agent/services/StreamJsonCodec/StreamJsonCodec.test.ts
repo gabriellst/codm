@@ -5,7 +5,8 @@
  * decision gate (`bf217a2a`) proved wrong in eight places.
  */
 import { describe, it, expect } from 'bun:test'
-import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
+import { AgentStopReason, ProviderLimitWindow } from '@codm/contracts-typescript/wire/enums'
+import { ProviderLimitStatus } from '../../enums/ProviderLimitStatus'
 import type { AgentFrame } from '../../types/AgentFrame'
 import { StreamJsonCodec } from './StreamJsonCodec'
 import { LineBuffer } from './LineBuffer'
@@ -364,7 +365,11 @@ describe('FrameDecoder — run records: context size and the usage-limit verdict
 			apiErrorParams: { rate_limit_info: { status: 'rejected', resetsAt: 1793397000, rateLimitType: 'five_hour' } },
 			message: { id: 'm3', content: [{ type: 'text', text: "You've hit your 5-hour limit · resets 6:50pm (America/Fortaleza)" }] },
 		})
-		expect(line?.rateLimit).toEqual({ rejected: true, resetsAt: new Date('2026-10-30T21:50:00.000Z') })
+		expect(line?.rateLimit).toEqual({
+			status: ProviderLimitStatus.REJECTED,
+			window: ProviderLimitWindow.FIVE_HOUR,
+			resetsAt: new Date('2026-10-30T21:50:00.000Z'),
+		})
 	})
 
 	it('rate_limit_event reports the verdict too, and "allowed" is not a rejection', () => {
@@ -372,9 +377,46 @@ describe('FrameDecoder — run records: context size and the usage-limit verdict
 			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'five_hour' } },
 			{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1793397000 } },
 		)
-		expect(allowed?.rateLimit).toEqual({ rejected: false, resetsAt: null })
+		expect(allowed?.rateLimit).toEqual({ status: ProviderLimitStatus.ALLOWED, window: ProviderLimitWindow.FIVE_HOUR, resetsAt: null })
 		expect(allowed?.frames).toEqual([])
-		expect(rejected?.rateLimit?.rejected).toBe(true)
+		expect(rejected?.rateLimit?.status).toBe(ProviderLimitStatus.REJECTED)
+	})
+
+	/**
+	 * FASE 4 (item 2) — the window and the verdict come from two DECLARED tables: the measured `rateLimitType`s
+	 * map to their window, anything else is UNKNOWN (never a guess by prefix); `allowed_warning` is a WARNING; and
+	 * an ALLOWED line keeps its `resetsAt` — the window's boundary the budget counts from.
+	 *
+	 * Falsifier: map by `startsWith('seven_day')` and the made-up `seven_day_opus` lands on WEEKLY instead of UNKNOWN.
+	 */
+	it('the window and the verdict are read by declared tables — weekly, warning, unknown, boundary of an allowed line', () => {
+		const [weekly, overage, warning, unknown, odd, noType] = decodeLines(
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1793397000, rateLimitType: 'seven_day' } },
+			{
+				type: 'rate_limit_event',
+				rate_limit_info: { status: 'allowed', resetsAt: 1793397000, rateLimitType: 'seven_day_overage_included' },
+			},
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed_warning', rateLimitType: 'five_hour' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'seven_day_opus' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'toString', rateLimitType: 'constructor' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected' } },
+		)
+		expect(weekly?.rateLimit).toEqual({
+			status: ProviderLimitStatus.REJECTED,
+			window: ProviderLimitWindow.WEEKLY,
+			resetsAt: new Date('2026-10-30T21:50:00.000Z'),
+		})
+		// An ALLOWED line keeps the boundary it carries.
+		expect(overage?.rateLimit).toEqual({
+			status: ProviderLimitStatus.ALLOWED,
+			window: ProviderLimitWindow.WEEKLY,
+			resetsAt: new Date('2026-10-30T21:50:00.000Z'),
+		})
+		expect(warning?.rateLimit?.status).toBe(ProviderLimitStatus.WARNING)
+		expect(unknown?.rateLimit?.window).toBe(ProviderLimitWindow.UNKNOWN)
+		// A wire string that happens to name an Object property is not a table entry.
+		expect(odd?.rateLimit).toEqual({ status: ProviderLimitStatus.ALLOWED, window: ProviderLimitWindow.UNKNOWN, resetsAt: null })
+		expect(noType?.rateLimit?.window).toBe(ProviderLimitWindow.UNKNOWN)
 	})
 })
 

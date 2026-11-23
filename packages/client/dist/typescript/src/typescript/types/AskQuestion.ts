@@ -6,6 +6,7 @@
 import type { AskDefault } from "./AskDefault.ts";
 import type { AskEffect } from "./AskEffect.ts";
 import type { AskOption } from "./AskOption.ts";
+import type { PublishFollowUp } from "./PublishFollowUp.ts";
 import type { StopKind } from "./StopKind.ts";
 
 export type AskQuestionPathParams = {
@@ -54,6 +55,7 @@ export type AskQuestionMutationRequest = {
      * @type string | undefined
     */
     addresseeId?: string;
+    onPublished?: PublishFollowUp;
 };
 
 export type AskQuestionMutationResponse = AskQuestion200;

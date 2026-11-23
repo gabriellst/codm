@@ -1,6 +1,11 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import type { WorkspaceBadge } from '../../../generated/typescript/src/wire/enums'
 
+/** The declared publish command's stored shape (`PublishCommandSchema` in the TS core owns it; parsed on read). */
+export interface StoredPublishCommand {
+	argv: string[]
+}
+
 /**
  * `workspace` (pgSchema namespace) → `workspace_*` table prefix. SQLite-dialect
  * mirror of db/schema/workspace.ts. `badges` was a pg `text[]`; SQLite has no array
@@ -18,6 +23,12 @@ export const workspaces = sqliteTable(
 
 		// Detected badges (GIT | CLAUDE_PROJECT). pg text[] → sqlite json text.
 		badges: text('badges', { mode: 'json' }).$type<WorkspaceBadge[]>().notNull(),
+		/**
+		 * Fase 4 (item 6c) — the workspace's declared PUBLISH COMMAND, as an argument list (never a shell line).
+		 * Null ⇒ none: a "pode publicar" wakes the session, as before. Read by the console's own door and by the
+		 * dispatcher — NEVER selected into an MCP-exposed DTO (an argument may carry a credential).
+		 */
+		publishCommand: text('publish_command', { mode: 'json' }).$type<StoredPublishCommand>(),
 
 		addedAt: integer('added_at', { mode: 'timestamp_ms' })
 			.notNull()

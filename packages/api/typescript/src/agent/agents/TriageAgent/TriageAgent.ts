@@ -5,6 +5,7 @@ import type { AgentRunner } from '../../services/AgentRunner'
 import { Agent } from '../../types/Agent'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import type { AgentRunRequest } from '../../types/AgentRunRequest'
+import type { AgentRunResult } from '../../types/AgentRuntimeEvent'
 import type { AgentApplicationErrors } from '../../errors'
 import { TriagePromptBuilder } from './prompt'
 import { TriageInputSchema, TriageOutputSchema } from './types'
@@ -36,7 +37,11 @@ export class TriageAgent extends Agent<typeof TriageInputSchema, typeof TriageOu
 	}
 
 	/** The verdict for one message. The ONE public method of an agent with an `outputSchema`. */
-	async triage(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): Promise<this['output']> {
+	async triage(
+		runner: AgentRunner,
+		input: this['input'],
+		transport: { signal?: AbortSignal; onFinished?: (result: AgentRunResult) => void } = {},
+	): Promise<this['output']> {
 		return this.collect(runner, input, transport)
 	}
 

@@ -41,6 +41,15 @@ export const AgentSessionSchema = z.object({
 	 * written from the frame that already carries it, which is why D8 costs nothing to collect.
 	 */
 	lastContextTokens: z.number().int().nonnegative().optional(),
+	/**
+	 * Fase 4 (item 6a) — the HANDOFF NOTES the CURRENT CLI session wrote (`WriteHandoffNotes`) once its context
+	 * passed the ask threshold: goal, state, decisions, files and branch, next step. The next turn that finds the
+	 * session past the context budget opens a fresh one seeded with them (`RunIssueTurn`). Absent until written,
+	 * and cleared when the handoff they were written for completes — notes belong to ONE session.
+	 */
+	handoffNotes: z.string().trim().min(1).optional(),
+	/** When `handoffNotes` were last written — absent with them. */
+	handoffAt: z.date().optional(),
 })
 
 export type AgentSessionProps = Z.infer<typeof AgentSessionSchema>
@@ -143,6 +152,36 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	}
 
 	/**
+	 * The session wrote its handoff notes (fase 4, item 6a). REPLACED on every call: the latest notes are the
+	 * freshest picture of the work, and a session asked on several turns keeps only what it said last.
+	 */
+	recordHandoff(notes: string, at: Date = new Date()): void {
+		this.handoffNotes = notes
+		this.handoffAt = at
+		this.validate()
+	}
+
+	/**
+	 * The handoff the notes were written for COMPLETED — a fresh CLI session started from them and was recorded on
+	 * this row. Cleared explicitly, never inferred from `agentSessionId` changing in `recordTurn`: a CLI may report a
+	 * different id on a plain resume, and that must not wipe notes the very same turn wrote.
+	 *
+	 * `decidedAt` is when the handoff was decided (the turn's start): notes written AFTER it are the NEW session's
+	 * and are kept — only the ones the handoff consumed are cleared.
+	 */
+	completeHandoff(decidedAt: Date): void {
+		if (this.handoffAt && this.handoffAt > decidedAt) return
+		this.handoffNotes = undefined
+		this.handoffAt = undefined
+		this.validate()
+	}
+
+	/** Whether the session's measured context is past `threshold` — the ask and the budget read the same measure. */
+	contextAbove(threshold: number): boolean {
+		return (this.lastContextTokens ?? 0) > threshold
+	}
+
+	/**
 	 * Can THIS row be handed to `--resume` for the turn described by `ctx`?
 	 *
 	 * Ordered most-structural first, so the reported reason is the most informative one: a run whose
@@ -169,7 +208,7 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 		if (ctx.cursor !== this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.CONVERSATION_ADVANCED }
 		// Last, because it is the only guard that is about cost rather than correctness: a session that
 		// is wrong for another reason should be reported as THAT reason.
-		if (ctx.contextBudget !== undefined && (this.lastContextTokens ?? 0) > ctx.contextBudget) {
+		if (ctx.contextBudget !== undefined && this.contextAbove(ctx.contextBudget)) {
 			return { resume: false, reason: ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED }
 		}
 		return { resume: true, id: this.agentSessionId }

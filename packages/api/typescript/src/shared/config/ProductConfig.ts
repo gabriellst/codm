@@ -21,7 +21,7 @@ import { z } from 'zod'
  *
  * ref: origin-fork@f04e8a0f (product Config in src/shared); relocated from the kernel Config by W0-3.
  */
-const ProductEnvSchema = z.object({
+export const ProductEnvSchema = z.object({
 	// Product display name — the brand string rendered in transactional-email chrome
 	// (MailSender `Layout`: header title + footer copyright). Neutral default so a fresh product
 	// renders without a brand until it sets this; the port carries NO hard-coded brand.
@@ -60,6 +60,18 @@ const ProductEnvSchema = z.object({
 		.int()
 		.positive()
 		.default(30 * 60 * 1000),
+
+	// O ORÇAMENTO DE COTA SEGURA DE FATO? (fase 4, item 2 — decisão do dono de 19/11: observar uma semana antes.)
+	//
+	// `false` (padrão) = OBSERVAÇÃO: o despachante calcula a admissão, grava `agent.quota.held { enforced: false }`
+	// na transição e mostra na saúde — e não segura nada nem anuncia nada (sem `BUDGET_HELD`, sem `WAITING_BUDGET`).
+	// `true` = a pista de tarefas fecha quando o orçamento nega. `z.stringbool()` e não `z.coerce.boolean()`: este
+	// último leria a string "false" como verdadeiro e ligaria o orçamento em silêncio.
+	CODM_AGENT_QUOTA_ENFORCE: z.stringbool().default(false),
+
+	// O MÁXIMO DE TURNOS DE TAREFA SIMULTÂNEOS (fase 4, item 1). A vaga efetiva é o mínimo deste, do portão de
+	// disco da máquina e da admissão do orçamento. Voltar a 4 é configuração, não build.
+	CODM_AGENT_ISSUE_SLOTS_MAX: z.coerce.number().int().min(1).max(6).default(6),
 
 	// O NOME DO ARQUIVO DE STORE dentro do `CODM_DATA_DIR` (F3/T8).
 	//

@@ -1,6 +1,7 @@
 import { AggregateRoot, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
+import { PublishCommandSchema, type PublishCommand } from '@shared/objects'
 
 /**
  * `Workspace` (BC2 Workspace Registry) — a local project folder the operator registered, plus its
@@ -17,6 +18,13 @@ export const WorkspaceSchema = z.object({
 	// Detected traits (GIT / CLAUDE_PROJECT). A folder may carry both or none.
 	badges: z.array(z.enum(WorkspaceBadge)),
 	addedAt: z.date(),
+	/**
+	 * Fase 4 (item 6c) — the PUBLISH COMMAND the owner declared: what codm runs, without waking the task's session,
+	 * when an answer authorizes publishing. Absent ⇒ none declared, and a "pode publicar" wakes the session as before.
+	 * An argument list, never a shell line. It may carry a credential: it never rides an MCP-exposed DTO, a fact or the
+	 * cloud panel — only the console's two doors read and write it.
+	 */
+	publishCommand: PublishCommandSchema.optional(),
 })
 
 export type WorkspaceProps = Z.infer<typeof WorkspaceSchema>
@@ -31,6 +39,12 @@ export class Workspace extends AggregateRoot<typeof WorkspaceSchema> {
 			badges: data.badges,
 			addedAt: new Date(),
 		})
+	}
+
+	/** Declare the publish command, or remove it (`null`) — validated as an argument list by the schema. */
+	setPublishCommand(command: PublishCommand | null): void {
+		this.publishCommand = command ?? undefined
+		this.validate()
 	}
 }
 

@@ -3,7 +3,14 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { CommandQueue, LoggingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	AgentModelId,
+	MailboxClaimClass,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	ProviderKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
 import { IssueHold } from '@issue/services/IssueHold'
@@ -16,6 +23,9 @@ import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/M
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
 import { LibSqlMailboxDispatcher, type TurnReport } from './LibSqlMailboxDispatcher'
+import { ThroughputGate } from '../ThroughputGate'
+import { ProductConfig } from '@shared/config/ProductConfig'
+import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -50,6 +60,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 			targetKind: MailboxTargetKind.THREAD,
 			targetId,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			claimClass: MailboxClaimClass.OPERATOR,
 			posture: PermissionPosture.AUTO,
 			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 			dedupKey,
@@ -109,7 +120,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		expect(first).toBeDefined()
 		expect(await repo.claimNext('worker-1', 60_000)).toBeUndefined()
 
-		await repo.complete(first?.id ?? '')
+		await repo.complete([first?.id ?? ''])
 
 		// The re-poll the dispatcher performs at the end of a turn. No time has passed.
 		const second = await repo.claimNext('worker-1', 60_000)
@@ -147,7 +158,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 
 		// The turn is still running, so its heartbeat pushes the lease forward before it lapses.
 		await new Promise(resolve => setTimeout(resolve, 100))
-		await repo.renewLease(claimed?.id ?? '', 'worker-long-turn', 10_000)
+		await repo.renewLease([claimed?.id ?? ''], 'worker-long-turn', 10_000)
 		// Bring total elapsed since the claim safely PAST the original 400ms expiry (~500ms total).
 		await new Promise(resolve => setTimeout(resolve, 400))
 
@@ -165,7 +176,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 
 		// The stalled worker wakes up and heartbeats. It must NOT extend a lease it no longer holds,
 		// or two runs would believe they own the same target.
-		await repo.renewLease(lapsed?.id ?? '', 'worker-that-stalled', 60_000)
+		await repo.renewLease([lapsed?.id ?? ''], 'worker-that-stalled', 60_000)
 
 		expect(await repo.claimNext('worker-third', 60_000)).toBeUndefined()
 	})
@@ -208,7 +219,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		for (let attempt = 0; attempt < 3; attempt++) {
 			const item = await repo.claimNext('worker-1', 60_000)
 			expect(item?.id ?? 'a-1').toBeDefined()
-			await repo.fail(item?.id ?? '', 'boom', 3)
+			await repo.fail(item?.id ?? '', [], 'boom', 3)
 		}
 
 		// The poisoned item is gone from the queue, and the one BEHIND it now runs.
@@ -294,12 +305,14 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const dispatcher = testBed.resolve(SequencingDispatcher)
 		const mailbox = testBed.resolve(MailboxRepository)
 
+		// The brief and a steer: two turns (a brief never carries steers — fase 4, 6b), so the lease alone orders them.
 		for (const seq of ['first', 'second']) {
 			await mailbox.enqueue({
 				ownerId,
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: issueId,
-				kind: MailboxItemKind.STEER,
+				kind: seq === 'first' ? MailboxItemKind.WORK : MailboxItemKind.STEER,
+				claimClass: seq === 'first' ? MailboxClaimClass.WORK : MailboxClaimClass.STEER,
 				posture: PermissionPosture.AUTO,
 				payload: { threadId: uuidv7(), key: 'ISS-1', title: 'lease only', text: seq, provider: 'CLAUDE' },
 				dedupKey: `${issueId}:${seq}`,
@@ -318,14 +331,15 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	 * AS PISTAS (2026-10-30): uma conversa nunca espera turno de código.
 	 *
 	 * Medido em produção: quatro turnos de issue (4–16 min cada) ocupavam o pool único de 4 slots e as
-	 * mensagens dos grupos ficavam no 👀 por minutos. Aqui, cinco issues travadas e UMA conversa que
-	 * chega depois: a conversa tem que começar enquanto as issues seguem presas, e as issues não podem
-	 * passar de quatro ao mesmo tempo.
+	 * mensagens dos grupos ficavam no 👀 por minutos. Aqui, uma issue a mais que o máximo da pista, travadas, e UMA
+	 * conversa que chega depois: a conversa tem que começar enquanto as issues seguem presas, e as issues não podem
+	 * passar do máximo ao mesmo tempo (`CODM_AGENT_ISSUE_SLOTS_MAX`, fase 4 — eram quatro fixas).
 	 *
 	 * O falsificador é exato: volte a um pool único de 4 (as duas pistas compartilhando os slots) e a
 	 * conversa nunca começa — `threadStarted` fica falso e este teste fica vermelho.
 	 */
-	it('uma conversa começa mesmo com a pista de issues cheia — e as issues não passam de quatro', async () => {
+	it('uma conversa começa mesmo com a pista de issues cheia — e as issues não passam do máximo', async () => {
+		const issueMax = ProductConfig.env.CODM_AGENT_ISSUE_SLOTS_MAX
 		const ownerId = 'owner-lanes'
 		let releaseIssues = (): void => {}
 		const gate = new Promise<void>(resolve => {
@@ -351,13 +365,14 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		const dispatcher = testBed.resolve(LaneDispatcher)
 		const mailbox = testBed.resolve(MailboxRepository)
-		for (let n = 0; n < 5; n++) {
+		for (let n = 0; n <= issueMax; n++) {
 			const issueId = uuidv7()
 			await mailbox.enqueue({
 				ownerId,
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: issueId,
 				kind: MailboxItemKind.STEER,
+				claimClass: MailboxClaimClass.STEER,
 				posture: PermissionPosture.AUTO,
 				payload: { threadId: uuidv7(), key: `ISS-${n}`, title: 'lane', text: 'x', provider: 'CLAUDE' },
 				dedupKey: `${issueId}:lane`,
@@ -366,18 +381,19 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await dispatcher.start()
 		try {
-			expect(await until(async () => issuesInFlight === 4, 2_000)).toBe(true)
+			expect(await until(async () => issuesInFlight === issueMax, 2_000)).toBe(true)
 			await mailbox.enqueue({
 				ownerId,
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: OTHER_THREAD,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { entryId: uuidv7() },
 				dedupKey: 'lane-thread-message',
 			})
 			expect(await until(async () => threadStarted, 2_000)).toBe(true)
-			expect(issuesPeak).toBe(4)
+			expect(issuesPeak).toBe(issueMax)
 		} finally {
 			releaseIssues()
 			await dispatcher.stop()
@@ -422,6 +438,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		const message = (threadId: string, dedupKey: string) =>
@@ -430,6 +448,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: threadId,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { entryId: uuidv7() },
 				dedupKey,
@@ -460,6 +479,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: threadId,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			claimClass: MailboxClaimClass.OPERATOR,
 			posture: PermissionPosture.AUTO,
 			payload: { entryId: uuidv7() },
 			dedupKey,
@@ -509,13 +529,14 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
 		const parkAsAPreviousRunDid = async () => {
 			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-			await mailbox.defer(claimed!.id, new Date(weeklyReset))
+			await mailbox.defer([claimed!.id], new Date(weeklyReset))
 		}
 		await mailbox.enqueue({
 			ownerId: testBed.ownerId,
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { issueId, threadId: pausedClaude.id.value, key: 'ISS-1', title: 'pausada', text: 'continua' },
 			dedupKey: `pausado:${issueId}`,
@@ -561,7 +582,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await operatorMessage(paused.id.value, 'pausado-antes')
 		const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-		await mailbox.defer(claimed!.id, new Date(Date.now() + 5 * 24 * 60 * 60_000))
+		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000))
 		await operatorMessage(spokeThenLimited.id.value, 'falou-e-bateu')
 
 		await dispatcher.drain()
@@ -667,6 +688,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await operatorMessage(thread.id.value, 'limite-semanal')
@@ -717,6 +740,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -724,6 +749,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			claimClass: MailboxClaimClass.OPERATOR,
 			posture: PermissionPosture.AUTO,
 			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 			dedupKey: 'poison-1',
@@ -771,6 +797,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -778,6 +806,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { threadId: uuidv7(), key: 'ISS-1', title: 'busy on fail', text: 'x' },
 			dedupKey: `${issueId}:busy`,
@@ -853,6 +882,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -861,6 +892,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: OTHER_THREAD,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 				dedupKey: 'long-turn-1',
@@ -936,6 +968,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -944,6 +978,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: uuidv7(),
 				kind: MailboxItemKind.WORK,
+				claimClass: MailboxClaimClass.WORK,
 				posture: PermissionPosture.AUTO,
 				payload: { threadId: thread.id.value, key: 'ISS-9', title: 'travada', goal: 'x', provider: 'CLAUDE' },
 				dedupKey: 'wedged-1',
@@ -1005,6 +1040,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
 		try {
@@ -1013,6 +1050,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: ISSUE_ID,
 				kind: MailboxItemKind.WORK,
+				claimClass: MailboxClaimClass.WORK,
 				posture: PermissionPosture.AUTO,
 				payload: { threadId: ISSUE_THREAD, key: 'some-issue', title: 'Some issue', provider: 'CLAUDE_CODE' },
 				dedupKey: 'issue-work-1',
@@ -1028,6 +1066,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: OTHER_THREAD,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 				dedupKey: 'operator-msg-1',
@@ -1093,13 +1132,13 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: { error: string; maxAttempts: number }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls.push({ error, maxAttempts })
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1108,6 +1147,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `transport:${thread.id.value}`,
@@ -1157,13 +1197,13 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: { error: string; maxAttempts: number }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls.push({ error, maxAttempts })
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1172,6 +1212,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `spoke:${thread.id.value}`,
@@ -1236,6 +1277,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1243,6 +1286,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			claimClass: MailboxClaimClass.OPERATOR,
 			posture: PermissionPosture.AUTO,
 			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 			dedupKey: `model:${thread.id.value}`,
@@ -1252,6 +1296,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: uuidv7(),
 			kind: MailboxItemKind.WORK,
+			claimClass: MailboxClaimClass.WORK,
 			posture: PermissionPosture.AUTO,
 			payload: { threadId: thread.id.value, key: 'ISS-1', title: 'work', goal: 'faz', provider: ProviderKind.CLAUDE_CODE },
 			dedupKey: `model-issue:${thread.id.value}`,
@@ -1260,7 +1305,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		await dispatcher.drain()
 
 		expect(seen.thread).toBe(AgentModelId.OPUS)
-		// A ISSUE HERDA a escolha da conversa que a abriu — ela não tem eixo próprio, de propósito.
+		// Uma issue SEM atributos (nascida antes da fase 4, S7) herda a escolha da conversa, resolvida agora. As que
+		// nascem pelo ForkIssue têm o modelo fixado pelo tipo de trabalho — `LibSqlMailboxDispatcher.model.test.ts`.
 		expect(seen.issue).toBe(AgentModelId.OPUS)
 	})
 
@@ -1296,6 +1342,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1303,6 +1351,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			claimClass: MailboxClaimClass.OPERATOR,
 			posture: PermissionPosture.AUTO,
 			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 			dedupKey: `default:${thread.id.value}`,
@@ -1350,25 +1399,27 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
 			testBed.resolve(CommandQueue),
+			testBed.resolve(ThroughputGate),
+			testBed.resolve(IssueAttributesRepository),
 		).bind(testContainer)
 
-		const realClaimNext = mailbox.claimNext.bind(mailbox)
+		const realClaimBundle = mailbox.claimBundle.bind(mailbox)
 		const realFail = mailbox.fail.bind(mailbox)
 		const realComplete = mailbox.complete.bind(mailbox)
 		let claimCalls = 0
 		let failCalls = 0
 		let completeCalls = 0
-		mailbox.claimNext = async (claimedBy, leaseMs, tx) => {
+		mailbox.claimBundle = async (claimedBy, leaseMs, lanes, tx) => {
 			claimCalls++
-			return realClaimNext(claimedBy, leaseMs, tx)
+			return realClaimBundle(claimedBy, leaseMs, lanes, tx)
 		}
-		mailbox.fail = async (id, error, maxAttempts, tx) => {
+		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
 			failCalls++
-			return realFail(id, error, maxAttempts, tx)
+			return realFail(head, followers, error, maxAttempts, tx)
 		}
-		mailbox.complete = async (id, tx) => {
+		mailbox.complete = async (ids, tx) => {
 			completeCalls++
-			return realComplete(id, tx)
+			return realComplete(ids, tx)
 		}
 
 		try {
@@ -1377,6 +1428,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				claimClass: MailboxClaimClass.OPERATOR,
 				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `gate:${thread.id.value}`,
@@ -1399,7 +1451,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			expect(claimCalls).toBeGreaterThan(0)
 			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
 		} finally {
-			mailbox.claimNext = realClaimNext
+			mailbox.claimBundle = realClaimBundle
 			mailbox.fail = realFail
 			mailbox.complete = realComplete
 		}

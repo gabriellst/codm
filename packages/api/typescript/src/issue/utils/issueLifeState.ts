@@ -23,6 +23,9 @@ export interface PendingItem {
  *     state below would describe work that is not going to happen until somebody resumes it.
  *  2. A turn holds a lease → RUNNING (or REMINDED, when that turn is the reminder).
  *  3. Its next turn is deferred by the provider → WAITING_PROVIDER.
+ *  3b. Work is queued but the quota budget is holding the ISSUE lane FOR REAL — enforced, not observing
+ *     (`QuotaStatusReader.holdsIssueLane`, fase 4) → WAITING_BUDGET. In observation the budget holds nothing, so
+ *     the issue stays QUEUED: the board never shows a hold that is not happening.
  *  4. Work is queued for a slot → QUEUED (or REMINDED for a queued reminder).
  *  5. An open stop asks someone → WAITING_PERSON.
  *  6. Nothing at all → STALLED.
@@ -35,6 +38,8 @@ export function lifeStateOf(input: {
 	held: boolean
 	pending: readonly PendingItem[]
 	openStops: number
+	/** The quota budget holds the ISSUE lane for real (enforced) — fase 4. */
+	budgetHeld: boolean
 }): IssueLifeState {
 	if (input.status === IssueStatus.COMPLETED) return IssueLifeState.DONE
 	if (input.held) return IssueLifeState.PAUSED
@@ -42,6 +47,7 @@ export function lifeStateOf(input: {
 	if (running) return running.reminder ? IssueLifeState.REMINDED : IssueLifeState.RUNNING
 	if (input.pending.some(item => item.deferred)) return IssueLifeState.WAITING_PROVIDER
 	const queued = input.pending.filter(item => !item.deferred)
+	if (queued.length > 0 && input.budgetHeld) return IssueLifeState.WAITING_BUDGET
 	if (queued.length > 0) return queued.every(item => item.reminder) ? IssueLifeState.REMINDED : IssueLifeState.QUEUED
 	if (input.openStops > 0) return IssueLifeState.WAITING_PERSON
 	return IssueLifeState.STALLED
@@ -50,11 +56,13 @@ export function lifeStateOf(input: {
 /**
  * The inputs of `lifeStateOf` for many issues at once: their pending queue items and open stop counts.
  * Three reads, whatever the number of issues — the board asks for every open issue on each refresh. The
- * third is the hold (issue ⋈ thread `paused`), read here rather than asked of every caller.
+ * third is the hold (issue ⋈ thread `paused`), read here rather than asked of every caller. `budgetHeld` is the
+ * agent's answer (`QuotaStatusReader.holdsIssueLane()`) — the same for every issue: the budget is the account's.
  */
 export async function lifeStateByIssue(
 	driver: LibSqlDatabaseDriver,
 	issues: readonly { issueId: string; status: IssueStatus }[],
+	budgetHeld: boolean,
 ): Promise<Map<string, IssueLifeState>> {
 	const ids = issues.map(issue => issue.issueId)
 	const states = new Map<string, IssueLifeState>()
@@ -111,6 +119,7 @@ export async function lifeStateByIssue(
 				held: held.has(issue.issueId),
 				pending: pending.get(issue.issueId) ?? [],
 				openStops: openStops.get(issue.issueId) ?? 0,
+				budgetHeld,
 			}),
 		)
 	}

@@ -1,6 +1,8 @@
 import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import { describeToolActivity } from '@codm/contracts/cues'
 import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
+import { ProviderLimitWindow } from '@codm/contracts-typescript/wire/enums'
+import { ProviderLimitStatus } from '../../enums/ProviderLimitStatus'
 import { count, isRecord, str } from './wireValues'
 
 /** One tool call the CLI's permission layer refused — WHAT was refused, never what it carried. */
@@ -61,12 +63,40 @@ export interface TerminalResultRecord {
  *    that the stdout line mirrors those fields is INFERRED, not captured. Wrong, it degrades to the
  *    behaviour before this field existed, and the event above still carries the verdict.
  * The text is never parsed: the instant comes from a structured field or not at all.
+ *
+ * Fase 4 (item 2): the record also says WHICH window it is about and WHAT the provider said, by two declared
+ * tables (`RATE_LIMIT_WINDOW`, `RATE_LIMIT_STATUS`) — a warning is now told apart from an ordinary "allowed",
+ * and the `resetsAt` of an ALLOWED line is kept too: it is the window's boundary the budget counts from.
  */
 export interface RateLimitRecord {
-	/** `status === 'rejected'` — the call was refused for the account's usage limit. */
-	rejected: boolean
+	/** What the provider said — refused, warned, or let the call through. */
+	status: ProviderLimitStatus
+	/** Which usage window the verdict is about; `UNKNOWN` for a `rateLimitType` the table does not name. */
+	window: ProviderLimitWindow
 	/** When the window resets; `null` when the CLI did not say. */
 	resetsAt: Date | null
+}
+
+/**
+ * `rate_limit_info.rateLimitType` → the window (fase 4, item 2). MEASURED in local CLI transcripts: `five_hour`,
+ * `seven_day`, `seven_day_overage_included` (895 / 92 / 1 lines). Anything else is `UNKNOWN` — never a guess by
+ * prefix, which would be convention instead of the declared relation (Non-Negotiable 5).
+ */
+export const RATE_LIMIT_WINDOW: Readonly<Record<string, ProviderLimitWindow>> = {
+	five_hour: ProviderLimitWindow.FIVE_HOUR,
+	seven_day: ProviderLimitWindow.WEEKLY,
+	seven_day_overage_included: ProviderLimitWindow.WEEKLY,
+}
+
+/**
+ * `rate_limit_info.status` → what the provider said. Declared in the CLI's own schema (claude 2.1.314:
+ * `allowed | allowed_warning | rejected`). A status it does not name degrades to ALLOWED — "not refused", the
+ * reading this codec always had for an unrecognised status.
+ */
+export const RATE_LIMIT_STATUS: Readonly<Record<string, ProviderLimitStatus>> = {
+	allowed: ProviderLimitStatus.ALLOWED,
+	allowed_warning: ProviderLimitStatus.WARNING,
+	rejected: ProviderLimitStatus.REJECTED,
 }
 
 export interface DecodedLine {
@@ -118,13 +148,22 @@ function readUsage(raw: unknown): AgentTurnUsage {
 	}
 }
 
+/** A wire string looked up in a declared table — only the table's OWN keys (never `toString` & co.). */
+function declared<Value>(table: Readonly<Record<string, Value>>, key: string | undefined): Value | undefined {
+	return key !== undefined && Object.hasOwn(table, key) ? table[key] : undefined
+}
+
 /** `rate_limit_info` → the verdict, or nothing when the shape is not the measured one. */
 function readRateLimit(raw: unknown): RateLimitRecord | undefined {
 	if (!isRecord(raw)) return undefined
 	const status = str(raw.status)
 	if (status === undefined) return undefined
 	const resetsAtSeconds = count(raw.resetsAt)
-	return { rejected: status === 'rejected', resetsAt: resetsAtSeconds > 0 ? new Date(resetsAtSeconds * 1000) : null }
+	return {
+		status: declared(RATE_LIMIT_STATUS, status) ?? ProviderLimitStatus.ALLOWED,
+		window: declared(RATE_LIMIT_WINDOW, str(raw.rateLimitType)) ?? ProviderLimitWindow.UNKNOWN,
+		resetsAt: resetsAtSeconds > 0 ? new Date(resetsAtSeconds * 1000) : null,
+	}
 }
 
 /** The codec records an `assistant` line can carry — see `DecodedLine.contextTokens` and `.rateLimit`. */

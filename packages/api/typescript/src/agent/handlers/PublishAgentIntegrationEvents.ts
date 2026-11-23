@@ -106,6 +106,11 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						goal: event.payload.goal,
 						originEntryId: event.payload.originEntryId,
 						provider: event.payload.provider,
+						// Fase 4 (S0c): the issue context keeps a read copy of what the task was born with.
+						priority: event.payload.priority,
+						priorityReason: event.payload.priorityReason,
+						workKind: event.payload.workKind,
+						model: event.payload.model,
 					},
 				}),
 			)

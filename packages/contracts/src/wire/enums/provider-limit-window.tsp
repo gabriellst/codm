@@ -1,0 +1,8 @@
+namespace TemplateContracts;
+
+@doc("Which provider usage window a limit (or a reset instant) belongs to (fase 4, item 2) — mapped from the CLI's rateLimitType by a declared table, never by a string prefix. FIVE_HOUR: the rolling five-hour window. WEEKLY: the seven-day window (any of its variants). UNKNOWN: the provider did not say (it only cuts the five-hour window).")
+enum ProviderLimitWindow {
+  FIVE_HOUR: "FIVE_HOUR",
+  WEEKLY: "WEEKLY",
+  UNKNOWN: "UNKNOWN",
+}
