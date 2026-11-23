@@ -1,15 +1,28 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenThread } from '@test/support'
+import { DomainEventRepository } from '@codm/core-typescript'
 import {
 	BatchItemDestinationKind,
 	BatchStatus,
+	IssueLifeState,
+	IssueTimelineItemKind,
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	SupervisorVerdict,
+	SuspicionReason,
 	ProviderLimitWindow,
 	QuotaState,
 	SlotLimit,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { InMemoryQuotaStatus, type QuotaStatus } from '@agent/services/QuotaStatusReader'
+import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { AgentSupervisorReviewedEvent } from '@agent/events/AgentSupervisorReviewedEvent'
+import { SupervisorMode } from '@agent/enums/SupervisorMode'
 import { Batch } from '@thread/entities/Batch'
 import { BatchRepository } from '@thread/repositories/BatchRepository'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -136,6 +149,48 @@ describe('PublishPanelSnapshot', () => {
 		testBed.resolve(InMemoryQuotaStatus).publish(status({ enforced: true }))
 		await run()
 		expect(publisher.batches.at(-1)?.health?.state).toBe(QuotaState.HOLDING)
+	})
+
+	it('fase 5: a task waiting for its retry carries retryingAt; one the supervisor escalated carries escalatedAt and the moment', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const retrying = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-5' })
+		const escalated = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-6' })
+		const mailbox = testBed.resolve(MailboxRepository)
+		await mailbox.enqueue({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: retrying.id.value,
+			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
+			posture: PermissionPosture.AUTO,
+			payload: { issueId: retrying.id.value, threadId: thread.id.value, text: 'segue' },
+			dedupKey: 'steer:panel-retry',
+		})
+		const claimed = await mailbox.claimNext('panel-test', 60_000)
+		if (!claimed) throw new Error('nothing claimed')
+		const retryAt = new Date(Date.now() + 4 * 60_000)
+		await mailbox.defer([claimed.id], retryAt, MailboxDeferCause.RETRY)
+		await testBed.resolve(DomainEventRepository).save(
+			new AgentSupervisorReviewedEvent({
+				entityId: escalated.id.value,
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: {
+					issueId: escalated.id.value,
+					reason: SuspicionReason.STALLED_OPEN,
+					verdict: SupervisorVerdict.ESCALATE,
+					mode: SupervisorMode.ACT,
+					acted: true,
+				},
+			}),
+		)
+
+		await testBed.resolve(PublishPanelSnapshot).execute({})
+		const pushed = (testBed.resolve(PanelPublisher) as MockPanelPublisher).batches.at(-1)?.issues ?? []
+		const byKey = (key: string) => pushed.find(row => row.key === key)
+		expect(byKey('APP-5')).toMatchObject({ lifeState: IssueLifeState.WAITING_RETRY, retryingAt: retryAt.toISOString() })
+		expect(byKey('APP-5')?.escalatedAt).toBeUndefined()
+		expect(byKey('APP-6')?.escalatedAt).toBeDefined()
+		expect(byKey('APP-6')?.timeline.filter(item => item.kind === IssueTimelineItemKind.SUPERVISOR_REVIEWED)).toHaveLength(1)
 	})
 
 	it('a group’s batch goes with the push once, and again only when it changes', async () => {

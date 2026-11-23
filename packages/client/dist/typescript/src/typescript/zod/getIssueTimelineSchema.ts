@@ -10,11 +10,14 @@ import { classificationMethodSchema } from "./classificationMethodSchema.ts";
 import { irreversibleActionKindSchema } from "./irreversibleActionKindSchema.ts";
 import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
 import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
+import { nudgeSourceSchema } from "./nudgeSourceSchema.ts";
 import { outputRoutingSchema } from "./outputRoutingSchema.ts";
 import { publishRunOutcomeSchema } from "./publishRunOutcomeSchema.ts";
 import { regretWindowOutcomeSchema } from "./regretWindowOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
+import { supervisorVerdictSchema } from "./supervisorVerdictSchema.ts";
+import { suspicionReasonSchema } from "./suspicionReasonSchema.ts";
 import { transcriptKindSchema } from "./transcriptKindSchema.ts";
 import { z } from "zod/v4";
 
@@ -151,6 +154,32 @@ get "outcome"(){
               },
 "exitCode": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
 "durationMs": z.optional(z.int().min(0).max(9007199254740991))
+    }), z.object({
+    "kind": z.enum(["NUDGED"]),
+"id": z.string(),
+"at": z.string(),
+"ordinal": z.int().min(1).max(9007199254740991),
+get "source"(){
+                return nudgeSourceSchema
+              },
+"outOf": z.int().min(1).max(9007199254740991)
+    }), z.object({
+    "kind": z.enum(["RETRY_SCHEDULED"]),
+"id": z.string(),
+"at": z.string(),
+"attempt": z.int().min(1).max(9007199254740991),
+"maxAttempts": z.int().min(1).max(9007199254740991),
+"retryAt": z.string()
+    }), z.object({
+    "kind": z.enum(["SUPERVISOR_REVIEWED"]),
+"id": z.string(),
+"at": z.string(),
+get "reason"(){
+                return suspicionReasonSchema
+              },
+get "verdict"(){
+                return supervisorVerdictSchema
+              }
     })]))
     })
 

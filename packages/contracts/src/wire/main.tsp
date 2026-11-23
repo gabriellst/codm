@@ -101,6 +101,12 @@ import "./enums/quota-state.tsp";
 import "./enums/slot-limit.tsp";
 import "./enums/publish-run-outcome.tsp";
 import "./enums/publish-follow-up-kind.tsp";
+// Fase 5 ("autonomia") — why a queued item is deferred (a column of the shared agent_mailbox table), who
+// nudged a silent task, why the supervisor looks at a task and what it decided.
+import "./enums/mailbox-defer-cause.tsp";
+import "./enums/nudge-source.tsp";
+import "./enums/suspicion-reason.tsp";
+import "./enums/supervisor-verdict.tsp";
 
 import "./events/index.tsp";
 

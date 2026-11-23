@@ -46,7 +46,7 @@ import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { usageFactsOf } from '../utils/usageFacts'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
-import { retriesInPlace } from '../enums/TransportStopKind'
+import { RETRIED_TRANSPORT_STOP_KINDS, retriesInPlace } from '../enums/TransportStopKind'
 
 export const RunOrchestratorTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -105,7 +105,14 @@ export const RunOrchestratorTurnOutputSchema = z.object({
 	 * instead of consuming the item with `complete()`. `retryAfter` (epoch ms) is set when the provider
 	 * named the earliest instant a retry can succeed (its usage limit), and turns the retry into a wait.
 	 */
-	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
+	transportStop: z
+		.object({
+			/** WHICH retried kind (fase 5, S2) — the dispatcher classifies the failure by it, never by `detail`. */
+			kind: z.enum(RETRIED_TRANSPORT_STOP_KINDS),
+			detail: z.string(),
+			retryAfter: z.number().int().optional(),
+		})
+		.optional(),
 })
 
 /**
@@ -658,7 +665,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// RETRY vs RECORD is DATA (`TRANSPORT_STOP_RETRIES`). A retried stop goes back to the dispatcher;
 			// anything else (PERMISSION_DENIED) becomes a thread-level stop NOW and the item is consumed.
 			if (retriesInPlace(outcome.stopKind)) {
-				return { text: '', spoke, transportStop: { detail: outcome.detail ?? outcome.stopKind, retryAfter: outcome.retryAfter } }
+				return {
+					text: '',
+					spoke,
+					transportStop: { kind: outcome.stopKind, detail: outcome.detail ?? outcome.stopKind, retryAfter: outcome.retryAfter },
+				}
 			}
 			await this.recordThreadStop(input, outcome.stopKind, outcome.detail)
 			return { text: '', spoke }

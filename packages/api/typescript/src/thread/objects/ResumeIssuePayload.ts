@@ -1,6 +1,7 @@
 import { z } from '@codm/core-typescript'
 import type Z from 'zod'
 import { StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { NudgePayloadSchema } from '@agent/objects'
 
 /**
  * The payload of the item a stop's resolution queues for its issue (`thread/handlers/ResumeIssueOnStopResolved`,
@@ -22,5 +23,11 @@ export const ResumeIssuePayloadSchema = z.object({
 	text: z.string(),
 	stopId: z.string(),
 	resolution: z.enum(StopResolution),
+	/**
+	 * Fase 5 — WHICH NUDGE the resume is, when it is one: the supervisor's retry (`AUTO_RETRY`, claim class
+	 * `REMINDER`) is the LAST nudge of the task's episode, so a quiet turn after it is a `STALLED` straight away. The
+	 * agent's own nudge shape, composed — the reconciler reads it back with `NudgePayloadSchema`.
+	 */
+	...NudgePayloadSchema.partial().shape,
 })
 export type ResumeIssuePayload = Z.output<typeof ResumeIssuePayloadSchema>

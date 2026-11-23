@@ -1,8 +1,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue, givenThread } from '@test/support'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { GetIssuesOverview } from './GetIssuesOverview'
@@ -60,7 +67,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		const target =
 			claimed?.targetId === waiting.id.value ? claimed : await mailbox.claimNext('provider-wait-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!target) throw new Error('no item claimed')
-		await mailbox.defer([target.id], reset)
+		await mailbox.defer([target.id], reset, MailboxDeferCause.PROVIDER_LIMIT)
 		if (claimed && claimed.id !== target.id) await mailbox.complete([claimed.id])
 
 		const overview = await testBed.resolve(GetIssuesOverview).execute({ ownerId: MOCK_CLOUD_OWNER_ID, includeArchived: false })
@@ -80,7 +87,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		await steer(issue.id.value, thread.id.value, `released-${uuidv7()}`)
 		const claimed = await mailbox.claimNext('provider-wait-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!claimed) throw new Error('no item claimed')
-		await mailbox.defer([claimed.id], new Date(Date.now() + 60 * 60_000))
+		await mailbox.defer([claimed.id], new Date(Date.now() + 60 * 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 		await mailbox.releaseDeferred([claimed.id])
 
 		const detail = await testBed.resolve(GetIssueDetail).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
@@ -115,7 +122,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		expect(deliveredAt).toBeDefined()
 
 		// A retry is the same delivery tried again — the hand-off instant does not move.
-		await mailbox.fail(first.id, [], 'transport', 3)
+		await mailbox.fail(first.id, [], { class: MailboxFailureClass.CRASH, detail: 'transport' }, [0, 0])
 		await new Promise(resolve => setTimeout(resolve, 5))
 		const retry = await mailbox.claimNext('steer-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!retry) throw new Error('no retry claimed')

@@ -1,5 +1,12 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import type { MailboxFailureClass } from '../../enums/MailboxFailureClass'
+import type {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -53,6 +60,22 @@ export interface EnqueueMailboxItem {
  */
 export type HoldSettlement = { consume: true } | { consume: false; merge?: Record<string, unknown> }
 
+/** A failed turn, as whoever recorded it DECLARED it (fase 5, S2) — the class picks the calendar, never the text. */
+export interface MailboxFailure {
+	class: MailboxFailureClass
+	/** What happened, for `last_error` and the stop's detail — never parsed. */
+	detail: string
+}
+
+/**
+ * What `fail` decided — the dispatcher drives the retry fact and the stop from THIS, never from a second count of its
+ * own. `attempts` is the head's count of runs (charged at claim).
+ * - retried: `retryAt` is when it may run again (`now` for a wait of 0).
+ * - dead: the calendar is spent; `since` is its first hand-off (`first_claimed_at`), so the stop can say how long it
+ *   was tried.
+ */
+export type MailboxFailOutcome = { dead: false; attempts: number; retryAt: Date } | { dead: true; attempts: number; since: Date | null }
+
 /** A leased item, ready to run. */
 export interface ClaimedMailboxItem {
 	id: string
@@ -105,6 +128,8 @@ export interface DeferredMailboxItem {
 	targetKind: MailboxTargetKind
 	targetId: string
 	payload: unknown
+	/** WHY it waits (fase 5, S1) — the releaser asks this (`DEFER_RELEASE`), never a join on `paused`. */
+	cause: MailboxDeferCause
 }
 
 /**
@@ -119,7 +144,15 @@ export interface DeferredMailboxItem {
  * target is in flight while different targets run in parallel.
  */
 export abstract class MailboxRepository {
-	/** @returns true when this item was newly queued; false when its `dedupKey` was already present. */
+	/**
+	 * @returns true when this item was newly queued; false when its `dedupKey` was already present.
+	 *
+	 * A NEW item ends the target's `RETRY` wait (fase 5, item 2 — `DEFER_RELEASE.onNewItem`), in the same write: the
+	 * claim always hands the target's oldest item, so the failed head runs again now with the message riding along —
+	 * and the attempt that wait stood for is HANDED BACK, so a person's message never uses one up (a re-failure waits the
+	 * same step of the calendar again). Only a real insert releases (a redelivered fact releases nothing), only a wait
+	 * still pending with no holder, and once (the released row is no longer deferred).
+	 */
 	abstract enqueue(item: EnqueueMailboxItem, tx?: Transaction): Promise<boolean>
 
 	/**
@@ -182,14 +215,14 @@ export abstract class MailboxRepository {
 	 * (`CODM_AGENT_LIMIT_RECHECK_MS`), and a turn the same provider accepts afterwards ends it at once
 	 * (`deferred` + `releaseDeferred`).
 	 *
-	 * ### This is the ONLY writer of a lease with no holder
-	 * `claimNext` writes a lease WITH a holder, `renewLease` keeps the holder in its predicate, and
-	 * `complete` / `fail` / `releaseOrphanedClaims` write `lease_until = NULL`. So "runnable, no holder,
-	 * lease in the future" is exactly a pause written here, and the release needs no marker column to
-	 * find it. A second writer of an ownerless lease would have to give the release a way to tell the two
-	 * apart — that is the condition under which a marker becomes necessary.
+	 * ### The CAUSE is declared, not inferred (fase 5, S1)
+	 * Three writers park an item this way: the provider's limit (`PROVIDER_LIMIT`), a paused issue (`HOLD`) and a
+	 * retry waiting out its schedule (`RETRY`). The shape cannot tell them apart, so `cause` is REQUIRED and lands in
+	 * `defer_cause`; every write that clears or replaces the lease clears it, so `null` ⇔ not deferred, also after a
+	 * lease lapses and the item is claimed. Releasers decide by it (`DEFER_RELEASE`). Gated by
+	 * `tests/architecture/mailbox-defer-cause.test.ts`.
 	 */
-	abstract defer(ids: readonly string[], until: Date, tx?: Transaction): Promise<void>
+	abstract defer(ids: readonly string[], until: Date, cause: MailboxDeferCause, tx?: Transaction): Promise<void>
 
 	/**
 	 * Give a claim back NOW: no holder, NO lease, the attempt the claim charged refunded — claimable by the very next
@@ -202,7 +235,7 @@ export abstract class MailboxRepository {
 	abstract giveBack(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
-	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
+	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future — each with its cause.
 	 *
 	 * The SQL half of the release, and the split mirrors `releaseOrphanedClaims`: SQL picks the
 	 * candidates, and the dispatcher decides which of them belong to the provider that just answered —
@@ -216,7 +249,7 @@ export abstract class MailboxRepository {
 	 * The predicate (runnable, no holder, lease in the future) is RE-ASSERTED in the same UPDATE, not
 	 * just the ids: between `deferred` and here an item whose pause lapsed can have been claimed, and
 	 * clearing a lease that has a holder would start a second turn beside a live one — the double turn
-	 * this queue exists to prevent. The attempt `defer` refunded is untouched.
+	 * this queue exists to prevent. The attempt `defer` refunded is untouched; the cause is cleared with the lease.
 	 *
 	 * @returns how many pauses were released.
 	 */
@@ -252,15 +285,28 @@ export abstract class MailboxRepository {
 	abstract complete(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
-	 * Record a failed turn: attempts++, lease released. Past `maxAttempts` the item is POISONED
-	 * (`dead_at`) rather than retried forever — a turn that keeps dying must stop being scheduled, or
-	 * it starves every later item for the same target.
+	 * Record a failed turn and schedule what comes next (fase 5, item 2) — the head's `attempts` was already charged at
+	 * claim, so it counts RUNS. With `waits` the calendar for the item's lane and failure class:
+	 *  - `attempts <= waits.length` ⇒ RETRIED after `waits[attempts - 1]`: deferred with cause `RETRY` (no holder, lease
+	 *    in the future — the target keeps its order behind it), or, for a wait of 0, released NOW with no lease and no
+	 *    cause. The attempt stays CHARGED either way — unlike `giveBack`, whose refund would let a login failure retry
+	 *    forever.
+	 *  - otherwise ⇒ POISONED (`dead_at`): a turn that keeps dying must stop being scheduled, or it starves every later
+	 *    item for the same target.
+	 *
+	 * Before this the item was released at once and came back on the next poll (250 ms): three attempts in seconds, dead
+	 * before a provider overload had passed.
 	 *
 	 * ONLY THE HEAD PAYS (fase 4, item 6b): the steers that rode with it (`followers`) get the attempt their claim
-	 * charged back and are released beside it, never poisoned — a turn that died is the head's failure to run, and a
-	 * steer that arrived while it was queued must not die of it. One write for the whole group.
+	 * charged back and are released beside it, never poisoned nor deferred. One write for the whole group.
 	 */
-	abstract fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: Transaction): Promise<void>
+	abstract fail(
+		head: string,
+		followers: readonly string[],
+		failure: MailboxFailure,
+		waits: readonly number[],
+		tx?: Transaction,
+	): Promise<MailboxFailOutcome>
 
 	/**
 	 * Release every lease held by a daemon boot that is PROVABLY gone — the boot sweep, made honest.
@@ -313,8 +359,8 @@ export abstract class MailboxRepository {
 	 * correction queued minutes BEFORE the action and still undelivered (a steer waits for the turn to end),
 	 * which a since-filter would let the push run past. Whatever its age, an unread steer cancels.
 	 *
-	 * Only a PERSON's steer: the automatic declaration reminder (`declarationReminder` in the payload,
-	 * `ReconcileStalledIssues`) is not a message from anyone and does not cancel.
+	 * Only a PERSON's steer: the automatic nudge (`claim_class = REMINDER`, `ReconcileStalledIssues`) is not a
+	 * message from anyone and does not cancel.
 	 */
 	abstract hasUnreadSteer(issueId: string, tx?: Transaction): Promise<boolean>
 }

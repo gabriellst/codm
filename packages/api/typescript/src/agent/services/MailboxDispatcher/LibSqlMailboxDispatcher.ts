@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
-import { CommandQueue, LoggingService, type PollingService, z } from '@codm/core-typescript'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { CommandQueue, DatabaseDriver, DomainEventRepository, LoggingService, type PollingService, z } from '@codm/core-typescript'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	type ProviderKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -13,9 +19,20 @@ import { cueRoutedSteer, RoutedSteerOriginSchema, type RoutedSteerOrigin } from 
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
-import { MailboxRepository, type ClaimedMailboxBundle, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
+import {
+	MailboxRepository,
+	type ClaimedMailboxBundle,
+	type ClaimedMailboxItem,
+	type MailboxFailOutcome,
+	type MailboxFailure,
+} from '../../repositories/MailboxRepository'
+import { MailboxFailureClass } from '../../enums/MailboxFailureClass'
+import type { RetriedTransportStopKind } from '../../enums/TransportStopKind'
+import { FAILURE_CLASS_OF_TRANSPORT_STOP, maxAttemptsOf, RETRY_SCHEDULE, STOP_OF_FAILURE } from '../../utils/RetrySchedule'
+import { AgentRetryScheduledEvent } from '../../events/AgentRetryScheduledEvent'
 import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 import { issueTurnModel } from '../../utils/ModelByWorkKind'
+import { DEFER_RELEASE } from '../../objects/DeferRelease'
 import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
@@ -63,8 +80,6 @@ const MAX_TURN_MS = 60 * 60 * 1000
  * recheck configured below it would be that same loop by another name.
  */
 const PROVIDER_PAUSE_FLOOR_MS = 60_000
-/** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
-const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
 /**
  * The idle ceiling — deliberately LOW for a conversational product.
@@ -107,10 +122,6 @@ const steerEntryOf = (payload: unknown): string | undefined => {
 	const parsed = SteerEntryPayloadSchema.safeParse(payload)
 	return parsed.success ? parsed.data.entryId : undefined
 }
-/** Whether a STEER is the automatic declaration reminder (`declarationReminder: true` on its payload). */
-const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
-const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safeParse(payload).success
-
 /** A STEER's text (`text` on its payload) — empty when absent, as the single-steer turn always read it. */
 /**
  * `sessionOnly` (fase 4, item 6c): what the turn's PROMPT carries and the timeline never renders — a failed publish's
@@ -218,7 +229,8 @@ export type TurnReport =
 			spoke: boolean
 			provider: ProviderKind
 			/** `retryAfter` (epoch ms): the provider named the instant a retry can succeed — see `waitForProvider`. */
-			transportStop?: { detail: string; retryAfter?: number }
+			/** `kind`: which retried transport kind it was — the failure's class is read off it (`FAILURE_CLASS_OF_TRANSPORT_STOP`). */
+			transportStop?: { kind: RetriedTransportStopKind; detail: string; retryAfter?: number }
 			dropped?: never
 			held?: never
 			interrupted?: never
@@ -284,6 +296,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	protected heartbeatMs = HEARTBEAT_MS
 	/** How long one turn may keep renewing before the queue stops believing it. See `MAX_TURN_MS`. */
 	protected maxTurnMs = MAX_TURN_MS
+	/** How long a failed item waits before its next attempt, by lane and class. A field for the same reason as `leaseMs`; see `RETRY_SCHEDULE`. */
+	protected retrySchedule = RETRY_SCHEDULE
 	/** Slots and claim order per target kind. A field for the same reason as `leaseMs`; see `TURN_LANES`. */
 	protected lanes = TURN_LANES
 	/**
@@ -366,6 +380,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// machine, quota budget); the attributes name the conversation of a held task, for the budget's notice.
 		private readonly gate: ThroughputGate,
 		private readonly attributes: IssueAttributesRepository,
+		// Nova tentativa com espera crescente (fase 5, S2) — appended like the rest. The failure's `fail` and its
+		// `agent.mailbox.retry_scheduled` fact are written in ONE unit of work.
+		private readonly driver: DatabaseDriver,
+		private readonly events: DomainEventRepository,
 	) {
 		super()
 	}
@@ -415,7 +433,6 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				pollMinMs: POLL_MIN_MS,
 				pollMaxMs: POLL_MAX_MS,
 				leaseMs: LEASE_MS,
-				maxAttempts: MAX_ATTEMPTS,
 			},
 		})
 		void this.tick()
@@ -467,7 +484,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	private async drainLoop(): Promise<number> {
 		// THE LOGIN GATE (Task T7, AC-4) — BEFORE `claimNext`, never after, and never on an item already
 		// in flight. An item that got claimed and then aborted would still burn one of its
-		// MAX_ATTEMPTS via `fail()` — the defer/contention lesson of 2026-08-05: undoing a claim is
+		// attempts via `fail()` — the defer/contention lesson of 2026-08-05: undoing a claim is
 		// never free. Checking here instead means an unauthenticated install simply never asks the
 		// queue for work — items sit PENDING, untouched, attempts unspent — and the very next drain
 		// (after `SetCloudToken` logs the daemon in) resumes exactly where it left off, no restart
@@ -517,6 +534,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				inFlight: running.get(MailboxTargetKind.ISSUE) ?? 0,
 				max: this.lanes[MailboxTargetKind.ISSUE].slots,
 				providerRefusing: paused,
+				...(paused && { providerPausedUntil: this.pausedUntil }),
 			})
 			await this.noticeBudgetHeld(issueLane.announce)
 			const capacity: Record<MailboxTargetKind, number> = {
@@ -700,7 +718,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 							},
 						}),
 				)
-				await this.recordFailure(bundle, abandoned ?? 'o turno foi abandonado')
+				await this.recordFailure(bundle, { class: MailboxFailureClass.ABANDONED, detail: abandoned ?? 'o turno foi abandonado' })
 				return
 			}
 
@@ -717,10 +735,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				return
 			}
 
-			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` bumps `attempts`, records the cause in
-			// `last_error` and releases the lease NOW — the item is claimable on the next poll (250ms)
-			// instead of waiting out the ten-minute lease clock. Past the cap, `raiseStopForPoisoned`
-			// turns the exhaustion into a Stop, which is the only warning the operator gets, and only then.
+			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` records the cause in `last_error` and puts the item back
+			// on its calendar (`RETRY_SCHEDULE`, by lane and by the class the stop's KIND declares — fase 5, S2) instead
+			// of the ten-minute lease clock. Past the calendar, `raiseStopForPoisoned` turns the exhaustion into a Stop,
+			// which is the only warning the operator gets, and only then.
 			//
 			// The `&& !report.spoke` is not caution, it preserves a prior decision: a turn that already
 			// streamed a cut has already spoken in the operator's real chat, and retrying it would
@@ -733,7 +751,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					await this.waitForProvider(bundle, report.transportStop.retryAfter, report.provider)
 					return
 				}
-				await this.recordFailure(bundle, report.transportStop.detail)
+				await this.recordFailure(bundle, {
+					class: FAILURE_CLASS_OF_TRANSPORT_STOP[report.transportStop.kind],
+					detail: report.transportStop.detail,
+				})
 				return
 			}
 
@@ -762,7 +783,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					error: message,
 				},
 			})
-			await this.recordFailure(bundle, message)
+			await this.recordFailure(bundle, { class: MailboxFailureClass.CRASH, detail: message })
 		} finally {
 			clearInterval(heartbeat)
 		}
@@ -822,7 +843,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			},
 		})
 		try {
-			await this.mailbox.defer(idsOf(bundle), new Date(recheckAt))
+			await this.mailbox.defer(idsOf(bundle), new Date(recheckAt), MailboxDeferCause.PROVIDER_LIMIT)
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -876,6 +897,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		try {
 			const ids: string[] = []
 			for (const candidate of await this.mailbox.deferred()) {
+				// Only the causes an accepted turn ends (`DEFER_RELEASE`): a RETRY waits its schedule — another turn
+				// passing proves nothing about this one.
+				if (!DEFER_RELEASE[candidate.cause].onProviderCredit) continue
 				const threadId = this.threadIdOf(candidate)
 				const thread = threadId ? await this.threads.findById(threadId) : undefined
 				if (thread && this.providerFor(candidate, thread) === provider) ids.push(candidate.id)
@@ -988,47 +1012,74 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	}
 
 	/**
-	 * attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered AHEAD
-	 * of everything else for its target, so retrying forever would silence that thread.
+	 * A turn ended badly — put its item back on its CALENDAR, or, once the calendar is spent, poison it and ask someone.
+	 *
+	 * ### The calendar (fase 5, item 2)
+	 * `RETRY_SCHEDULE[lane][failure.class]` — declared, never read off the error's text: the class comes from whoever
+	 * records the failure (the transport stop's KIND, an exception, the ceiling). `fail` decides (retry at X, or dead) in
+	 * the SAME unit of work that records `agent.mailbox.retry_scheduled`, so the queue and the fact never disagree; the
+	 * stop is driven from that decision, never from a second count here.
 	 *
 	 * ### A POISONED ITEM IS A NEEDS-YOU, and it used to be a silent one
-	 * `attempts` was already incremented at claim, so reaching MAX here means this failure was the
-	 * last one and the row is now dead. Before the stop existed the only trace was a log nobody reads:
-	 * the item stopped existing for the queue, the issue stayed `WORKING` forever, and the operator
-	 * found out by asking. Raising a stop puts it on the Needs-you panel — and since stops of this kind
-	 * now reach the channel, on the operator's phone.
+	 * Before the stop existed the only trace was a log nobody reads: the item stopped existing for the queue, the issue
+	 * stayed `WORKING` forever, and the operator found out by asking. The stop puts it on the Needs-you panel and, for
+	 * these kinds, on the operator's phone — with the cause the group should read (`STOP_OF_FAILURE`: login says login).
 	 *
-	 * One method for all three ways a turn can end badly (threw, reported a transport stop, ran past
-	 * the ceiling) because they differ only in the sentence written to `last_error` — and the third one
-	 * arrived by copying the other two, which is how the poison counter drifts.
+	 * One method for the three ways a turn can end badly (threw, reported a transport stop, ran past the ceiling) because
+	 * they differ only in the declared class and the sentence written to `last_error`.
 	 */
-	private async recordFailure(bundle: ClaimedMailboxBundle, cause: string): Promise<void> {
+	private async recordFailure(bundle: ClaimedMailboxBundle, failure: MailboxFailure): Promise<void> {
 		const item = bundle.head
+		const waits = this.retrySchedule[item.targetKind][failure.class]
 		// NEVER REJECTS. This runs from `runTurn`'s catch, and a turn promise is observed only while
 		// `drain()` races it — a `drain()` that already left on a failed `claimNext` leaves the turn with
 		// no observer, and a rejection there is unhandled: measured 2026-10-30, a BUSY on this write
 		// killed the daemon on every boot. Losing the write is recoverable — the item keeps its lease and
 		// is claimable again when it expires, with the attempt already charged at claim.
+		let outcome: MailboxFailOutcome
 		try {
-			// Only the head pays the attempt; the steers that rode with it are released with theirs given back (6b).
-			await this.mailbox.fail(
-				item.id,
-				bundle.followers.map(follower => follower.id),
-				cause,
-				MAX_ATTEMPTS,
-			)
+			outcome = await this.driver.unitOfWorkFactory.create().transaction(async tx => {
+				// Only the head pays the attempt; the steers that rode with it are released with theirs given back (6b).
+				const decided = await this.mailbox.fail(
+					item.id,
+					bundle.followers.map(follower => follower.id),
+					failure,
+					waits,
+					tx,
+				)
+				if (!decided.dead) {
+					await this.events.save(
+						new AgentRetryScheduledEvent({
+							entityId: item.targetId,
+							ownerId: item.ownerId,
+							payload: {
+								itemId: item.id,
+								targetKind: item.targetKind,
+								targetId: item.targetId,
+								failureClass: failure.class,
+								attempt: decided.attempts,
+								maxAttempts: maxAttemptsOf(waits),
+								retryAt: decided.retryAt.toISOString(),
+							},
+						}),
+						tx,
+					)
+				}
+				return decided
+			})
 		} catch (error) {
 			this.logging.error({
 				content: {
 					message: 'could not record a mailbox turn failure — the lease will expire instead',
 					itemId: item.id,
-					cause,
+					failureClass: failure.class,
+					cause: failure.detail,
 					error: error instanceof Error ? error.message : String(error),
 				},
 			})
 			return
 		}
-		if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, cause)
+		if (outcome.dead) await this.raiseStopForPoisoned(item, failure, outcome)
 	}
 
 	/**
@@ -1202,7 +1253,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		this.logging.info({ content: { message: 'issue work held — paused', itemId: item.id, issueId: item.targetId } })
 		try {
 			// The whole group goes back held, attempts refunded — the steers come back together on resume.
-			await this.mailbox.defer(idsOf(bundle), new Date(Date.now() + HOLD_RECHECK_MS))
+			await this.mailbox.defer(idsOf(bundle), new Date(Date.now() + HOLD_RECHECK_MS), MailboxDeferCause.HOLD)
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -1300,9 +1351,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// item 5). Every other steer, and the brief, carry none, and their words are the issue's progress.
 			// With several routed steers in the turn, it answers the LAST one — the latest word in the group.
 			answersEntryId: item.kind === MailboxItemKind.STEER ? steerEntriesOf(members).at(-1) : undefined,
-			// The automatic nudge (`ReconcileStalledIssues`) — read off its payload, where it always was and
-			// never reached the turn.
-			declarationReminder: item.kind === MailboxItemKind.STEER && reminderOf(item.payload) ? true : undefined,
+			// WHAT the head item is — its declared class (fase 5): a nudge's turn (`REMINDER`) answers nobody.
+			claimClass: item.claimClass,
 		})
 		// A pause killed it (or kept it from starting): nothing was persisted, the item goes back held.
 		if (result.held) return { held: true, spoke: false }
@@ -1314,29 +1364,38 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	/**
 	 * Turn a poisoned item into a Needs-you card — the leg that was missing.
 	 *
-	 * ### Why `SERVER_ERROR` and not a kind of its own
-	 * The frozen `StopKind` set has no member for "the queue gave up on this item", and minting one is a
-	 * contract change, not a hotfix. `SERVER_ERROR` is the least-wrong home: its admissible resolutions
-	 * are exactly the two that apply here (`RETRY` / `TAKE_OVER`), and its catalog title already reads as
-	 * a condition rather than a sentence somebody wrote. The `detail` carries what actually happened, so
-	 * nothing is hidden. A dedicated kind is the follow-up, and it belongs in a spec.
+	 * ### Which kind — declared by the failure's class (`STOP_OF_FAILURE`, fase 5)
+	 * The frozen `StopKind` set has no member for "the queue gave up on this item". `SERVER_ERROR` is the
+	 * home for a provider error, a crash and an abandoned turn (its resolutions are the two that apply:
+	 * `RETRY` / `TAKE_OVER`); a login problem is `AUTH_REQUIRED`, so the group reads "o CLI precisa de
+	 * login" instead of "erro do provedor" — before, every exhaustion was `SERVER_ERROR`, login included.
+	 * The `detail` carries how many attempts, over how long, and what happened.
 	 *
 	 * ### Why this is best-effort
 	 * The turn already failed. If raising the stop ALSO fails, rethrowing would replace a recorded
 	 * failure with an unrecorded one and hand the outbox a second thing to retry. The item is already
 	 * dead in the queue either way; the worst case here is the silence we had before, never worse.
 	 */
-	private async raiseStopForPoisoned(item: ClaimedMailboxItem, cause: string): Promise<void> {
+	private async raiseStopForPoisoned(
+		item: ClaimedMailboxItem,
+		failure: MailboxFailure,
+		outcome: Extract<MailboxFailOutcome, { dead: true }>,
+	): Promise<void> {
 		try {
 			const threadId = this.threadIdOf(item)
 			if (!threadId) return
 
+			// How long it was tried, from its first hand-off — "em ~N min" — so the stop says the calendar ran, not that it
+			// gave up at once.
+			const minutes = outcome.since ? Math.max(Math.round((Date.now() - outcome.since.getTime()) / 60_000), 0) : undefined
+			const span = minutes === undefined ? '' : ` em ${minutes} min`
 			await this.handlerFor(RaiseStop).execute({
 				stopId: crypto.randomUUID(),
 				threadId,
 				issueId: item.targetKind === MailboxTargetKind.ISSUE ? item.targetId : undefined,
-				kind: StopKind.SERVER_ERROR,
-				detail: `O trabalho parou depois de ${item.attempts} tentativas: ${cause}`,
+				// The cause the group reads (fase 5, S2): a login problem says login, never "erro do provedor".
+				kind: STOP_OF_FAILURE[failure.class],
+				detail: `O trabalho parou depois de ${outcome.attempts} tentativas${span}: ${failure.detail}`,
 			})
 		} catch (error) {
 			this.logging.error({

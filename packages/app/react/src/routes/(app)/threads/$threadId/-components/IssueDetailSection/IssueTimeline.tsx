@@ -43,6 +43,42 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: DetailProps<K>) => ReactNo
 	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
 	BATCH_LINKED: ({ item }) => <BatchLinkedDetail item={item} />,
 	PUBLISH_RAN: ({ item, issueId }) => <PublishRanDetail item={item} issueId={issueId} />,
+	// Fase 5 — the nudge ("empurrão 1 de 2"), the scheduled retry and what the supervisor did, with why it looked.
+	NUDGED: ({ item }) => <NudgedDetail item={item} />,
+	RETRY_SCHEDULED: ({ item }) => <RetryScheduledDetail item={item} />,
+	SUPERVISOR_REVIEWED: ({ item }) => <SupervisorReviewedDetail item={item} />,
+}
+
+function NudgedDetail({ item }: { item: ItemOf<'NUDGED'> }) {
+	const { t } = useTranslation()
+	return <>{t('session.timelineNudged', { ordinal: item.ordinal, outOf: item.outOf, source: enumLabel('NudgeSource', item.source) })}</>
+}
+
+/** "o supervisor escalou · motivo: parada há tempo" — only an ACTED verdict reaches the timeline (observation is audit). */
+function SupervisorReviewedDetail({ item }: { item: ItemOf<'SUPERVISOR_REVIEWED'> }) {
+	const { t } = useTranslation()
+	return (
+		<>
+			{t('session.timelineSupervisor', {
+				verdict: enumLabel('SupervisorVerdict', item.verdict),
+				reason: enumLabel('SuspicionReason', item.reason),
+			})}
+		</>
+	)
+}
+
+function RetryScheduledDetail({ item }: { item: ItemOf<'RETRY_SCHEDULED'> }) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<>
+			{t('session.timelineRetryScheduled', {
+				attempt: item.attempt,
+				max: item.maxAttempts,
+				time: formatDayAndTime(item.retryAt, locale),
+			})}
+		</>
+	)
 }
 
 /**

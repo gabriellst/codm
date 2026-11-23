@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
 import { and, desc, eq, gte, isNotNull, isNull, or, sql } from 'drizzle-orm'
-import { LibSqlDatabaseDriver, z } from '@codm/core-typescript'
+import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox, issues, outbox } from '@codm/contracts/db'
-import { IssueStatus, MailboxTargetKind, type ProviderKind } from '@codm/contracts-typescript/wire/enums'
-
-/** The payload mark `ReconcileStalledIssues` puts on the reminder steer it queues. */
-const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
+import { IssueStatus, MailboxClaimClass, MailboxTargetKind, type ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueHold } from '@issue/services/IssueHold'
+import { NudgePayloadSchema } from '../../objects/NudgePayload'
+import { DeclaredWaitReader } from '../DeclaredWaitReader'
 import type { StalledIssueRef } from './StalledIssueReader'
 import { StalledIssueReader } from './StalledIssueReader'
 
@@ -21,7 +21,11 @@ const EXPIRED_LEASE_GRACE_MS = 60 * 1000
 
 @injectable()
 export class LibSqlStalledIssueReader extends StalledIssueReader {
-	constructor(private driver: LibSqlDatabaseDriver) {
+	constructor(
+		private readonly driver: LibSqlDatabaseDriver,
+		private readonly hold: IssueHold,
+		private readonly declared: DeclaredWaitReader,
+	) {
 		super()
 	}
 
@@ -85,12 +89,25 @@ export class LibSqlStalledIssueReader extends StalledIssueReader {
 				),
 			)
 
+		// A FEEDBACK asked in the last turn is a declared wait (fase 5, item 1 — the owner's decision of 20/11: it waits
+		// without a deadline): never nudged, never blocked for waiting on people.
+		const waiting = await this.declared.waiting(rows.map(row => row.issueId))
+
 		// The turn that went quiet: the issue's most recently consumed item. Per row, because stalled issues
 		// are a handful per sweep and the question is "which ONE item", not an aggregate.
 		const refs: StalledIssueRef[] = []
 		for (const row of rows) {
+			if (waiting.has(row.issueId)) continue
+			// A PAUSED CONVERSATION holds its issues too (`PauseThread` writes only `threads.paused`): the same question the
+			// dispatcher asks before a turn, so a group that asked for silence is never nudged nor told of a stall.
+			if (await this.hold.isHeld(row.issueId)) continue
 			const recent = await this.driver.db
-				.select({ id: agentMailbox.id, payload: agentMailbox.payload, consumedAt: agentMailbox.consumedAt })
+				.select({
+					id: agentMailbox.id,
+					claimClass: agentMailbox.claimClass,
+					payload: agentMailbox.payload,
+					consumedAt: agentMailbox.consumedAt,
+				})
 				.from(agentMailbox)
 				.where(
 					and(
@@ -109,7 +126,9 @@ export class LibSqlStalledIssueReader extends StalledIssueReader {
 			// means it was the last word.
 			const latestAt = recent[0]?.consumedAt?.getTime()
 			const latest = recent.filter(item => item.consumedAt?.getTime() === latestAt)
-			const reminder = latest.find(item => ReminderPayloadSchema.safeParse(item.payload).success)
+			// WHAT the item is comes from the column (fase 5); WHICH nudge, from its declared payload.
+			const reminder = latest.find(item => item.claimClass === MailboxClaimClass.REMINDER)
+			const nudge = reminder && NudgePayloadSchema.safeParse(reminder.payload).data?.nudge
 			refs.push({
 				issueId: row.issueId,
 				ownerId: row.ownerId,
@@ -118,7 +137,12 @@ export class LibSqlStalledIssueReader extends StalledIssueReader {
 				title: row.title,
 				provider: row.provider as ProviderKind,
 				lastConsumedItemId: (reminder ?? latest[0])?.id ?? null,
-				lastTurnWasReminder: reminder !== undefined,
+				// A REMINDER whose payload does not parse still IS a reminder: read as the last nudge, so a malformed row
+				// ends the episode with the stop instead of re-opening it.
+				lastNudge: reminder && {
+					ordinal: nudge ? nudge.ordinal : Number.POSITIVE_INFINITY,
+					rootItemId: nudge?.rootItemId ?? reminder.id,
+				},
 			})
 		}
 		return refs

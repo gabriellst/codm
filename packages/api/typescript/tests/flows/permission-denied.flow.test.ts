@@ -139,9 +139,9 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 		const realComplete = mailbox.complete.bind(mailbox)
 		const failCalls: string[] = []
 		let completeCalls = 0
-		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
-			failCalls.push(error)
-			return realFail(head, followers, error, maxAttempts, tx)
+		mailbox.fail = async (head, followers, failure, waits, tx) => {
+			failCalls.push(failure.detail)
+			return realFail(head, followers, failure, waits, tx)
 		}
 		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1

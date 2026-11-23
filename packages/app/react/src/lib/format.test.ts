@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'bun:test'
-import { formatDurationSeconds, formatMoney, formatPercent, sumMoney } from './format'
+import {
+	formatDayAndTime,
+	formatDurationSeconds,
+	formatMoney,
+	formatPercent,
+	formatTimeOfDay,
+	formatTimeOrDayAndTime,
+	sumMoney,
+} from './format'
 
 describe('formatMoney', () => {
 	it('formats cents as currency in the given locale', () => {
@@ -67,5 +75,21 @@ describe('formatDurationSeconds', () => {
 	it('clamps zero and non-finite to zero', () => {
 		expect(formatDurationSeconds(0, 'pt-BR')).toBe(asUnit(0, 'second'))
 		expect(formatDurationSeconds(Number.NaN, 'pt-BR')).toBe(asUnit(0, 'second'))
+	})
+})
+
+describe('formatTimeOrDayAndTime', () => {
+	const now = new Date(2026, 10, 23, 23, 50)
+	it('the time alone when the instant is today (local)', () => {
+		const later = new Date(2026, 10, 23, 23, 55).toISOString()
+		expect(formatTimeOrDayAndTime(later, 'pt-BR', now)).toBe(formatTimeOfDay(later, 'pt-BR'))
+	})
+	it('day and time once it crosses midnight — the time alone would read as today', () => {
+		const tomorrow = new Date(2026, 10, 24, 0, 40).toISOString()
+		expect(formatTimeOrDayAndTime(tomorrow, 'pt-BR', now)).toBe(formatDayAndTime(tomorrow, 'pt-BR'))
+		expect(formatTimeOrDayAndTime(tomorrow, 'pt-BR', now)).toContain('24/11')
+	})
+	it('an unparseable instant comes back as is', () => {
+		expect(formatTimeOrDayAndTime('nope', 'pt-BR', now)).toBe('nope')
 	})
 })

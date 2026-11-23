@@ -5,6 +5,7 @@ import { issues } from '@codm/contracts/db'
 import type { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { lifeStateByIssue } from '../../utils/issueLifeState'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 import { providerWaitByIssue } from '../../utils/providerWaitByIssue'
 import { IssueBoardReader, type IssueBoardRow } from './IssueBoardReader'
 
@@ -13,6 +14,7 @@ export class LibSqlIssueBoardReader extends IssueBoardReader {
 	constructor(
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
 	) {
 		super()
 	}
@@ -34,7 +36,7 @@ export class LibSqlIssueBoardReader extends IssueBoardReader {
 			lifeStateByIssue(
 				this.driver,
 				rows.map(row => ({ issueId: row.issueId, status: row.status as IssueStatus })),
-				this.quota.holdsIssueLane(),
+				{ budgetHeld: this.quota.holdsIssueLane(), declaredWait: this.declaredWait },
 			),
 			providerWaitByIssue(this.driver, ids),
 		])

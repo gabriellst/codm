@@ -6,6 +6,7 @@ import { BaseError, DomainEventRepository, LoggingService, type MockLoggingServi
 import {
 	IssueSignalLevel,
 	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	ProviderKind,
@@ -310,19 +311,33 @@ describe('RunIssueTurn use case', () => {
 	})
 
 	/**
-	 * O TURNO DO LEMBRETE É SILENCIOSO (fase 0, item 5). It only asks the session to declare; the
-	 * substance was already reported by the turn it follows, and a second "nada novo" in the group is the
-	 * noise this exists to cut. Falsifier: drop the `declarationReminder` guard on `enqueueResult` and a
-	 * result item appears.
+	 * O TURNO DO EMPURRÃO É SILENCIOSO (fase 0, item 5; fase 5: pela coluna). It only asks the session to declare;
+	 * the substance was already reported by the turn it follows, and a second "nada novo" in the group is the noise
+	 * this exists to cut. Falsifier: drop `ANSWERS_A_PERSON` from `reportTurn` — a REMINDER turn handed a person's
+	 * entry would queue an `ISSUE_RESULT` (the same input with class STEER below does).
 	 */
-	it('a declaration-reminder turn queues NO result for the orchestrator', async () => {
+	it('a nudge turn (claim class REMINDER) queues NO result for the orchestrator, even handed a person to answer', async () => {
 		const useCase = testBed.resolve(RunIssueTurn)
 		const mailbox = testBed.resolve(MailboxRepository)
 		const issueId = testId('run-issue-turn', 'issue-reminder')
+		const answering = { turnKind: MailboxItemKind.STEER as const, answersEntryId: testId('run-issue-turn', 'person-reminder') }
 
-		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-reminder'), declarationReminder: true })
-
+		await useCase.execute({
+			...baseInput(issueId),
+			...answering,
+			messageId: testId('run-issue-turn', 'entry-reminder'),
+			claimClass: MailboxClaimClass.REMINDER,
+		})
 		expect(await mailbox.claimNext('run-issue-turn-test', 60_000)).toBeUndefined()
+
+		// The control: the same turn as somebody's steer answers them.
+		await useCase.execute({
+			...baseInput(issueId),
+			...answering,
+			messageId: testId('run-issue-turn', 'entry-steer'),
+			claimClass: MailboxClaimClass.STEER,
+		})
+		expect((await mailbox.claimNext('run-issue-turn-test', 60_000))?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
 	})
 
 	it('upserts the durable session row from the session id the terminal event reported', async () => {
@@ -622,7 +637,7 @@ describe('RunIssueTurn use case', () => {
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.stopId).toBeDefined()
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 
@@ -830,7 +845,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		const out = await useCase.execute(baseInput(issueId))
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 
 		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
@@ -854,7 +869,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 
 		// NADA foi dito: nem o resultado composto, nem o alarme do Stop.
 		expect(await mailbox.claimNext('run-issue-turn-silent-test', 60_000)).toBeUndefined()

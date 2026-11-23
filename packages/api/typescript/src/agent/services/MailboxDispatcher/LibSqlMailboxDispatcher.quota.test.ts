@@ -123,6 +123,8 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			testBed.resolve(CommandQueue),
 			gate,
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 	/** A task of `threadId` with one queued work item, and a message to the orchestrator in the same conversation. */
@@ -193,9 +195,10 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			lifeStateOf({
 				status: IssueStatus.WORKING,
 				held: false,
-				pending: [{ running: false, deferred: false, reminder: false }],
+				pending: [{ running: false, reminder: false }],
 				openStops: 0,
 				budgetHeld: status.holdsIssueLane(),
+				declaredWait: false,
 			}),
 		).toBe(IssueLifeState.WAITING_BUDGET)
 		// one notice for the conversation, and a second drain while still held does not repeat it
@@ -298,6 +301,8 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			testBed.resolve(CommandQueue),
 			gate,
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 		const held = script.lane
 		await dispatcher.drain() // held: told

@@ -1,9 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { TestBed } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MockIssueAttributesRepository } from '../IssueAttributesRepository'
@@ -153,7 +160,12 @@ for (const env of ['libsql', 'mock'] as const) {
 		it('a failed turn: only the head pays — the followers come back with their attempt refunded, the group whole', async () => {
 			for (const text of ['s1', 's2', 's3']) await enqueue(text)
 			const claimed = await bundle()
-			await mailbox.fail(claimed?.head.id ?? '', claimed?.followers.map(item => item.id) ?? [], 'boom', 3)
+			await mailbox.fail(
+				claimed?.head.id ?? '',
+				claimed?.followers.map(item => item.id) ?? [],
+				{ class: MailboxFailureClass.CRASH, detail: 'boom' },
+				[0, 0],
+			)
 
 			const again = await bundle()
 			expect(textsOf(again)).toEqual(['s1', 's2', 's3'])
@@ -167,7 +179,12 @@ for (const env of ['libsql', 'mock'] as const) {
 		it('the head is poisoned alone; its followers form the next turn', async () => {
 			for (const text of ['s1', 's2']) await enqueue(text)
 			const claimed = await bundle()
-			await mailbox.fail(claimed?.head.id ?? '', claimed?.followers.map(item => item.id) ?? [], 'boom', 1)
+			await mailbox.fail(
+				claimed?.head.id ?? '',
+				claimed?.followers.map(item => item.id) ?? [],
+				{ class: MailboxFailureClass.CRASH, detail: 'boom' },
+				[],
+			)
 
 			const next = await bundle()
 			expect(textsOf(next)).toEqual(['s2'])
@@ -177,7 +194,7 @@ for (const env of ['libsql', 'mock'] as const) {
 		it('a pause gives the whole group back — attempts refunded, held until the instant, then whole again', async () => {
 			for (const text of ['s1', 's2']) await enqueue(text)
 			const claimed = await bundle()
-			await mailbox.defer(idsOf(claimed), new Date(Date.now() + 60_000))
+			await mailbox.defer(idsOf(claimed), new Date(Date.now() + 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 			expect(await bundle()).toBeUndefined()
 			expect((await mailbox.deferred()).map(item => item.id).sort()).toEqual([...idsOf(claimed)].sort())
 

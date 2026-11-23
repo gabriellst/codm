@@ -86,6 +86,18 @@ export function formatDayAndTime(iso: string, locale: Locale = DEFAULT_LOCALE): 
 }
 
 /**
+ * The time alone when the instant falls TODAY (local), day and time otherwise — `"14:30"` / `"24/11 09:05"` in pt-BR.
+ * For a near instant that may still cross midnight (a retry scheduled at 23:50 for 00:40): the time alone reads as
+ * today, so it only stands alone when it is. `now` is handed in so a test never depends on the clock. Degrades like
+ * `formatTimeOfDay`.
+ */
+export function formatTimeOrDayAndTime(iso: string, locale: Locale = DEFAULT_LOCALE, now: Date = new Date()): string {
+	const date = new Date(iso)
+	if (Number.isNaN(date.getTime())) return iso
+	return date.toDateString() === now.toDateString() ? formatTimeOfDay(iso, locale) : formatDayAndTime(iso, locale)
+}
+
+/**
  * Relative time from now, locale-aware: an artifact recorded 12 minutes ago reads "há 12 min" in
  * pt-BR, "12 min. ago" in en-US. `Intl.RelativeTimeFormat` picks the wording; this function only
  * picks the UNIT (second/minute/hour/day), the same threshold shape `formatDurationSeconds` uses —

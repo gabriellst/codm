@@ -7,3 +7,10 @@
  * `AgentRunStopRaisedEvent` já tem exatamente um publicador, que é este contexto.
  */
 export { ReconcileStalledIssues } from './usecases/ReconcileStalledIssues'
+
+/**
+ * O supervisor (fase 5, item 3): a cada 20 min, as tarefas suspeitas por regra são vistas pelo modelo pequeno, sem
+ * ferramentas, e todo veredito fica registrado. Vive aqui pela mesma razão do reconciliador: quem sabe o que é um
+ * turno vivo, uma fila adiada e o gasto do provedor é o dono da mailbox.
+ */
+export { SuperviseSuspectIssues } from './usecases/SuperviseSuspectIssues'

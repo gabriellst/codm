@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const usageRoleSchema = z.enum(["ORCHESTRATOR", "ISSUE", "TRIAGE"])
+export const usageRoleSchema = z.enum(["ORCHESTRATOR", "ISSUE", "TRIAGE", "SUPERVISOR"])

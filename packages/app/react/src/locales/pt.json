@@ -417,7 +417,8 @@
 			"STALLED": "Parada",
 			"WAITING_BUDGET": "Segurada pelo orçamento",
 			"WAITING_PERSON": "Aguardando pessoa",
-			"WAITING_PROVIDER": "Esperando cota"
+			"WAITING_PROVIDER": "Esperando cota",
+			"WAITING_RETRY": "Tentando de novo"
 		},
 		"IssueStatus": {
 			"COMPLETED": "Concluída",
@@ -438,7 +439,10 @@
 			"STEER": "Orientação",
 			"STOP_RAISED": "Pediu alguém",
 			"STOP_RESOLVED": "Respondida",
-			"TURN_STARTED": "Turno iniciado"
+			"TURN_STARTED": "Turno iniciado",
+			"NUDGED": "Empurrão",
+			"RETRY_SCHEDULED": "Nova tentativa",
+			"SUPERVISOR_REVIEWED": "Supervisor"
 		},
 		"Language": {
 			"en-US": "English (US)",
@@ -513,7 +517,8 @@
 			"DENY": "Negar",
 			"RETRY": "Tentar novamente",
 			"REVIEW_AND_SEND": "Revisar e enviar",
-			"TAKE_OVER": "Assumir"
+			"TAKE_OVER": "Assumir",
+			"AUTO_RETRY": "Tentado de novo pelo supervisor"
 		},
 		"ThreadStatus": {
 			"IDLE": "Ocioso",
@@ -531,6 +536,22 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Projeto Claude",
 			"GIT": "git"
+		},
+		"NudgeSource": {
+			"RECONCILER": "automático",
+			"SUPERVISOR": "supervisor"
+		},
+		"SuspicionReason": {
+			"STALLED_OPEN": "Parada há tempo",
+			"PROVIDER_ERROR_OPEN": "Erro do provedor há tempo",
+			"NUDGE_LOOP": "Cala de novo",
+			"SILENT_TURN": "Turno mudo"
+		},
+		"SupervisorVerdict": {
+			"NUDGE": "empurrou",
+			"RESTART_WITH_NOTES": "reiniciou com as notas",
+			"ESCALATE": "escalou",
+			"LEAVE": "deixou como está"
 		}
 	},
 	"errors": {
@@ -907,7 +928,12 @@
 		"timelineTriage": "roteada pela triagem",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
-		"waitingTerminal": "Aguardando saída do terminal…"
+		"waitingTerminal": "Aguardando saída do terminal…",
+		"timelineNudged": "empurrão {{ordinal}} de {{outOf}} · {{source}}",
+		"timelineRetryScheduled": "tentativa {{attempt}} de {{max}} · {{time}}",
+		"timelineSupervisor": "o supervisor {{verdict}} · motivo: {{reason}}",
+		"retryingAt": "Nova tentativa às {{when}}",
+		"escalatedBySupervisor": "Escalada pelo supervisor"
 	},
 	"settings": {
 		"agentProviders": "Provedores de agentes",

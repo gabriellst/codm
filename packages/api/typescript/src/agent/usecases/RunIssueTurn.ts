@@ -44,7 +44,7 @@ import {
 	MessageVia,
 	TurnAbortReason,
 } from '../enums'
-import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
+import { isTransportStopKind, RETRIED_TRANSPORT_STOP_KINDS, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
 
 /**
  * THE TWO HANDOFF THRESHOLDS (fase 4, item 6a), in tokens of the session's measured context (`lastContextTokens`).
@@ -138,14 +138,28 @@ export const RunIssueTurnInputSchema = z.object({
 	 */
 	answersEntryId: z.uuid().optional(),
 	/**
-	 * This turn IS the declaration reminder — the one automatic steer a turn that ended without declaring
-	 * anything receives (`remindToDeclare`). Two consequences, both deliberate: its reply is NOT handed to
-	 * the orchestrator (the substance was already reported by the turn it follows, and a second "nada
-	 * novo" in the group is the noise this exists to cut), and it never schedules another reminder (one
-	 * nudge, then the reconcile sweep raises the stop).
+	 * WHAT the item the turn drains is — its `claim_class`, read off the column by the dispatcher (fase 5: never off a
+	 * payload flag). Absent for a turn no queue item scheduled (the e2e door). It decides one thing here, by table
+	 * (`ANSWERS_A_PERSON`): a nudge's turn (`REMINDER`) never answers anybody in the group.
 	 */
-	declarationReminder: z.boolean().optional(),
+	claimClass: z.enum(MailboxClaimClass).optional(),
 })
+
+/**
+ * WHETHER A TURN OF THIS CLAIM CLASS MAY ANSWER A PERSON (fase 5, item 1) — hand its words to the orchestrator as an
+ * `ISSUE_RESULT` quoting somebody's message. A nudge's turn (`REMINDER`) never does: nobody asked it anything, the
+ * substance was already reported by the turn it follows, and a second "nada novo" in the group is the noise the nudge
+ * exists to cut — its words stay the issue's PROGRESS. Total over the enum.
+ */
+const ANSWERS_A_PERSON: Readonly<Record<MailboxClaimClass, boolean>> = {
+	[MailboxClaimClass.DECISION_ANSWER]: true,
+	[MailboxClaimClass.INTERRUPT]: true,
+	[MailboxClaimClass.STEER]: true,
+	[MailboxClaimClass.WORK]: true,
+	[MailboxClaimClass.REMINDER]: false,
+	[MailboxClaimClass.RESULT]: true,
+	[MailboxClaimClass.OPERATOR]: true,
+}
 
 export const RunIssueTurnOutputSchema = z.object({
 	issueId: z.uuid(),
@@ -163,7 +177,14 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * to retry via `fail()` instead of consuming the item with `complete()`. `retryAfter` (epoch ms) is set
 	 * when the provider named the earliest instant a retry can succeed (its usage limit).
 	 */
-	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
+	transportStop: z
+		.object({
+			/** WHICH retried kind (fase 5, S2) — the dispatcher classifies the failure by it, never by `detail`. */
+			kind: z.enum(RETRIED_TRANSPORT_STOP_KINDS),
+			detail: z.string(),
+			retryAfter: z.number().int().optional(),
+		})
+		.optional(),
 	/**
 	 * The turn was KILLED because its issue was paused (fase 2, item 2 — `IssueTurnAborter`), or the
 	 * pause landed before it could start. Nothing of its conclusion was persisted — no ISSUE_RESULT, no
@@ -224,6 +245,23 @@ interface SessionHandoff {
 	derived: string
 	/** The turn's start: notes written AFTER it (by the new session itself) are not the ones this handoff consumed. */
 	decidedAt: Date
+	/** Why the old session was left — its size, or the supervisor's request (fase 5). */
+	reason: ResumeInvalidationReason
+}
+
+/**
+ * WHETHER A FRESH SESSION STARTS FROM THE HANDOFF NOTES, by the reason the resume was dropped — total over
+ * `ResumeInvalidationReason` (fase 4, item 6a; fase 5, item 3). A session past the context budget and a session the
+ * supervisor asked to restart hand their work over (the session's notes, if any, and the derived ones); every other
+ * reason means a premise broke (model, workspace, cursor) and the turn simply runs fresh, as it always did.
+ */
+const SEEDS_FROM_NOTES: Readonly<Record<ResumeInvalidationReason, boolean>> = {
+	[ResumeInvalidationReason.MODEL_CHANGED]: false,
+	[ResumeInvalidationReason.CWD_CHANGED]: false,
+	[ResumeInvalidationReason.MISSING_CURSOR]: false,
+	[ResumeInvalidationReason.CONVERSATION_ADVANCED]: false,
+	[ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED]: true,
+	[ResumeInvalidationReason.HANDOFF_REQUESTED]: true,
 }
 
 /**
@@ -376,8 +414,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
 		// it says to RECORD (PERMISSION_DENIED) was already minted by `persistOutcome` and consumes the item.
 		const transportStop =
-			retried && observed.outcome.kind === 'STOPPED'
-				? { detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
+			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind)
+				? { kind: observed.outcome.stopKind, detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
 				: undefined
 
 		return {
@@ -492,6 +530,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			},
 			{ signal },
 		)) {
+			// Every stream frame is a sign of life (fase 5): the supervisor's SILENT_TURN reads the last one, in memory.
+			if (event.type === 'frame') this.aborter.sawFrame(input.issueId)
 			const frame = accumulator.feed(event)
 			if (frame) await this.registry.send(input.issueId, frame)
 		}
@@ -581,9 +621,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				// sem nada rodando. Esta linha é o que aponta a causa em segundos.
 				this.logging.warn({
 					content: {
-						message: input.declarationReminder
-							? 'turn ended without a declared outcome even after the reminder — the reconcile sweep will raise the stop'
-							: 'turn ended without a declared outcome — the reconcile sweep will remind it once',
+						message:
+							input.claimClass === MailboxClaimClass.REMINDER
+								? 'turn ended without a declared outcome even after a nudge — the reconcile sweep nudges again or raises the stop'
+								: 'turn ended without a declared outcome — the reconcile sweep will nudge it',
 						issueId: input.issueId,
 						threadId: input.threadId,
 						turnKind: input.turnKind,
@@ -646,7 +687,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// this line survived Fase 4.5 untouched: the per-CLI data literal and its registry died, their static
 		// fields moved onto the concrete runner, while `ProviderDetector` stayed and kept returning
 		// `caps: ProviderCapabilities` unchanged (AC-5.9).
-		if (!detection.caps?.sessionResume) {
+		// A supervisor's restart request (fase 5) goes on to the handoff below even here: the request is answered by a
+		// fresh session seeded with the notes, and `resumeDecision` reports it before anything else.
+		if (!detection.caps?.sessionResume && !existing.handoffRequestedAt) {
 			this.logging.warn({
 				content: {
 					message: 'provider has no native session resume capability — starting a fresh provider session',
@@ -668,9 +711,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		if (decision.resume) return { resumed: true, id: decision.id, askNotes: existing.contextAbove(ISSUE_HANDOFF_ASK_AT) }
 
 		this.logResumeInvalidated(input, existing.agentSessionId, decision.reason)
-		if (decision.reason !== ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED) return { resumed: false, id: uuidv7() }
-		// THE HANDOFF (fase 4, item 6a): the old session is past the budget — a fresh one starts from its notes and the
-		// task's durable state. Every other reason keeps its old meaning (the premise broke; the turn simply runs fresh).
+		if (!SEEDS_FROM_NOTES[decision.reason]) return { resumed: false, id: uuidv7() }
+		// THE HANDOFF (fase 4, item 6a; fase 5): the old session is past the budget, or the supervisor asked to restart it
+		// — a fresh one starts from its notes and the task's durable state (`SEEDS_FROM_NOTES`).
 		return {
 			resumed: false,
 			id: uuidv7(),
@@ -685,6 +728,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 					cwd: input.workspacePath,
 				}),
 				decidedAt: new Date(),
+				reason: decision.reason,
 			},
 		}
 	}
@@ -747,6 +791,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 							notesSource: handoff.sessionNotes ? HandoffNotesSource.SESSION : HandoffNotesSource.DERIVED,
 							fromAgentSessionId: handoff.fromAgentSessionId,
 							toAgentSessionId: agentSessionId,
+							reason: handoff.reason,
 						},
 					}),
 					tx,
@@ -792,8 +837,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// A turn that answers a person AND finished the task: the closing already is that person's answer (it
 		// quotes their message — `IssueTurnAborter.answerWithClosing`), so the reply would be a second message
 		// saying the same thing. Its words stay on the timeline as PROGRESS.
-		if (input.answersEntryId && !this.aborter.answeredByClosing(input.issueId, input.answersEntryId)) {
-			await this.enqueueResult(input, input.answersEntryId, text, tx)
+		const answersEntryId = input.claimClass && !ANSWERS_A_PERSON[input.claimClass] ? undefined : input.answersEntryId
+		if (answersEntryId && !this.aborter.answeredByClosing(input.issueId, answersEntryId)) {
+			await this.enqueueResult(input, answersEntryId, text, tx)
 			return
 		}
 		await this.domainEventRepository.save(

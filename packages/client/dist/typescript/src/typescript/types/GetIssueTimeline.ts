@@ -10,11 +10,14 @@ import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { IrreversibleActionKind } from "./IrreversibleActionKind.ts";
 import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
+import type { NudgeSource } from "./NudgeSource.ts";
 import type { OutputRouting } from "./OutputRouting.ts";
 import type { PublishRunOutcome } from "./PublishRunOutcome.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
+import type { SupervisorVerdict } from "./SupervisorVerdict.ts";
+import type { SuspicionReason } from "./SuspicionReason.ts";
 import type { TranscriptKind } from "./TranscriptKind.ts";
 
 export type GetIssueTimelinePathParams = {
@@ -107,6 +110,24 @@ export const ItemsKindEnum14 = {
 } as const;
 
 export type ItemsKindEnum14Key = (typeof ItemsKindEnum14)[keyof typeof ItemsKindEnum14];
+
+export const ItemsKindEnum15 = {
+    NUDGED: "NUDGED"
+} as const;
+
+export type ItemsKindEnum15Key = (typeof ItemsKindEnum15)[keyof typeof ItemsKindEnum15];
+
+export const ItemsKindEnum16 = {
+    RETRY_SCHEDULED: "RETRY_SCHEDULED"
+} as const;
+
+export type ItemsKindEnum16Key = (typeof ItemsKindEnum16)[keyof typeof ItemsKindEnum16];
+
+export const ItemsKindEnum17 = {
+    SUPERVISOR_REVIEWED: "SUPERVISOR_REVIEWED"
+} as const;
+
+export type ItemsKindEnum17Key = (typeof ItemsKindEnum17)[keyof typeof ItemsKindEnum17];
 
 /**
  * @description An issue\'s timeline: created, turns, messages, steers, artifacts, stops, completion
@@ -463,6 +484,85 @@ export type GetIssueTimeline200 = {
          * @type integer | undefined
         */
         durationMs?: number;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum15Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @minLength 1
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        ordinal: number;
+        /**
+         * @type string
+        */
+        source: NudgeSource;
+        /**
+         * @minLength 1
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        outOf: number;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum16Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @minLength 1
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        attempt: number;
+        /**
+         * @minLength 1
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        maxAttempts: number;
+        /**
+         * @type string
+        */
+        retryAt: string;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum17Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        reason: SuspicionReason;
+        /**
+         * @type string
+        */
+        verdict: SupervisorVerdict;
     })[];
 };
 

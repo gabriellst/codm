@@ -516,6 +516,7 @@ const (
 	IssueLifeStateRUNNING IssueLifeState = "RUNNING"
 	IssueLifeStateQUEUED IssueLifeState = "QUEUED"
 	IssueLifeStateWAITING_PROVIDER IssueLifeState = "WAITING_PROVIDER"
+	IssueLifeStateWAITING_RETRY IssueLifeState = "WAITING_RETRY"
 	IssueLifeStateWAITING_BUDGET IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITING_PERSON IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateREMINDED IssueLifeState = "REMINDED"
@@ -526,7 +527,7 @@ const (
 
 func ParseIssueLifeState(s string) (IssueLifeState, error) {
 	switch IssueLifeState(s) {
-	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_BUDGET, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
+	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_RETRY, IssueLifeStateWAITING_BUDGET, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
 		return IssueLifeState(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueLifeState: %q", s)
@@ -604,11 +605,14 @@ const (
 	IssueTimelineItemKindREGRET_WINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 	IssueTimelineItemKindBATCH_LINKED IssueTimelineItemKind = "BATCH_LINKED"
 	IssueTimelineItemKindPUBLISH_RAN IssueTimelineItemKind = "PUBLISH_RAN"
+	IssueTimelineItemKindNUDGED IssueTimelineItemKind = "NUDGED"
+	IssueTimelineItemKindRETRY_SCHEDULED IssueTimelineItemKind = "RETRY_SCHEDULED"
+	IssueTimelineItemKindSUPERVISOR_REVIEWED IssueTimelineItemKind = "SUPERVISOR_REVIEWED"
 )
 
 func ParseIssueTimelineItemKind(s string) (IssueTimelineItemKind, error) {
 	switch IssueTimelineItemKind(s) {
-	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW, IssueTimelineItemKindBATCH_LINKED, IssueTimelineItemKindPUBLISH_RAN:
+	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW, IssueTimelineItemKindBATCH_LINKED, IssueTimelineItemKindPUBLISH_RAN, IssueTimelineItemKindNUDGED, IssueTimelineItemKindRETRY_SCHEDULED, IssueTimelineItemKindSUPERVISOR_REVIEWED:
 		return IssueTimelineItemKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueTimelineItemKind: %q", s)
@@ -681,6 +685,23 @@ func ParseMailboxClaimClass(s string) (MailboxClaimClass, error) {
 		return MailboxClaimClass(s), nil
 	default:
 		return "", fmt.Errorf("invalid MailboxClaimClass: %q", s)
+	}
+}
+
+type MailboxDeferCause string
+
+const (
+	MailboxDeferCausePROVIDER_LIMIT MailboxDeferCause = "PROVIDER_LIMIT"
+	MailboxDeferCauseHOLD MailboxDeferCause = "HOLD"
+	MailboxDeferCauseRETRY MailboxDeferCause = "RETRY"
+)
+
+func ParseMailboxDeferCause(s string) (MailboxDeferCause, error) {
+	switch MailboxDeferCause(s) {
+	case MailboxDeferCausePROVIDER_LIMIT, MailboxDeferCauseHOLD, MailboxDeferCauseRETRY:
+		return MailboxDeferCause(s), nil
+	default:
+		return "", fmt.Errorf("invalid MailboxDeferCause: %q", s)
 	}
 }
 
@@ -793,6 +814,22 @@ func ParseMessageType(s string) (MessageType, error) {
 		return MessageType(s), nil
 	default:
 		return "", fmt.Errorf("invalid MessageType: %q", s)
+	}
+}
+
+type NudgeSource string
+
+const (
+	NudgeSourceRECONCILER NudgeSource = "RECONCILER"
+	NudgeSourceSUPERVISOR NudgeSource = "SUPERVISOR"
+)
+
+func ParseNudgeSource(s string) (NudgeSource, error) {
+	switch NudgeSource(s) {
+	case NudgeSourceRECONCILER, NudgeSourceSUPERVISOR:
+		return NudgeSource(s), nil
+	default:
+		return "", fmt.Errorf("invalid NudgeSource: %q", s)
 	}
 }
 
@@ -1177,14 +1214,51 @@ const (
 	StopResolutionDENY StopResolution = "DENY"
 	StopResolutionANSWER StopResolution = "ANSWER"
 	StopResolutionDEFAULT_APPLIED StopResolution = "DEFAULT_APPLIED"
+	StopResolutionAUTO_RETRY StopResolution = "AUTO_RETRY"
 )
 
 func ParseStopResolution(s string) (StopResolution, error) {
 	switch StopResolution(s) {
-	case StopResolutionRETRY, StopResolutionREVIEW_AND_SEND, StopResolutionTAKE_OVER, StopResolutionAPPROVE, StopResolutionDENY, StopResolutionANSWER, StopResolutionDEFAULT_APPLIED:
+	case StopResolutionRETRY, StopResolutionREVIEW_AND_SEND, StopResolutionTAKE_OVER, StopResolutionAPPROVE, StopResolutionDENY, StopResolutionANSWER, StopResolutionDEFAULT_APPLIED, StopResolutionAUTO_RETRY:
 		return StopResolution(s), nil
 	default:
 		return "", fmt.Errorf("invalid StopResolution: %q", s)
+	}
+}
+
+type SupervisorVerdict string
+
+const (
+	SupervisorVerdictNUDGE SupervisorVerdict = "NUDGE"
+	SupervisorVerdictRESTART_WITH_NOTES SupervisorVerdict = "RESTART_WITH_NOTES"
+	SupervisorVerdictESCALATE SupervisorVerdict = "ESCALATE"
+	SupervisorVerdictLEAVE SupervisorVerdict = "LEAVE"
+)
+
+func ParseSupervisorVerdict(s string) (SupervisorVerdict, error) {
+	switch SupervisorVerdict(s) {
+	case SupervisorVerdictNUDGE, SupervisorVerdictRESTART_WITH_NOTES, SupervisorVerdictESCALATE, SupervisorVerdictLEAVE:
+		return SupervisorVerdict(s), nil
+	default:
+		return "", fmt.Errorf("invalid SupervisorVerdict: %q", s)
+	}
+}
+
+type SuspicionReason string
+
+const (
+	SuspicionReasonSTALLED_OPEN SuspicionReason = "STALLED_OPEN"
+	SuspicionReasonPROVIDER_ERROR_OPEN SuspicionReason = "PROVIDER_ERROR_OPEN"
+	SuspicionReasonNUDGE_LOOP SuspicionReason = "NUDGE_LOOP"
+	SuspicionReasonSILENT_TURN SuspicionReason = "SILENT_TURN"
+)
+
+func ParseSuspicionReason(s string) (SuspicionReason, error) {
+	switch SuspicionReason(s) {
+	case SuspicionReasonSTALLED_OPEN, SuspicionReasonPROVIDER_ERROR_OPEN, SuspicionReasonNUDGE_LOOP, SuspicionReasonSILENT_TURN:
+		return SuspicionReason(s), nil
+	default:
+		return "", fmt.Errorf("invalid SuspicionReason: %q", s)
 	}
 }
 
@@ -1572,11 +1646,12 @@ const (
 	UsageRoleORCHESTRATOR UsageRole = "ORCHESTRATOR"
 	UsageRoleISSUE UsageRole = "ISSUE"
 	UsageRoleTRIAGE UsageRole = "TRIAGE"
+	UsageRoleSUPERVISOR UsageRole = "SUPERVISOR"
 )
 
 func ParseUsageRole(s string) (UsageRole, error) {
 	switch UsageRole(s) {
-	case UsageRoleORCHESTRATOR, UsageRoleISSUE, UsageRoleTRIAGE:
+	case UsageRoleORCHESTRATOR, UsageRoleISSUE, UsageRoleTRIAGE, UsageRoleSUPERVISOR:
 		return UsageRole(s), nil
 	default:
 		return "", fmt.Errorf("invalid UsageRole: %q", s)

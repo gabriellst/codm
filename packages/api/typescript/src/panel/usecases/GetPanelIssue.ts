@@ -17,6 +17,10 @@ export const GetPanelIssueOutputSchema = z.object({
 		status: z.enum(IssueStatus),
 		lifeState: z.enum(IssueLifeState),
 		waitingForProviderUntil: z.string().optional(),
+		/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent otherwise (filled from S2). */
+		retryingAt: z.string().optional(),
+		/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
+		escalatedAt: z.string().optional(),
 		updatedAt: z.string(),
 	}),
 	timeline: z.array(IssueTimelineItemSchema),
@@ -64,6 +68,8 @@ export class GetPanelIssue extends Handler<typeof GetPanelIssueInputSchema, type
 				status: issue.status,
 				lifeState: issue.lifeState,
 				waitingForProviderUntil: issue.waitingForProviderUntil?.toISOString(),
+				retryingAt: issue.retryingAt?.toISOString(),
+				escalatedAt: issue.escalatedAt?.toISOString(),
 				updatedAt: issue.updatedAt.toISOString(),
 			},
 			// Stored verbatim from a validated sync; a row that no longer parses shows no timeline rather than failing the page.

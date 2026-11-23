@@ -193,4 +193,26 @@ describe('ResolveStopController — reachable by the console AND from inside an 
 		}
 		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolvedAt).toBeUndefined()
 	})
+
+	/**
+	 * Fase 5: AUTO_RETRY is the supervisor job's. Even on the kinds that admit it (STALLED, SERVER_ERROR), the bare
+	 * door — the console and the MCP tool behind it — refuses it, and the stop stays open.
+	 */
+	it('AUTO_RETRY is refused on the bare door even where the kind admits it — the stop stays open', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		for (const kind of [StopKind.STALLED, StopKind.SERVER_ERROR]) {
+			const stop = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), kind })
+			const request = requestFor(stop.stopId, StopResolution.AUTO_RETRY)
+			await new AgentIdentityMiddleware(new InMemoryAgentIdentityService()).execute(request)
+			const failure = await testBed
+				.resolve(ResolveStopController)
+				.execute(request)
+				.then(
+					() => undefined,
+					(error: unknown) => error as BaseError,
+				)
+			expect(failure?.name).toBe('RESOLUTION_NOT_APPLICABLE')
+			expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolvedAt).toBeUndefined()
+		}
+	})
 })

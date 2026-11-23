@@ -7,7 +7,8 @@
 export const UsageRoleEnum = {
     ORCHESTRATOR: "ORCHESTRATOR",
     ISSUE: "ISSUE",
-    TRIAGE: "TRIAGE"
+    TRIAGE: "TRIAGE",
+    SUPERVISOR: "SUPERVISOR"
 } as const;
 
 export type UsageRoleEnumKey = (typeof UsageRoleEnum)[keyof typeof UsageRoleEnum];

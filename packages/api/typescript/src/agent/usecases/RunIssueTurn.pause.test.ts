@@ -167,4 +167,30 @@ describe('a pause kills the running issue turn, and the killed turn says nothing
 		expect(turn.signal.aborted).toBe(false)
 		turn.end()
 	})
+
+	/**
+	 * THE SILENCE SIGNAL (fase 5) — every stream frame of the running turn is stamped on the registry, in memory, so the
+	 * supervisor's SILENT_TURN reads when the turn last spoke. Falsifier: drop the stamp in the stream loop and
+	 * `lastFrameAt` stays absent while the turn streams.
+	 */
+	it("a frame of the running turn stamps the registry's last sign of life", async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-15' })
+		const aborter = testBed.resolve(IssueTurnAborter)
+		const begunAt = new Date(Date.now() - 45 * 60_000)
+		const turn = aborter.begin(issue.id.value, undefined, [], begunAt)
+		expect(aborter.liveTurn(issue.id.value)).toEqual({ startedAt: begunAt })
+
+		const before = Date.now()
+		const running = testBed.resolve(RunIssueTurn).execute(input(issue.id.value, thread.id.value))
+		await runner.running
+		const live = aborter.liveTurn(issue.id.value)
+		expect(live?.startedAt).toEqual(begunAt)
+		expect(live?.lastFrameAt?.getTime()).toBeGreaterThanOrEqual(before)
+
+		aborter.abort(issue.id.value)
+		await running
+		turn.end()
+		expect(aborter.liveTurn(issue.id.value)).toBeUndefined()
+	})
 })

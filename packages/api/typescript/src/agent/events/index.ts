@@ -46,12 +46,15 @@ import type { AgentToolCallEvent } from './AgentToolCallEvent'
  * Nor the run's USAGE, since fase 4 (S1). It used to be minted here unstamped and minted AGAIN by the use case
  * that knew whose turn it was; now the runner carries the buckets on its terminal record
  * (`AgentRunResult.usage`) and `agent.turn.usage` has exactly one producer per role — the turn that knows the
- * role, the provider and the model (`RunIssueTurn`, `RunOrchestratorTurn`, `TriageUsageRecorder`).
+ * role, the provider and the model (`RunIssueTurn`, `RunOrchestratorTurn`, `SmallModelUsageRecorder`).
  */
 export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent
 export { IssueForkedEvent, IssueForkedEventSchema } from './IssueForkedEvent'
 export { OrchestratorRepliedEvent, OrchestratorRepliedEventSchema } from './OrchestratorRepliedEvent'
 export { RegretWindowClosedEvent, RegretWindowClosedEventSchema } from './RegretWindowClosedEvent'
+export { AgentRetryScheduledEvent, AgentRetryScheduledEventSchema } from './AgentRetryScheduledEvent'
+export { AgentIssueNudgedEvent, AgentIssueNudgedEventSchema } from './AgentIssueNudgedEvent'
+export { AgentSupervisorReviewedEvent, AgentSupervisorReviewedEventSchema } from './AgentSupervisorReviewedEvent'
 export { PublishRanEvent, PublishRanEventSchema } from './PublishRanEvent'
 export { PublishStartedEvent, PublishStartedEventSchema } from './PublishStartedEvent'
 export { IssueSpokeEvent, IssueSpokeEventSchema, SPOKEN_LEVELS, type SpokenLevel } from './IssueSpokeEvent'

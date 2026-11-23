@@ -13,12 +13,15 @@ import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
+import type { NudgeSource } from "./NudgeSource.ts";
 import type { OutputRouting } from "./OutputRouting.ts";
 import type { PanelHealth } from "./PanelHealth.ts";
 import type { PublishRunOutcome } from "./PublishRunOutcome.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
+import type { SupervisorVerdict } from "./SupervisorVerdict.ts";
+import type { SuspicionReason } from "./SuspicionReason.ts";
 import type { TranscriptKind } from "./TranscriptKind.ts";
 
 /**
@@ -124,6 +127,24 @@ export const TimelineKindEnum14 = {
 
 export type TimelineKindEnum14Key = (typeof TimelineKindEnum14)[keyof typeof TimelineKindEnum14];
 
+export const TimelineKindEnum15 = {
+    NUDGED: "NUDGED"
+} as const;
+
+export type TimelineKindEnum15Key = (typeof TimelineKindEnum15)[keyof typeof TimelineKindEnum15];
+
+export const TimelineKindEnum16 = {
+    RETRY_SCHEDULED: "RETRY_SCHEDULED"
+} as const;
+
+export type TimelineKindEnum16Key = (typeof TimelineKindEnum16)[keyof typeof TimelineKindEnum16];
+
+export const TimelineKindEnum17 = {
+    SUPERVISOR_REVIEWED: "SUPERVISOR_REVIEWED"
+} as const;
+
+export type TimelineKindEnum17Key = (typeof TimelineKindEnum17)[keyof typeof TimelineKindEnum17];
+
 export type SyncPanelMutationRequest = {
     /**
      * @type array
@@ -175,6 +196,14 @@ export type SyncPanelMutationRequest = {
          * @type string | undefined, date-time
         */
         waitingForProviderUntil?: string;
+        /**
+         * @type string | undefined, date-time
+        */
+        retryingAt?: string;
+        /**
+         * @type string | undefined, date-time
+        */
+        escalatedAt?: string;
         /**
          * @type boolean
         */
@@ -530,6 +559,85 @@ export type SyncPanelMutationRequest = {
              * @type integer | undefined
             */
             durationMs?: number;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum15Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            ordinal: number;
+            /**
+             * @type string
+            */
+            source: NudgeSource;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            outOf: number;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum16Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            attempt: number;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            maxAttempts: number;
+            /**
+             * @type string
+            */
+            retryAt: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum17Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            reason: SuspicionReason;
+            /**
+             * @type string
+            */
+            verdict: SupervisorVerdict;
         })[];
         /**
          * @type string, date-time

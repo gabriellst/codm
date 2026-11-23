@@ -66,10 +66,14 @@ export const QUOTA_RESERVE_MIN_SHARE = 0.05
 export const QUOTA_RESERVE_START_SHARE = 0.186
 /** The span the orchestrator's share is measured over. */
 export const QUOTA_RESERVE_MEASURE_MS = 7 * DAY_MS
-/** Which roles the reserve is FOR — the orchestrator and the triage that serves it; never the tasks. */
+/**
+ * Which roles the reserve is FOR — the orchestrator and the small-model work that serves it (the triage, and from
+ * fase 5 the supervisor); never the tasks.
+ */
 export const RESERVED_ROLES: Readonly<Record<UsageRole, boolean>> = {
 	[UsageRole.ORCHESTRATOR]: true,
 	[UsageRole.TRIAGE]: true,
+	[UsageRole.SUPERVISOR]: true,
 	[UsageRole.ISSUE]: false,
 }
 

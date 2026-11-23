@@ -7,6 +7,7 @@ import { TerminalLineRepository, LibSqlTerminalLineRepository, MockTerminalLineR
 import { PanelPublisher, CloudPanelPublisher, MockPanelPublisher } from './services/PanelPublisher'
 import { IssueHold, LibSqlIssueHold, MockIssueHold } from './services/IssueHold'
 import { IssueBoardReader, LibSqlIssueBoardReader, MockIssueBoardReader } from './services/IssueBoardReader'
+import { IssueTimelineReader, LibSqlIssueTimelineReader, MockIssueTimelineReader } from './services/IssueTimelineReader'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: IssueRepository, mock: MockIssueRepository, real: LibSqlIssueRepository },
@@ -17,4 +18,6 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: IssueHold, mock: MockIssueHold, real: LibSqlIssueHold },
 	// The board of one group for another context (fase 3, item 4 — `relatorio`): key, title, status, life state.
 	{ token: IssueBoardReader, mock: MockIssueBoardReader, real: LibSqlIssueBoardReader },
+	// One issue's timeline for another context (fase 5, item 3 — the supervisor): the same assembly the console shows.
+	{ token: IssueTimelineReader, mock: MockIssueTimelineReader, real: LibSqlIssueTimelineReader },
 ])

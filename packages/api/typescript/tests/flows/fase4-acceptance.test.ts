@@ -188,6 +188,8 @@ describe('fase 4 — acceptance', () => {
 				testBed.resolve(CommandQueue),
 				gate,
 				testBed.resolve(IssueAttributesRepository),
+				testBed.resolve(DatabaseDriver),
+				testBed.resolve(DomainEventRepository),
 			).bind(testContainer)
 		}
 

@@ -29,8 +29,8 @@ describe('StopResolutions — fase 3 asks and the stall', () => {
 		])
 	})
 
-	it('the stall is retried or taken over — it asks nothing to answer', () => {
-		expect(RESOLUTIONS_BY_KIND[StopKind.STALLED]).toEqual([StopResolution.RETRY, StopResolution.TAKE_OVER])
+	it('the stall is retried or taken over — it asks nothing to answer (fase 5: or retried by the supervisor)', () => {
+		expect(RESOLUTIONS_BY_KIND[StopKind.STALLED]).toEqual([StopResolution.RETRY, StopResolution.TAKE_OVER, StopResolution.AUTO_RETRY])
 	})
 
 	it('ANSWER/DEFAULT_APPLIED belong to the asks only — the old kinds keep their vocabulary', () => {
@@ -60,5 +60,20 @@ describe('StopResolutions — fase 3 asks and the stall', () => {
 		expect(bareResolutionsForKind(StopKind.QUESTION_ASKED)).toEqual([StopResolution.TAKE_OVER])
 		// The old kinds keep every button they had.
 		expect(bareResolutionsForKind(StopKind.APPROVAL_NEEDED)).toEqual(RESOLUTIONS_BY_KIND[StopKind.APPROVAL_NEEDED])
+	})
+
+	it('fase 5 — AUTO_RETRY applies only to STALLED and SERVER_ERROR, is never offered by any door, and never elevates', () => {
+		for (const kind of Object.values(StopKind)) {
+			const applies = kind === StopKind.STALLED || kind === StopKind.SERVER_ERROR
+			expect(isResolutionApplicable(kind, StopResolution.AUTO_RETRY)).toBe(applies)
+			expect(bareResolutionsForKind(kind)).not.toContain(StopResolution.AUTO_RETRY)
+			expect(panelResolutionsForKind(kind)).not.toContain(StopResolution.AUTO_RETRY)
+		}
+		expect(GIVEN_BY_NAME_ALONE[StopResolution.AUTO_RETRY]).toBe(false)
+		expect(OFFERED_ON_PANEL[StopResolution.AUTO_RETRY]).toBe(false)
+		expect(RESUMES_WITH_RESOLVER_POSTURE[StopResolution.AUTO_RETRY]).toBe(false)
+		// The buttons people had on these kinds are unchanged.
+		expect(bareResolutionsForKind(StopKind.STALLED)).toEqual([StopResolution.RETRY, StopResolution.TAKE_OVER])
+		expect(panelResolutionsForKind(StopKind.SERVER_ERROR)).toEqual([StopResolution.RETRY])
 	})
 })

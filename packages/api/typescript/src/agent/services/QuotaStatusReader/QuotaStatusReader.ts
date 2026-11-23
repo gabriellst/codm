@@ -21,6 +21,8 @@ export interface QuotaStatus {
 	diskFreeBytes: number
 	/** Whether the provider is refusing the account right now (the dispatcher's usage-limit pause). */
 	providerRefusing: boolean
+	/** Until when (epoch ms) that pause holds every claim — absent when the provider is not refusing. */
+	providerPausedUntil?: number
 }
 
 /**
@@ -42,6 +44,16 @@ export abstract class QuotaStatusReader {
 	holdsIssueLane(): boolean {
 		const status = this.current()
 		return status?.enforced === true && !status.admission.admitted
+	}
+
+	/**
+	 * Until when the provider's usage-limit pause holds the whole queue (fase 5) — `undefined` when nothing is paused,
+	 * including before the dispatcher's first loop. The supervisor skips its pass while this stands: a model call now
+	 * would be refused like every turn, and spend what the account is waiting to get back.
+	 */
+	providerPausedUntil(now: number = Date.now()): Date | undefined {
+		const until = this.current()?.providerPausedUntil
+		return until !== undefined && until > now ? new Date(until) : undefined
 	}
 }
 

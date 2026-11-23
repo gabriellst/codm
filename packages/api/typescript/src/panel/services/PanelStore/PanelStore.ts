@@ -18,6 +18,9 @@ export interface PanelIssueRow {
 	status: IssueStatus
 	lifeState: IssueLifeState
 	waitingForProviderUntil: Date | null
+	/** Fase 5 — a failed turn's next attempt, and the supervisor's last escalation (pg 0009). */
+	retryingAt: Date | null
+	escalatedAt: Date | null
 	archived: boolean
 	timeline: unknown
 	updatedAt: Date

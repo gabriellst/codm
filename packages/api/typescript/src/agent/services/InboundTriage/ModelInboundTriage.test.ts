@@ -33,7 +33,7 @@ class ResultRunner extends AgentRunner {
 
 /**
  * WHAT THE TRIAGE SPENT (fase 4, S1) — a triage run is a turn on the provider's small model, and its tokens count
- * against the same account: `agent.turn.usage` with `role: TRIAGE`, recorded by the agent (`TriageUsageRecorder`)
+ * against the same account: `agent.turn.usage` with `role: TRIAGE`, recorded by the agent (`SmallModelUsageRecorder`)
  * whatever the verdict — the `thread` context that asked never writes the agent's facts.
  *
  * Falsifier: drop the `onFinished` callback and neither case finds a TRIAGE fact.

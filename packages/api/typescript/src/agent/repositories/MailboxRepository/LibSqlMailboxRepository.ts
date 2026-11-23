@@ -2,7 +2,13 @@ import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
 import { DAEMON_BOOT, Id, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction, z } from '@codm/core-typescript'
 import { agentIssueAttributes, agentMailbox } from '@codm/contracts/db'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, type PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	type PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
 	type ClaimedMailboxBundle,
@@ -10,7 +16,10 @@ import {
 	type DeferredMailboxItem,
 	type EnqueueMailboxItem,
 	type HoldSettlement,
+	type MailboxFailOutcome,
+	type MailboxFailure,
 } from './MailboxRepository'
+import { causesReleasedBy } from '../../objects/DeferRelease'
 import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
 import { claimRankSql } from '../../utils/ClaimRank'
 import { coalescedPrefix, MAX_COALESCED, type CoalescingCandidate } from '../../utils/SteerCoalescing'
@@ -30,6 +39,12 @@ const unleased = (now: Date) => or(isNull(agentMailbox.leaseUntil), lt(agentMail
  * instant the lease ends, the item is still paused and not yet claimable — never neither.
  */
 const deferredAt = (now: Date) => and(runnable(), isNull(agentMailbox.claimedBy), gte(agentMailbox.leaseUntil, now))
+
+/**
+ * Every write that clears or replaces the lease clears the cause with it (fase 5, S1) — so `defer_cause IS NULL` ⇔ not
+ * deferred holds after a lapse too. One spread, used by every such write below, so none can forget it.
+ */
+const noLease = { claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null, deferCause: null } as const
 
 /** What the claim reads of a head and of the items behind it — the order keys and what decides who rides along. */
 const coalescingColumns = {
@@ -76,8 +91,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 	}
 
 	async enqueue(item: EnqueueMailboxItem, tx?: LibSqlTransaction): Promise<boolean> {
-		const inserted = await this.write(tx, dbc =>
-			dbc
+		return this.write(tx, async dbc => {
+			const inserted = await dbc
 				.insert(agentMailbox)
 				.values({
 					// uuid v7, monotonic: the claim's LAST tie-break is `id`, so it must be arrival order too (fase 4, S4).
@@ -102,9 +117,23 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					}),
 				})
 				.onConflictDoNothing({ target: agentMailbox.dedupKey })
-				.returning({ id: agentMailbox.id }),
-		)
-		return inserted.length > 0
+				.returning({ id: agentMailbox.id })
+			if (inserted.length === 0) return false
+			// THE NEW ITEM ENDS THE TARGET'S RETRY WAIT (fase 5, item 2 — see the port), handing back the attempt the wait
+			// stood for. Re-asserted predicate: still deferred (no holder, lease pending) by a cause `onNewItem` releases.
+			await dbc
+				.update(agentMailbox)
+				.set({ leaseUntil: null, deferCause: null, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
+				.where(
+					and(
+						eq(agentMailbox.targetKind, item.targetKind),
+						eq(agentMailbox.targetId, item.targetId),
+						deferredAt(new Date()),
+						inArray(agentMailbox.deferCause, causesReleasedBy('onNewItem')),
+					),
+				)
+			return true
+		})
 	}
 
 	/**
@@ -236,6 +265,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					claimedBoot: DAEMON_BOOT.id,
 					claimedPid: DAEMON_BOOT.pid,
 					leaseUntil: new Date(now.getTime() + leaseMs),
+					// A claim REPLACES the lease: a lapsed deferral's cause goes with it (fase 5, S1).
+					deferCause: null,
 					attempts: sql`${agentMailbox.attempts} + 1`,
 					// The FIRST hand-off only ("entregue", fase 0 item 3b): a retry is the same delivery tried again.
 					firstClaimedAt: sql`COALESCE(${agentMailbox.firstClaimedAt}, ${now.getTime()})`,
@@ -333,14 +364,14 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			// to protect it.
 			await dbc
 				.update(agentMailbox)
-				.set({ claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+				.set(noLease)
 				.where(and(inArray(agentMailbox.id, orphaned), runnable(), ne(agentMailbox.claimedBoot, DAEMON_BOOT.id)))
 			return orphaned.length
 		})
 	}
 
 	async settleHold(dedupKey: string, holder: string, settlement: HoldSettlement, tx?: LibSqlTransaction): Promise<boolean> {
-		const released = { claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null }
+		const released = noLease
 		const set = settlement.consume
 			? { ...released, consumedAt: new Date() }
 			: { ...released, ...(settlement.merge && { payload: sql`json_patch(${agentMailbox.payload}, ${JSON.stringify(settlement.merge)})` }) }
@@ -368,35 +399,56 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		await this.write(tx, dbc =>
 			dbc
 				.update(agentMailbox)
-				.set({ consumedAt: new Date(), claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+				.set({ consumedAt: new Date(), ...noLease })
 				.where(inArray(agentMailbox.id, [...ids])),
 		)
 	}
 
-	async fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: LibSqlTransaction): Promise<void> {
-		const released = { claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null }
-		await this.write(tx, async dbc => {
-			// `attempts` was already incremented at claim, so the comparison here reads the real count of
-			// runs, not of scheduling opportunities.
-			await dbc
-				.update(agentMailbox)
-				.set({
-					...released,
-					lastError: error,
-					deadAt: sql`CASE WHEN ${agentMailbox.attempts} >= ${maxAttempts} THEN ${Date.now()} ELSE NULL END`,
-				})
+	async fail(
+		head: string,
+		followers: readonly string[],
+		failure: MailboxFailure,
+		waits: readonly number[],
+		tx?: LibSqlTransaction,
+	): Promise<MailboxFailOutcome> {
+		return this.write(tx, async dbc => {
+			const now = Date.now()
+			// `attempts` was already incremented at claim, so it reads the real count of runs, not of scheduling chances.
+			const [row] = await dbc
+				.select({ attempts: agentMailbox.attempts, firstClaimedAt: agentMailbox.firstClaimedAt })
+				.from(agentMailbox)
 				.where(eq(agentMailbox.id, head))
+			const attempts = row?.attempts ?? 0
+			const wait = waits[Math.max(attempts, 1) - 1]
+			let outcome: MailboxFailOutcome
+			if (wait === undefined) {
+				await dbc
+					.update(agentMailbox)
+					.set({ ...noLease, lastError: failure.detail, deadAt: new Date(now) })
+					.where(eq(agentMailbox.id, head))
+				outcome = { dead: true, attempts, since: row?.firstClaimedAt ?? null }
+			} else {
+				// A wait of 0 is "again now": no lease, no cause — never `lease = now`, which `claimNext` (`lease < now`)
+				// refuses until the clock ticks (the millisecond bug `giveBack` documents). Either way the attempt stays.
+				const retry = wait > 0 ? { leaseUntil: new Date(now + wait), deferCause: MailboxDeferCause.RETRY } : {}
+				await dbc
+					.update(agentMailbox)
+					.set({ ...noLease, ...retry, lastError: failure.detail })
+					.where(eq(agentMailbox.id, head))
+				outcome = { dead: false, attempts, retryAt: new Date(now + wait) }
+			}
 			// The steers that rode with it: released beside it, the attempt their claim charged given back (fase 4, 6b).
 			if (followers.length > 0) {
 				await dbc
 					.update(agentMailbox)
-					.set({ ...released, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
+					.set({ ...noLease, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
 					.where(and(inArray(agentMailbox.id, [...followers]), runnable()))
 			}
+			return outcome
 		})
 	}
 
-	async defer(ids: readonly string[], until: Date, tx?: LibSqlTransaction): Promise<void> {
+	async defer(ids: readonly string[], until: Date, cause: MailboxDeferCause, tx?: LibSqlTransaction): Promise<void> {
 		if (ids.length === 0) return
 		// The attempt the claim charged is REFUNDED: a turn the provider refused to start never ran, so
 		// it must not move the item toward poison. `MAX(…, 0)` because a row can only be deferred after a
@@ -409,6 +461,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					claimedBoot: null,
 					claimedPid: null,
 					leaseUntil: until,
+					deferCause: cause,
 					attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)`,
 				})
 				.where(and(inArray(agentMailbox.id, [...ids]), runnable())),
@@ -420,13 +473,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		await this.write(tx, dbc =>
 			dbc
 				.update(agentMailbox)
-				.set({
-					claimedBy: null,
-					claimedBoot: null,
-					claimedPid: null,
-					leaseUntil: null,
-					attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)`,
-				})
+				.set({ ...noLease, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
 				.where(and(inArray(agentMailbox.id, [...ids]), runnable())),
 		)
 	}
@@ -439,10 +486,12 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				targetKind: agentMailbox.targetKind,
 				targetId: agentMailbox.targetId,
 				payload: agentMailbox.payload,
+				cause: agentMailbox.deferCause,
 			})
 			.from(agentMailbox)
-			.where(deferredAt(new Date()))
-		return rows.map(row => ({ ...row, targetKind: row.targetKind as MailboxTargetKind }))
+			.where(and(deferredAt(new Date()), isNotNull(agentMailbox.deferCause)))
+		// No CHECK on the column (fase 5, S0a: a new column on an existing table) — the enum closes it here.
+		return rows.map(row => ({ ...row, targetKind: row.targetKind as MailboxTargetKind, cause: z.enum(MailboxDeferCause).parse(row.cause) }))
 	}
 
 	/**
@@ -454,7 +503,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		const released = await this.write(tx, dbc =>
 			dbc
 				.update(agentMailbox)
-				.set({ leaseUntil: null })
+				.set({ leaseUntil: null, deferCause: null })
 				.where(and(inArray(agentMailbox.id, [...ids]), deferredAt(new Date())))
 				.returning({ id: agentMailbox.id }),
 		)
@@ -493,9 +542,9 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					runnable(),
 					// Held by no turn: the live turn's own item (a STEER it is reading right now) is not "unread".
 					isNull(agentMailbox.claimedBy),
-					// A PERSON's message: the automatic "declare your outcome" reminder (`ReconcileStalledIssues`)
-					// rides the same kind, and must never cancel a push as if the operator had written.
-					sql`json_extract(${agentMailbox.payload}, '$.declarationReminder') IS NULL`,
+					// A PERSON's message: the automatic nudge (`ReconcileStalledIssues`, claim class REMINDER) rides the
+					// same kind, and must never cancel a push as if the operator had written. Read off the column (fase 5).
+					ne(agentMailbox.claimClass, MailboxClaimClass.REMINDER),
 				),
 			)
 			.limit(1)

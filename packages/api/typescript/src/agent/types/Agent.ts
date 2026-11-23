@@ -272,7 +272,7 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * ### `onFinished` — the run's terminal record, for whoever accounts for it (fase 4, S1)
 	 * The structured output is all `collect` returns, but the run also SPENT something (`result.usage`) and the
 	 * provider may have refused or warned (`result.providerLimit`). A caller that records that cost (the triage's
-	 * `TriageUsageRecorder`) observes the record through this TRANSPORT callback — same family as `signal` — called
+	 * `SmallModelUsageRecorder`) observes the record through this TRANSPORT callback — same family as `signal` — called
 	 * once, before the output is validated, so a run that failed validation is accounted for all the same.
 	 */
 	protected async collect(

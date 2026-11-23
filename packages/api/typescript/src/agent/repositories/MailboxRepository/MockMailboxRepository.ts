@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxDeferCause, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
 	type ClaimedMailboxBundle,
@@ -8,7 +8,10 @@ import {
 	type DeferredMailboxItem,
 	type EnqueueMailboxItem,
 	type HoldSettlement,
+	type MailboxFailOutcome,
+	type MailboxFailure,
 } from './MailboxRepository'
+import { DEFER_RELEASE } from '../../objects/DeferRelease'
 import { IssueAttributesRepository } from '../IssueAttributesRepository'
 import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
 import { claimRankOf } from '../../utils/ClaimRank'
@@ -28,6 +31,8 @@ interface Row extends EnqueueMailboxItem {
 	seq: number
 	/** The twin of `first_claimed_at` — set by the first claim, never cleared. */
 	firstClaimedAt?: number
+	/** The twin of `defer_cause` — set by `defer`, cleared by every write that clears or replaces the lease. */
+	deferCause: MailboxDeferCause | null
 }
 
 /** In-memory twin, same semantics: dedup by key, one lease per target, expiry, poison. */
@@ -47,10 +52,21 @@ export class MockMailboxRepository extends MailboxRepository {
 			claimedBoot: item.hold ? DAEMON_BOOT.id : null,
 			claimedPid: item.hold ? DAEMON_BOOT.pid : null,
 			leaseUntil: item.hold?.until.getTime(),
+			deferCause: null,
 			consumed: false,
 			dead: false,
 			seq: this.seq,
 		})
+		// Same rule as the SQL twin: a new item ends the target's RETRY wait, handing back the attempt it stood for.
+		const now = Date.now()
+		for (const deferred of this.deferredRows(now)) {
+			if (deferred.targetKind !== item.targetKind || deferred.targetId !== item.targetId || !DEFER_RELEASE[deferred.deferCause].onNewItem)
+				continue
+			const row: Row = deferred
+			row.leaseUntil = undefined
+			row.deferCause = null
+			row.attempts = Math.max(row.attempts - 1, 0)
+		}
 		return true
 	}
 
@@ -111,6 +127,7 @@ export class MockMailboxRepository extends MailboxRepository {
 			const firstClaim = member.firstClaimedAt === undefined
 			member.firstClaimedAt ??= now
 			member.leaseUntil = now + leaseMs
+			member.deferCause = null
 			member.claimedBy = claimedBy
 			member.claimedBoot = DAEMON_BOOT.id
 			member.claimedPid = DAEMON_BOOT.pid
@@ -140,22 +157,14 @@ export class MockMailboxRepository extends MailboxRepository {
 		const orphaned = this.rows.filter(
 			r => !r.consumed && !r.dead && r.leaseUntil !== undefined && isClaimOrphaned({ bootId: r.claimedBoot, pid: r.claimedPid }),
 		)
-		for (const row of orphaned) {
-			row.leaseUntil = undefined
-			row.claimedBy = null
-			row.claimedBoot = null
-			row.claimedPid = null
-		}
+		for (const row of orphaned) this.release(row)
 		return orphaned.length
 	}
 
 	async settleHold(dedupKey: string, holder: string, settlement: HoldSettlement): Promise<boolean> {
 		const row = this.rows.find(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
 		if (!row) return false
-		row.leaseUntil = undefined
-		row.claimedBy = null
-		row.claimedBoot = null
-		row.claimedPid = null
+		this.release(row)
 		if (settlement.consume) row.consumed = true
 		else if (settlement.merge) row.payload = { ...(row.payload as Record<string, unknown>), ...settlement.merge }
 		return true
@@ -172,23 +181,42 @@ export class MockMailboxRepository extends MailboxRepository {
 		}
 	}
 
-	async fail(head: string, followers: readonly string[], _error: string, maxAttempts: number): Promise<void> {
+	async fail(head: string, followers: readonly string[], _failure: MailboxFailure, waits: readonly number[]): Promise<MailboxFailOutcome> {
+		const now = Date.now()
 		const row = this.rows.find(r => r.id === head)
-		if (row) {
-			this.release(row)
-			if (row.attempts >= maxAttempts) row.dead = true
+		const attempts = row?.attempts ?? 0
+		const wait = waits[Math.max(attempts, 1) - 1]
+		let outcome: MailboxFailOutcome
+		if (wait === undefined) {
+			if (row) {
+				this.release(row)
+				row.dead = true
+			}
+			outcome = { dead: true, attempts, since: row?.firstClaimedAt === undefined ? null : new Date(row.firstClaimedAt) }
+		} else {
+			if (row) {
+				this.release(row)
+				// A wait of 0 is "again now" (no lease, no cause); the attempt stays charged either way.
+				if (wait > 0) {
+					row.leaseUntil = now + wait
+					row.deferCause = MailboxDeferCause.RETRY
+				}
+			}
+			outcome = { dead: false, attempts, retryAt: new Date(now + wait) }
 		}
 		// Only the head pays: the steers that rode with it get their attempt back.
 		for (const follower of this.rows.filter(r => followers.includes(r.id) && !r.consumed && !r.dead)) {
 			this.release(follower)
 			follower.attempts = Math.max(follower.attempts - 1, 0)
 		}
+		return outcome
 	}
 
-	async defer(ids: readonly string[], until: Date): Promise<void> {
+	async defer(ids: readonly string[], until: Date, cause: MailboxDeferCause): Promise<void> {
 		for (const row of this.rows.filter(r => ids.includes(r.id) && !r.consumed && !r.dead)) {
 			this.release(row)
 			row.leaseUntil = until.getTime()
+			row.deferCause = cause
 			row.attempts = Math.max(row.attempts - 1, 0)
 		}
 	}
@@ -205,6 +233,7 @@ export class MockMailboxRepository extends MailboxRepository {
 		row.claimedBy = null
 		row.claimedBoot = null
 		row.claimedPid = null
+		row.deferCause = null
 	}
 
 	/** Same predicate as the SQL twin's `deferredAt`: runnable, no holder, lease in the future. */
@@ -212,17 +241,29 @@ export class MockMailboxRepository extends MailboxRepository {
 		return !row.consumed && !row.dead && row.claimedBy === null && row.leaseUntil !== undefined && row.leaseUntil >= now
 	}
 
+	/** The rows a defer parked — the cause is part of the predicate, as in the SQL twin. */
+	private deferredRows(now: number): (Row & { deferCause: MailboxDeferCause })[] {
+		return this.rows.filter((r): r is Row & { deferCause: MailboxDeferCause } => this.isDeferred(r, now) && r.deferCause !== null)
+	}
+
 	async deferred(): Promise<DeferredMailboxItem[]> {
 		const now = Date.now()
-		return this.rows
-			.filter(r => this.isDeferred(r, now))
-			.map(r => ({ id: r.id, targetKind: r.targetKind, targetId: r.targetId, payload: r.payload }))
+		return this.deferredRows(now).map(r => ({
+			id: r.id,
+			targetKind: r.targetKind,
+			targetId: r.targetId,
+			payload: r.payload,
+			cause: r.deferCause,
+		}))
 	}
 
 	async releaseDeferred(ids: readonly string[]): Promise<number> {
 		const now = Date.now()
 		const released = this.rows.filter(r => ids.includes(r.id) && this.isDeferred(r, now))
-		for (const row of released) row.leaseUntil = undefined
+		for (const row of released) {
+			row.leaseUntil = undefined
+			row.deferCause = null
+		}
 		return released.length
 	}
 
@@ -243,7 +284,7 @@ export class MockMailboxRepository extends MailboxRepository {
 				r.targetKind === MailboxTargetKind.ISSUE &&
 				r.targetId === issueId &&
 				r.kind === MailboxItemKind.STEER &&
-				!(typeof r.payload === 'object' && r.payload !== null && 'declarationReminder' in r.payload),
+				r.claimClass !== MailboxClaimClass.REMINDER,
 		)
 	}
 }

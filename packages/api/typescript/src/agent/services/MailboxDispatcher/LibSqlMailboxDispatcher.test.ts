@@ -1,15 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
-import { CommandQueue, LoggingService } from '@codm/core-typescript'
+import { CommandQueue, DatabaseDriver, DomainEventRepository, LoggingService } from '@codm/core-typescript'
 import {
 	AgentModelId,
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
 	ProviderKind,
+	StopKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
@@ -26,6 +29,8 @@ import { LibSqlMailboxDispatcher, type TurnReport } from './LibSqlMailboxDispatc
 import { ThroughputGate } from '../ThroughputGate'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
+import type { RetrySchedule } from '../../utils/RetrySchedule'
+import { AgentRetryScheduledEvent } from '../../events/AgentRetryScheduledEvent'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -36,6 +41,29 @@ import { IssueAttributesRepository } from '../../repositories/IssueAttributesRep
  * workspace and a CLI, none of which is what is being tested. The dispatcher's own loop is three
  * lines over `claimNext`; what makes it correct is what `claimNext` promises here.
  */
+/**
+ * Every class retried AT ONCE, twice — the pre-fase-5 shape (three attempts inside one drain), for the cases below that
+ * are about something else (the stop, the ceiling) and not about the calendar (`LibSqlMailboxDispatcher.retry.test.ts`).
+ */
+const twice = [0, 0]
+const AT_ONCE: RetrySchedule = {
+	[MailboxTargetKind.ISSUE]: {
+		[MailboxFailureClass.PROVIDER_ERROR]: twice,
+		[MailboxFailureClass.CRASH]: twice,
+		[MailboxFailureClass.ABANDONED]: twice,
+		[MailboxFailureClass.CLI_LOGIN]: twice,
+	},
+	[MailboxTargetKind.THREAD]: {
+		[MailboxFailureClass.PROVIDER_ERROR]: twice,
+		[MailboxFailureClass.CRASH]: twice,
+		[MailboxFailureClass.ABANDONED]: twice,
+		[MailboxFailureClass.CLI_LOGIN]: twice,
+	},
+}
+class AtOnceDispatcher extends LibSqlMailboxDispatcher {
+	protected override retrySchedule = AT_ONCE
+}
+
 describe('MailboxRepository — the guarantees the dispatcher is built on', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
@@ -219,7 +247,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		for (let attempt = 0; attempt < 3; attempt++) {
 			const item = await repo.claimNext('worker-1', 60_000)
 			expect(item?.id ?? 'a-1').toBeDefined()
-			await repo.fail(item?.id ?? '', [], 'boom', 3)
+			await repo.fail(item?.id ?? '', [], { class: MailboxFailureClass.CRASH, detail: 'boom' }, [0, 0])
 		}
 
 		// The poisoned item is gone from the queue, and the one BEHIND it now runs.
@@ -424,7 +452,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				return {
 					spoke: false,
 					provider: ProviderKind.CLAUDE_CODE,
-					transportStop: { detail: "You've hit your 5-hour limit", retryAfter: Date.now() + 10 * 60_000 },
+					transportStop: { kind: StopKind.SERVER_ERROR, detail: "You've hit your 5-hour limit", retryAfter: Date.now() + 10 * 60_000 },
 				}
 			}
 		}
@@ -440,6 +468,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		const message = (threadId: string, dedupKey: string) =>
@@ -488,7 +518,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	const limitVerdict = (retryAfter: number): TurnReport => ({
 		spoke: false,
 		provider: ProviderKind.CLAUDE_CODE,
-		transportStop: { detail: "You've hit your weekly limit", retryAfter },
+		transportStop: { kind: StopKind.SERVER_ERROR, detail: "You've hit your weekly limit", retryAfter },
 	})
 
 	/**
@@ -529,7 +559,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
 		const parkAsAPreviousRunDid = async () => {
 			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-			await mailbox.defer([claimed!.id], new Date(weeklyReset))
+			await mailbox.defer([claimed!.id], new Date(weeklyReset), MailboxDeferCause.PROVIDER_LIMIT)
 		}
 		await mailbox.enqueue({
 			ownerId: testBed.ownerId,
@@ -574,7 +604,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				return {
 					spoke: true,
 					provider: ProviderKind.CLAUDE_CODE,
-					transportStop: { detail: "You've hit your weekly limit", retryAfter: Date.now() + 10 * 60_000 },
+					transportStop: { kind: StopKind.SERVER_ERROR, detail: "You've hit your weekly limit", retryAfter: Date.now() + 10 * 60_000 },
 				}
 			}
 		}
@@ -582,7 +612,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await operatorMessage(paused.id.value, 'pausado-antes')
 		const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000))
+		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 		await operatorMessage(spokeThenLimited.id.value, 'falou-e-bateu')
 
 		await dispatcher.drain()
@@ -690,6 +720,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(spyContainer)
 
 		await operatorMessage(thread.id.value, 'limite-semanal')
@@ -730,7 +762,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			throw new Error('boom')
 		}
 
-		const dispatcher = new LibSqlMailboxDispatcher(
+		// Retried at once: this case is about the stop at the end of the calendar, not its waits.
+		const dispatcher = new AtOnceDispatcher(
 			mailbox,
 			threads,
 			workspaces,
@@ -742,6 +775,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -799,6 +834,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -884,6 +921,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		try {
@@ -952,8 +991,9 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			return undefined
 		}
 
-		class CeilingDispatcher extends LibSqlMailboxDispatcher {
-			// Dez vezes o teto: se este teste passar, não foi a expiração do lease que soltou o item.
+		class CeilingDispatcher extends AtOnceDispatcher {
+			// Dez vezes o teto: se este teste passar, não foi a expiração do lease que soltou o item. Retentado na hora
+			// (`AtOnceDispatcher`): o caso é o teto, não o calendário.
 			protected override leaseMs = 1_200
 			protected override heartbeatMs = 20
 			protected override maxTurnMs = 120
@@ -970,6 +1010,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		try {
@@ -993,6 +1035,9 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			// Três turnos começaram: o teto devolveu o item à fila duas vezes antes de a terceira falha
 			// envenená-lo. Sem o teto, `started` fica em 1 para sempre.
 			expect(started).toBe(3)
+			// Cada volta pelo teto é registrada como ABANDONADO (fase 5) — a classe que escolhe o calendário, declarada.
+			const retries = await testBed.resolve(DomainEventRepository).findByType(AgentRetryScheduledEvent)
+			expect(retries.map(fact => fact.payload.failureClass)).toEqual([MailboxFailureClass.ABANDONED, MailboxFailureClass.ABANDONED])
 			// E o item não está mais em voo — que é a condição de o reconciliador voltar a enxergar a issue.
 			expect(await mailbox.claimNext('worker-depois', 60_000)).toBeUndefined()
 		} finally {
@@ -1042,6 +1087,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		try {
@@ -1099,13 +1146,10 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	 * O falsificador é exato: troque o `fail` de volta por `complete` no ramo de transporte e este
 	 * teste fica vermelho, porque `completeCalls` deixa de ser zero.
 	 *
-	 * ### Por que `drain()` e não `start()` + sleep + `stop()`
-	 * Um runner que SEMPRE morre no transporte, sem latência real de provider, esgota `MAX_ATTEMPTS`
-	 * dentro de um ÚNICO `drainLoop`: `fail()` libera o lease e a MESMA volta do laço já reclama o item
-	 * de novo, tudo em microtasks — não há janela de relógio em que o item fique "reclamável mas ainda
-	 * não reclamado pelo próprio dispatcher" para um sleep observar de fora. `drain()` devolve uma
-	 * promise que só resolve quando o laço genuinely para (nada reclamável, nada em voo), o que torna
-	 * "todas as tentativas já rodaram" um fato determinístico em vez de uma corrida contra um timer.
+	 * ### Desde a fase 5 (S2): volta no CALENDÁRIO, não na hora
+	 * `fail()` deixa o item adiado com causa `RETRY` até a próxima espera da pista e da classe (conversa,
+	 * erro do provedor: 10 s) — o mesmo `drain()` não o reclama de novo. O calendário inteiro está em
+	 * `LibSqlMailboxDispatcher.retry.test.ts`; aqui fica a decisão de fail × complete e o detalhe real.
 	 */
 	it('um turno MUDO que morre no transporte é reenfileirado via fail(), nunca consumido via complete()', async () => {
 		const ownerId = uuidv7()
@@ -1113,7 +1157,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		class TransportFailingDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
-				return { spoke: false, provider: ProviderKind.CLAUDE_CODE, transportStop: { detail: 'provider unavailable' } }
+				return {
+					spoke: false,
+					provider: ProviderKind.CLAUDE_CODE,
+					transportStop: { kind: StopKind.SERVER_ERROR, detail: 'provider unavailable' },
+				}
 			}
 		}
 
@@ -1130,11 +1178,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		// dispatcher's constructor received, so wrapping it observes exactly what `runTurn` calls.
 		const realFail = mailbox.fail.bind(mailbox)
 		const realComplete = mailbox.complete.bind(mailbox)
-		const failCalls: { error: string; maxAttempts: number }[] = []
+		const failCalls: { error: string; failureClass: MailboxFailureClass }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
-			failCalls.push({ error, maxAttempts })
-			return realFail(head, followers, error, maxAttempts, tx)
+		mailbox.fail = async (head, followers, failure, waits, tx) => {
+			failCalls.push({ error: failure.detail, failureClass: failure.class })
+			return realFail(head, followers, failure, waits, tx)
 		}
 		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
@@ -1158,12 +1206,10 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			// NUNCA consumido como se tivesse sido atendido.
 			expect(completeCalls).toBe(0)
 
-			// AC-3: o item foi reenfileirado e reclamado de novo pelo MESMO drain, sem esperar o lease de
-			// 10 minutos — a prova é que houve MAIS de uma tentativa dentro de um `drain()` só.
-			expect(failCalls.length).toBeGreaterThan(1)
-
-			// AC-5 — o detalhe REAL do transporte, não um placeholder genérico, em toda tentativa.
-			for (const call of failCalls) expect(call.error).toBe('provider unavailable')
+			// AC-3: o item foi reenfileirado no calendário (fase 5) — uma tentativa neste drain, classificada pelo
+			// KIND da parada (`SERVER_ERROR` → erro do provedor), e adiado como nova tentativa, não como cota.
+			expect(failCalls).toEqual([{ error: 'provider unavailable', failureClass: MailboxFailureClass.PROVIDER_ERROR }])
+			expect((await mailbox.deferred()).map(item => [item.targetId, item.cause])).toEqual([[thread.id.value, MailboxDeferCause.RETRY]])
 		} finally {
 			mailbox.fail = realFail
 			mailbox.complete = realComplete
@@ -1186,7 +1232,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		class SpokeThenDiedDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
-				return { spoke: true, provider: ProviderKind.CLAUDE_CODE, transportStop: { detail: 'died after speaking' } }
+				return {
+					spoke: true,
+					provider: ProviderKind.CLAUDE_CODE,
+					transportStop: { kind: StopKind.SERVER_ERROR, detail: 'died after speaking' },
+				}
 			}
 		}
 
@@ -1195,11 +1245,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		const realFail = mailbox.fail.bind(mailbox)
 		const realComplete = mailbox.complete.bind(mailbox)
-		const failCalls: { error: string; maxAttempts: number }[] = []
+		const failCalls: { error: string; failureClass: MailboxFailureClass }[] = []
 		let completeCalls = 0
-		mailbox.fail = async (head, followers, error, maxAttempts, tx) => {
-			failCalls.push({ error, maxAttempts })
-			return realFail(head, followers, error, maxAttempts, tx)
+		mailbox.fail = async (head, followers, failure, waits, tx) => {
+			failCalls.push({ error: failure.detail, failureClass: failure.class })
+			return realFail(head, followers, failure, waits, tx)
 		}
 		mailbox.complete = async (ids, tx) => {
 			completeCalls += 1
@@ -1279,6 +1329,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1344,6 +1396,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1401,6 +1455,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CommandQueue),
 			testBed.resolve(ThroughputGate),
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		const realClaimBundle = mailbox.claimBundle.bind(mailbox)

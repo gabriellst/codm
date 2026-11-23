@@ -6,7 +6,7 @@ import { IssueLifeStateEnum } from '@codm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { row } from '@codm/app-ui/surfaces'
-import { ProviderWaitBadge, type IssueRowItem } from './IssueRow'
+import { EscalatedBadge, ProviderWaitBadge, RetryWaitBadge, type IssueRowItem } from './IssueRow'
 
 export interface IssueCardItem extends IssueRowItem {
 	lifeState: IssueLifeState
@@ -14,7 +14,8 @@ export interface IssueCardItem extends IssueRowItem {
 
 /**
  * The life states the card SPELLS OUT, with their glyph — the ones that share a column with another state
- * (REMINDED and PAUSED sit in STALLED's, WAITING_BUDGET in WAITING_PROVIDER's). `null` = the column already says it. Exhaustive by type.
+ * (REMINDED and PAUSED sit in STALLED's, WAITING_BUDGET and WAITING_RETRY in WAITING_PROVIDER's). `null` = the column —
+ * or a badge with the instant (`retryingAt` for WAITING_RETRY) — already says it. Exhaustive by type.
  */
 const LIFE_BADGE_ICON: Record<IssueLifeState, ElementType | null> = {
 	[IssueLifeStateEnum.QUEUED]: null,
@@ -22,6 +23,8 @@ const LIFE_BADGE_ICON: Record<IssueLifeState, ElementType | null> = {
 	[IssueLifeStateEnum.WAITING_PERSON]: null,
 	[IssueLifeStateEnum.WAITING_PROVIDER]: null,
 	[IssueLifeStateEnum.WAITING_BUDGET]: IconHourglass,
+	// Fase 5: a failed turn waiting for its next attempt — the retry badge says it, with the time (`retryingAt`).
+	[IssueLifeStateEnum.WAITING_RETRY]: null,
 	[IssueLifeStateEnum.REMINDED]: IconBellRinging,
 	[IssueLifeStateEnum.STALLED]: null,
 	[IssueLifeStateEnum.PAUSED]: IconPlayerPause,
@@ -47,6 +50,8 @@ export function IssueCard({ item, className, ...props }: { item: IssueCardItem }
 			</span>
 			{item.threadDisplayName && <span className="truncate text-xs text-muted-foreground">{item.threadDisplayName}</span>}
 			{item.waitingForProviderUntil && <ProviderWaitBadge until={item.waitingForProviderUntil} />}
+			{item.retryingAt && <RetryWaitBadge at={item.retryingAt} />}
+			{item.escalatedAt && <EscalatedBadge at={item.escalatedAt} />}
 			<LifeBadge lifeState={item.lifeState} />
 		</Link>
 	)

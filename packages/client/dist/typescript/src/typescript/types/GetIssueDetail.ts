@@ -58,6 +58,14 @@ export type GetIssueDetail200 = {
         */
         waitingForProviderUntil?: string;
         /**
+         * @type string | undefined
+        */
+        retryingAt?: string;
+        /**
+         * @type string | undefined
+        */
+        escalatedAt?: string;
+        /**
          * @type string
         */
         lifeState: IssueLifeState;

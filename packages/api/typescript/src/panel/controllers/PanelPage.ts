@@ -36,7 +36,7 @@ export class PanelPageController extends Controller<typeof PanelPageInputSchema,
 	}
 }
 
-const PANEL_HTML = `<!doctype html>
+export const PANEL_HTML = `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -82,8 +82,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 <script>
 (() => {
   const COLS = [['QUEUED','Na fila'],['RUNNING','Fazendo'],['WAITING_PERSON','Aguardando pessoa'],['WAITING_PROVIDER','Esperando cota'],['STALLED','Parada'],['DONE','Concluída']];
-  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',WAITING_BUDGET:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
-  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada',REGRET_WINDOW:'Janela de arrependimento',BATCH_LINKED:'Item de lote',PUBLISH_RAN:'Publicação'};
+  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',WAITING_BUDGET:'WAITING_PROVIDER',WAITING_RETRY:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
+  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada',REGRET_WINDOW:'Janela de arrependimento',BATCH_LINKED:'Item de lote',PUBLISH_RAN:'Publicação',NUDGED:'Empurrão',RETRY_SCHEDULED:'Nova tentativa',SUPERVISOR_REVIEWED:'Supervisor'};
   // Janela de arrependimento (fase 2, item 3): the kind of action and how the wait ended — never a command line.
   const ACTION = {GIT_PUSH:'git push',GIT_FORCE_PUSH:'git push forçado',PR_MERGE:'merge de PR',RELEASE:'criar release',PACKAGE_PUBLISH:'publicar pacote',DEPLOY:'deploy'};
   const OUTCOME = {PROCEEDED:'seguiu',CANCELLED_BY_STEER:'cancelado por recado',CANCELLED_BY_PAUSE:'cancelado pela pausa'};
@@ -91,15 +91,26 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   const PUBLISH = {SUCCEEDED:'publicou',FAILED:'falhou',TIMED_OUT:'passou do prazo',CANCELLED_BY_STEER:'cancelada por recado',CANCELLED_BY_PAUSE:'cancelada pela pausa',UNKNOWN:'interrompida, resultado desconhecido'};
   // Fase 3: an ask shows its code and question, its answer what was answered, and what an issue said says where it went.
   const ROUTED = {PANEL:'só no painel',DIGEST:'no resumo',GROUP:'no grupo'};
+  // Fase 5: who nudged a silent task, why the supervisor looked and what it decided.
+  const NUDGER = {RECONCILER:'automático',SUPERVISOR:'supervisor'};
+  const SUSPICION = {STALLED_OPEN:'parada há tempo',PROVIDER_ERROR_OPEN:'erro do provedor há tempo',NUDGE_LOOP:'cala de novo',SILENT_TURN:'turno mudo'};
+  const VERDICT = {NUDGE:'empurrou',RESTART_WITH_NOTES:'reiniciou com as notas',ESCALATE:'escalou',LEAVE:'deixou'};
+  // How a stop was resolved, when there is no answer to show (a retry, a take-over, the supervisor's retry).
+  const RESOLUTION = {RETRY:'tentar novamente',REVIEW_AND_SEND:'revisar e enviar',APPROVE:'aprovada',DENY:'negada',TAKE_OVER:'assumida',ANSWER:'respondida',DEFAULT_APPLIED:'seguiu com o padrão',AUTO_RETRY:'tentado de novo pelo supervisor'};
   const DETAIL = {
     STOP_RAISED: i => (i.ask ? i.ask.code + ' — ' + i.ask.question : i.title),
-    STOP_RESOLVED: i => (i.answer ? i.answer.label : ''),
+    STOP_RESOLVED: i => (i.answer ? i.answer.label : (RESOLUTION[i.resolution] || i.resolution)),
     MESSAGE: i => (i.routing ? '[' + (ROUTED[i.routing] || i.routing) + '] ' : '') + i.text,
     REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome),
     BATCH_LINKED: i => i.batchCode + ' · item ' + i.n,
+    NUDGED: i => 'empurrão ' + i.ordinal + (i.outOf ? ' de ' + i.outOf : '') + ' (' + (NUDGER[i.source] || i.source) + ')',
+    RETRY_SCHEDULED: i => 'tentativa ' + i.attempt + ' de ' + i.maxAttempts + ' às ' + fmt(i.retryAt),
+    SUPERVISOR_REVIEWED: i => 'o supervisor ' + (VERDICT[i.verdict] || i.verdict) + ' · motivo: ' + (SUSPICION[i.reason] || i.reason).toLowerCase(),
     PUBLISH_RAN: i => (PUBLISH[i.outcome] || i.outcome) + (i.exitCode != null ? ' (saída ' + i.exitCode + ')' : '') + (i.durationMs != null ? ' — ' + Math.round(i.durationMs / 1000) + ' s' : '')};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  // A near instant (the next retry): the time alone today, with the day once it crosses midnight.
+  const fmtNear = iso => new Date(iso).toDateString() === new Date().toDateString() ? new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : fmt(iso);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
   // Fase 4 (item 7): the owner's health badge — percentages and states only, never the account's numbers.
   const HEALTH = {OK:'Cota ok',NEAR:'Cota da semana perto do limite',HOLDING:'Tarefas novas seguradas pela cota',REFUSED:'Provedor recusando — fila pausada'};
@@ -139,6 +150,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
         if (issue.lifeState === 'REMINDED') card.append(el('div', 'muted', 'Lembrada de declarar'));
         if (issue.lifeState === 'PAUSED') card.append(el('div', 'muted', 'Pausada'));
         if (issue.lifeState === 'WAITING_BUDGET') card.append(el('div', 'muted', 'Segurada pelo orçamento'));
+        if (issue.retryingAt) card.append(el('div', 'muted', 'Nova tentativa às ' + fmtNear(issue.retryingAt)));
+        if (issue.escalatedAt) card.append(el('div', 'muted warn', 'Escalada pelo supervisor'));
         card.addEventListener('click', () => open(issue.issueId));
         col.append(card);
       }

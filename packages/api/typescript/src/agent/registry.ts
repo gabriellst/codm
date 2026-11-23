@@ -7,6 +7,8 @@ import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, 
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { IssueTurnAborter } from './services/IssueTurnAborter'
+import { LiveTurnReader } from './services/LiveTurnReader'
+import { NudgeQueue } from './services/NudgeQueue'
 import { ImmediateRegretWindowClock, RegretWindowClock, TimerRegretWindowClock } from './services/RegretWindowClock'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
@@ -23,12 +25,17 @@ import {
 	MockIssueAttributesRepository,
 } from './repositories/IssueAttributesRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { DeclaredWaitReader, LibSqlDeclaredWaitReader, MockDeclaredWaitReader } from './services/DeclaredWaitReader'
+import { LibSqlSuspectIssueReader, MockSuspectIssueReader, SuspectIssueReader } from './services/SuspectIssueReader'
+import { LibSqlOpenStopReader, MockOpenStopReader, OpenStopReader } from './services/OpenStopReader'
+import { IssueSupervisor, MockIssueSupervisor, ModelIssueSupervisor } from './services/IssueSupervisor'
+import { SupervisorAgent, SupervisorPromptBuilder } from './agents/SupervisorAgent'
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
 import { ProcessPublishCommandRunner, PublishCommandRunner, ScriptedPublishCommandRunner } from './services/PublishCommandRunner'
 import { HandoffNotes, LibSqlHandoffNotes, MockHandoffNotes } from './services/HandoffNotes'
 import { WorktreeSightings } from './services/WorktreeSightings'
-import { FactTriageUsageRecorder, TriageUsageRecorder } from './services/TriageUsageRecorder'
+import { FactSmallModelUsageRecorder, SmallModelUsageRecorder } from './services/SmallModelUsageRecorder'
 import { LibSqlQuotaLedgerReader, MockQuotaLedgerReader, QuotaLedgerReader } from './services/QuotaBudget'
 import { IssueWorktreeJanitor } from './services/IssueWorktreeJanitor'
 import { FixedMachineCapacity, MachineCapacity, SystemMachineCapacity } from './services/MachineCapacity'
@@ -86,6 +93,16 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The kill switch of a running issue turn (fase 2, item 2 — "pare" vale na hora): one in-memory
 	// AbortController per issue in flight, shared by the dispatcher, RunIssueTurn and the pause handler.
 	{ token: IssueTurnAborter, mock: IssueTurnAborter, integration: IssueTurnAborter, real: IssueTurnAborter },
+	// The one door a nudge goes through (fase 5): the reconciler's nudges and the supervisor's resume without a stop.
+	{ token: NudgeQueue, mock: NudgeQueue, integration: NudgeQueue, real: NudgeQueue },
+	// Its read-only face (fase 5): whether an issue's turn runs and when it last streamed a frame — the supervisor's
+	// silence signal, resolved to the SAME instance, with no kill switch in reach.
+	{
+		token: LiveTurnReader,
+		mock: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+		integration: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+		real: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+	},
 	// The wait of the regret window (fase 2, item 3): wall clock wherever a session can call the hook,
 	// instant in `mock`. A test that needs a steer to land mid-window overrides it.
 	{
@@ -154,13 +171,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: HandoffNotes, mock: MockHandoffNotes, integration: LibSqlHandoffNotes, real: LibSqlHandoffNotes },
 	// The hook's worktree sightings (fase 4, item 1): one in-memory instance per process, like the kill switch above.
 	{ token: WorktreeSightings, mock: WorktreeSightings, integration: WorktreeSightings, real: WorktreeSightings },
-	// What a triage run spent (fase 4, S1): `agent.turn.usage` with role TRIAGE, in its own unit of work. The same
-	// in every env — the env split lives in the database driver under it.
+	// What a small-model run spent (fase 4, S1; fase 5): `agent.turn.usage` with role TRIAGE or SUPERVISOR, in its own
+	// unit of work. The same in every env — the env split lives in the database driver under it.
 	{
-		token: TriageUsageRecorder,
-		mock: FactTriageUsageRecorder,
-		integration: FactTriageUsageRecorder,
-		real: FactTriageUsageRecorder,
+		token: SmallModelUsageRecorder,
+		mock: FactSmallModelUsageRecorder,
+		integration: FactSmallModelUsageRecorder,
+		real: FactSmallModelUsageRecorder,
 	},
 	// The worktree janitor (fase 4, item 1). One class everywhere: what it may touch is decided by the git probe bound
 	// above, and the scripted probe never judges a tree clean nor removes one — only `real` can delete a folder.
@@ -186,6 +203,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: LibSqlQuotaLedgerReader,
 		real: LibSqlQuotaLedgerReader,
 	},
+	// The declared wait (fase 5, item 1): a feedback asked in the last turn, read from the agent's own facts wherever there
+	// is a database — the reconciler and the issue's life state ask the same port, so they never disagree.
+	{ token: DeclaredWaitReader, mock: MockDeclaredWaitReader, integration: LibSqlDeclaredWaitReader, real: LibSqlDeclaredWaitReader },
+	// The supervisor's suspects (fase 5, item 3): declared rules over the store wherever there is a database.
+	{ token: SuspectIssueReader, mock: MockSuspectIssueReader, integration: LibSqlSuspectIssueReader, real: LibSqlSuspectIssueReader },
+	// The rails re-checked when the supervisor acts (fase 5, S5): the task's open stops, read again in the action's transaction.
+	{ token: OpenStopReader, mock: MockOpenStopReader, integration: LibSqlOpenStopReader, real: LibSqlOpenStopReader },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.
@@ -235,6 +259,18 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// triage run), so every existing suite keeps the orchestrator path it was written against. A suite that
 	// exercises the triage overrides it with `ModelInboundTriage` over a stub runner factory.
 	{ token: InboundTriage, mock: NoInboundTriage, integration: NoInboundTriage, real: ModelInboundTriage, e2e: NoInboundTriage },
+	// The supervisor's reviewer (fase 5, item 3), the triage's shape: a real small-model run only in `real`; scripted
+	// (no model, `LEAVE` unless told) everywhere else. The suite that exercises the review builds the model class over a
+	// stub runner factory itself.
+	{ token: SupervisorPromptBuilder, mock: { useClass: SupervisorPromptBuilder }, real: { useClass: SupervisorPromptBuilder } },
+	{ token: SupervisorAgent, mock: { useClass: SupervisorAgent }, real: { useClass: SupervisorAgent } },
+	{
+		token: IssueSupervisor,
+		mock: MockIssueSupervisor,
+		integration: MockIssueSupervisor,
+		real: ModelIssueSupervisor,
+		e2e: MockIssueSupervisor,
+	},
 	//
 	// The run credential is NOT bound here. `AgentIdentityService` is a CORE token and lives on the
 	// ROOT shelf in `shared/registry.ts` — see the comment there for the mechanical reason

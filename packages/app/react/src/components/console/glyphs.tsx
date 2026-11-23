@@ -142,6 +142,8 @@ export const resolutionIsPrimary: Record<StopResolution, boolean> = {
 	// Fase 3: answering an ask is the primary move; a default that applied is never a button anyone presses.
 	ANSWER: true,
 	DEFAULT_APPLIED: false,
+	// Fase 5: the supervisor's retry — written by its job, never a button anyone presses.
+	AUTO_RETRY: false,
 }
 
 // ── Artifacts ────────────────────────────────────────────────────────────────────

@@ -8,7 +8,9 @@ import { BatchItemDestinationSchema, type PanelHealth } from '@shared/objects'
 import { PanelPublisher, type PanelBatchSnapshot, type PanelIssueSnapshot } from '../services/PanelPublisher'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { panelHealthOf, QuotaStatusReader } from '@agent/services/QuotaStatusReader'
-import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
+import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
 import { assembleIssueTimeline } from '../utils/issueTimeline'
 
 export const PublishPanelSnapshotInputSchema = z.object({})
@@ -55,6 +57,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 		private readonly publisher: PanelPublisher,
 		private readonly logging: LoggingService,
 		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
 	) {
 		super()
 	}
@@ -75,13 +78,15 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 			.where(or(eq(issues.archived, false), gt(issues.updatedAt, new Date(Date.now() - ARCHIVED_REPORT_WINDOW_MS))))
 
 		const groups = [...new Map(rows.map(row => [row.threadId, { threadId: row.threadId, name: row.threadName }])).values()]
-		const [life, waiting] = await Promise.all([
+		const [life, waiting, retrying, escalated] = await Promise.all([
 			lifeStateByIssue(
 				this.driver,
 				rows.map(row => ({ issueId: row.issueId, status: row.status as IssueStatus })),
-				this.quota.holdsIssueLane(),
+				{ budgetHeld: this.quota.holdsIssueLane(), declaredWait: this.declaredWait },
 			),
 			providerWaitByIssue(this.driver),
+			retryWaitByIssue(this.driver),
+			escalatedAtByIssue(this.driver),
 		])
 
 		const changed: { snapshot: PanelIssueSnapshot; fingerprint: string }[] = []
@@ -98,6 +103,8 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 				status: row.status as IssueStatus,
 				lifeState,
 				waitingForProviderUntil: waiting.get(row.issueId)?.toISOString(),
+				retryingAt: retrying.get(row.issueId)?.toISOString(),
+				escalatedAt: escalated.get(row.issueId)?.toISOString(),
 				archived: row.archived,
 				timeline,
 			}

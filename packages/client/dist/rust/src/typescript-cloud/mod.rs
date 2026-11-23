@@ -2389,6 +2389,9 @@ pub mod types {
     ///          "updatedAt"
     ///        ],
     ///        "properties": {
+    ///          "escalatedAt": {
+    ///            "type": "string"
+    ///          },
     ///          "issueId": {
     ///            "type": "string",
     ///            "format": "uuid",
@@ -2399,6 +2402,9 @@ pub mod types {
     ///          },
     ///          "lifeState": {
     ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
+    ///          "retryingAt": {
+    ///            "type": "string"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
@@ -2487,6 +2493,9 @@ pub mod types {
     ///    "updatedAt"
     ///  ],
     ///  "properties": {
+    ///    "escalatedAt": {
+    ///      "type": "string"
+    ///    },
     ///    "issueId": {
     ///      "type": "string",
     ///      "format": "uuid",
@@ -2497,6 +2506,9 @@ pub mod types {
     ///    },
     ///    "lifeState": {
     ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "retryingAt": {
+    ///      "type": "string"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -2518,11 +2530,23 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetPanelBoardResponseIssuesItem {
+        #[serde(
+            rename = "escalatedAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub escalated_at: ::std::option::Option<::std::string::String>,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
         pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        #[serde(
+            rename = "retryingAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub retrying_at: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -2841,6 +2865,9 @@ pub mod types {
     ///        "updatedAt"
     ///      ],
     ///      "properties": {
+    ///        "escalatedAt": {
+    ///          "type": "string"
+    ///        },
     ///        "issueId": {
     ///          "type": "string",
     ///          "format": "uuid",
@@ -2851,6 +2878,9 @@ pub mod types {
     ///        },
     ///        "lifeState": {
     ///          "$ref": "#/components/schemas/IssueLifeState"
+    ///        },
+    ///        "retryingAt": {
+    ///          "type": "string"
     ///        },
     ///        "status": {
     ///          "$ref": "#/components/schemas/IssueStatus"
@@ -3543,6 +3573,115 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "ordinal",
+    ///              "outOf",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "NUDGED"
+    ///                ]
+    ///              },
+    ///              "ordinal": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "outOf": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/NudgeSource"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "attempt",
+    ///              "id",
+    ///              "kind",
+    ///              "maxAttempts",
+    ///              "retryAt"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "attempt": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "RETRY_SCHEDULED"
+    ///                ]
+    ///              },
+    ///              "maxAttempts": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "retryAt": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "reason",
+    ///              "verdict"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "SUPERVISOR_REVIEWED"
+    ///                ]
+    ///              },
+    ///              "reason": {
+    ///                "$ref": "#/components/schemas/SuspicionReason"
+    ///              },
+    ///              "verdict": {
+    ///                "$ref": "#/components/schemas/SupervisorVerdict"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -3581,6 +3720,9 @@ pub mod types {
     ///    "updatedAt"
     ///  ],
     ///  "properties": {
+    ///    "escalatedAt": {
+    ///      "type": "string"
+    ///    },
     ///    "issueId": {
     ///      "type": "string",
     ///      "format": "uuid",
@@ -3591,6 +3733,9 @@ pub mod types {
     ///    },
     ///    "lifeState": {
     ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "retryingAt": {
+    ///      "type": "string"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -3612,11 +3757,23 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetPanelIssueResponseIssue {
+        #[serde(
+            rename = "escalatedAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub escalated_at: ::std::option::Option<::std::string::String>,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
         pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        #[serde(
+            rename = "retryingAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub retrying_at: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -4591,6 +4748,115 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "ordinal",
+    ///        "outOf",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NUDGED"
+    ///          ]
+    ///        },
+    ///        "ordinal": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "outOf": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/NudgeSource"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "attempt",
+    ///        "id",
+    ///        "kind",
+    ///        "maxAttempts",
+    ///        "retryAt"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "attempt": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RETRY_SCHEDULED"
+    ///          ]
+    ///        },
+    ///        "maxAttempts": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "retryAt": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "reason",
+    ///        "verdict"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "SUPERVISOR_REVIEWED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "$ref": "#/components/schemas/SuspicionReason"
+    ///        },
+    ///        "verdict": {
+    ///          "$ref": "#/components/schemas/SupervisorVerdict"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -4735,6 +5001,32 @@ pub mod types {
             exit_code: ::std::option::Option<i64>,
             id: ::std::string::String,
             outcome: ::codm_contracts_rust::wire::enums::PublishRunOutcome,
+        },
+        #[serde(rename = "NUDGED")]
+        Nudged {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            ordinal: ::std::num::NonZeroU64,
+            #[serde(rename = "outOf")]
+            out_of: ::std::num::NonZeroU64,
+            source: ::codm_contracts_rust::wire::enums::NudgeSource,
+        },
+        #[serde(rename = "RETRY_SCHEDULED")]
+        RetryScheduled {
+            at: ::std::string::String,
+            attempt: ::std::num::NonZeroU64,
+            id: ::std::string::String,
+            #[serde(rename = "maxAttempts")]
+            max_attempts: ::std::num::NonZeroU64,
+            #[serde(rename = "retryAt")]
+            retry_at: ::std::string::String,
+        },
+        #[serde(rename = "SUPERVISOR_REVIEWED")]
+        SupervisorReviewed {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            reason: ::codm_contracts_rust::wire::enums::SuspicionReason,
+            verdict: ::codm_contracts_rust::wire::enums::SupervisorVerdict,
         },
     }
     impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
@@ -6558,6 +6850,11 @@ pub mod types {
     ///          "archived": {
     ///            "type": "boolean"
     ///          },
+    ///          "escalatedAt": {
+    ///            "type": "string",
+    ///            "format": "date-time",
+    ///            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///          },
     ///          "issueId": {
     ///            "type": "string",
     ///            "format": "uuid",
@@ -6570,6 +6867,11 @@ pub mod types {
     ///          },
     ///          "lifeState": {
     ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
+    ///          "retryingAt": {
+    ///            "type": "string",
+    ///            "format": "date-time",
+    ///            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
@@ -7061,6 +7363,112 @@ pub mod types {
     ///                      "$ref": "#/components/schemas/PublishRunOutcome"
     ///                    }
     ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "ordinal",
+    ///                    "outOf",
+    ///                    "source"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "NUDGED"
+    ///                      ]
+    ///                    },
+    ///                    "ordinal": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    },
+    ///                    "outOf": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    },
+    ///                    "source": {
+    ///                      "$ref": "#/components/schemas/NudgeSource"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "attempt",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "maxAttempts",
+    ///                    "retryAt"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "attempt": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "RETRY_SCHEDULED"
+    ///                      ]
+    ///                    },
+    ///                    "maxAttempts": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    },
+    ///                    "retryAt": {
+    ///                      "type": "string"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "reason",
+    ///                    "verdict"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "SUPERVISOR_REVIEWED"
+    ///                      ]
+    ///                    },
+    ///                    "reason": {
+    ///                      "$ref": "#/components/schemas/SuspicionReason"
+    ///                    },
+    ///                    "verdict": {
+    ///                      "$ref": "#/components/schemas/SupervisorVerdict"
+    ///                    }
+    ///                  }
     ///                }
     ///              ]
     ///            },
@@ -7279,6 +7687,11 @@ pub mod types {
     ///    "archived": {
     ///      "type": "boolean"
     ///    },
+    ///    "escalatedAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
     ///    "issueId": {
     ///      "type": "string",
     ///      "format": "uuid",
@@ -7291,6 +7704,11 @@ pub mod types {
     ///    },
     ///    "lifeState": {
     ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "retryingAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -7782,6 +8200,112 @@ pub mod types {
     ///                "$ref": "#/components/schemas/PublishRunOutcome"
     ///              }
     ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "ordinal",
+    ///              "outOf",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "NUDGED"
+    ///                ]
+    ///              },
+    ///              "ordinal": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "outOf": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/NudgeSource"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "attempt",
+    ///              "id",
+    ///              "kind",
+    ///              "maxAttempts",
+    ///              "retryAt"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "attempt": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "RETRY_SCHEDULED"
+    ///                ]
+    ///              },
+    ///              "maxAttempts": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "retryAt": {
+    ///                "type": "string"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "reason",
+    ///              "verdict"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "SUPERVISOR_REVIEWED"
+    ///                ]
+    ///              },
+    ///              "reason": {
+    ///                "$ref": "#/components/schemas/SuspicionReason"
+    ///              },
+    ///              "verdict": {
+    ///                "$ref": "#/components/schemas/SupervisorVerdict"
+    ///              }
+    ///            }
     ///          }
     ///        ]
     ///      },
@@ -7808,11 +8332,27 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SyncPanelBodyIssuesItem {
         pub archived: bool,
+        #[serde(
+            rename = "escalatedAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub escalated_at: ::std::option::Option<
+            ::chrono::DateTime<::chrono::offset::Utc>,
+        >,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: SyncPanelBodyIssuesItemKey,
         #[serde(rename = "lifeState")]
         pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        #[serde(
+            rename = "retryingAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub retrying_at: ::std::option::Option<
+            ::chrono::DateTime<::chrono::offset::Utc>,
+        >,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
@@ -8401,6 +8941,112 @@ pub mod types {
     ///          "$ref": "#/components/schemas/PublishRunOutcome"
     ///        }
     ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "ordinal",
+    ///        "outOf",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "NUDGED"
+    ///          ]
+    ///        },
+    ///        "ordinal": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "outOf": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/NudgeSource"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "attempt",
+    ///        "id",
+    ///        "kind",
+    ///        "maxAttempts",
+    ///        "retryAt"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "attempt": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RETRY_SCHEDULED"
+    ///          ]
+    ///        },
+    ///        "maxAttempts": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "retryAt": {
+    ///          "type": "string"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "reason",
+    ///        "verdict"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "SUPERVISOR_REVIEWED"
+    ///          ]
+    ///        },
+    ///        "reason": {
+    ///          "$ref": "#/components/schemas/SuspicionReason"
+    ///        },
+    ///        "verdict": {
+    ///          "$ref": "#/components/schemas/SupervisorVerdict"
+    ///        }
+    ///      }
     ///    }
     ///  ]
     ///}
@@ -8545,6 +9191,32 @@ pub mod types {
             exit_code: ::std::option::Option<i64>,
             id: ::std::string::String,
             outcome: ::codm_contracts_rust::wire::enums::PublishRunOutcome,
+        },
+        #[serde(rename = "NUDGED")]
+        Nudged {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            ordinal: ::std::num::NonZeroU64,
+            #[serde(rename = "outOf")]
+            out_of: ::std::num::NonZeroU64,
+            source: ::codm_contracts_rust::wire::enums::NudgeSource,
+        },
+        #[serde(rename = "RETRY_SCHEDULED")]
+        RetryScheduled {
+            at: ::std::string::String,
+            attempt: ::std::num::NonZeroU64,
+            id: ::std::string::String,
+            #[serde(rename = "maxAttempts")]
+            max_attempts: ::std::num::NonZeroU64,
+            #[serde(rename = "retryAt")]
+            retry_at: ::std::string::String,
+        },
+        #[serde(rename = "SUPERVISOR_REVIEWED")]
+        SupervisorReviewed {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            reason: ::codm_contracts_rust::wire::enums::SuspicionReason,
+            verdict: ::codm_contracts_rust::wire::enums::SupervisorVerdict,
         },
     }
     impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {

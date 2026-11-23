@@ -13,9 +13,11 @@ import {
 	ClassificationMethod,
 } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
-import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 
 /** A STEER item's payload carries the message as `text` (`SteerIssueTurn`); anything else reads as empty. */
 const SteerPayloadSchema = z.object({ text: z.string() })
@@ -41,6 +43,10 @@ export const GetIssueDetailOutputSchema = z.object({
 		paused: z.boolean(),
 		/** ISO instant until which the issue waits on the provider's usage limit; absent when it is not. */
 		waitingForProviderUntil: z.string().optional(),
+		/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent otherwise (filled from S2). */
+		retryingAt: z.string().optional(),
+		/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
+		escalatedAt: z.string().optional(),
 		/** Where the work stands right now, by rule (`lifeStateOf`). */
 		lifeState: z.enum(IssueLifeState),
 	}),
@@ -84,6 +90,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 	constructor(
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
 	) {
 		super()
 	}
@@ -109,11 +116,12 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
-		const life = await lifeStateByIssue(
-			this.driver,
-			[{ issueId: issue.id, status: issue.status as IssueStatus }],
-			this.quota.holdsIssueLane(),
-		)
+		const retrying = await retryWaitByIssue(this.driver, [input.issueId])
+		const escalated = await escalatedAtByIssue(this.driver, [input.issueId])
+		const life = await lifeStateByIssue(this.driver, [{ issueId: issue.id, status: issue.status as IssueStatus }], {
+			budgetHeld: this.quota.holdsIssueLane(),
+			declaredWait: this.declaredWait,
+		})
 		const steerRows = await this.driver.db
 			.select()
 			.from(agentMailbox)
@@ -136,6 +144,8 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				archived: issue.archived,
 				paused: issue.paused,
 				waitingForProviderUntil: waiting.get(issue.id)?.toISOString(),
+				retryingAt: retrying.get(issue.id)?.toISOString(),
+				escalatedAt: escalated.get(issue.id)?.toISOString(),
 				lifeState: life.get(issue.id) ?? IssueLifeState.STALLED,
 			},
 			provider: issue.provider as ProviderKind,

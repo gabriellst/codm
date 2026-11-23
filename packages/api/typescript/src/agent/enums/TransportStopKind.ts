@@ -40,13 +40,25 @@ export function isTransportStopKind(kind: StopKind): kind is TransportStopKind {
  * Total over the type: a transport kind added to the contract fails compilation here until somebody
  * decides which it is.
  */
-export const TRANSPORT_STOP_RETRIES: Record<TransportStopKind, boolean> = {
+export const TRANSPORT_STOP_RETRIES = {
 	[StopKind.AUTH_REQUIRED]: true,
 	[StopKind.SERVER_ERROR]: true,
 	[StopKind.PERMISSION_DENIED]: false,
-}
+} as const satisfies Record<TransportStopKind, boolean>
+
+/**
+ * The transport kinds that go back to the queue — DERIVED from `TRANSPORT_STOP_RETRIES`, never listed a second time
+ * (fase 5, S2). What a retried stop carries to the dispatcher, which classifies its failure by it
+ * (`FAILURE_CLASS_OF_TRANSPORT_STOP`) instead of by the error's text.
+ */
+export type RetriedTransportStopKind = {
+	[Kind in TransportStopKind]: (typeof TRANSPORT_STOP_RETRIES)[Kind] extends true ? Kind : never
+}[TransportStopKind]
 
 /** True when a stop of this kind goes back to the queue instead of being recorded now. */
-export function retriesInPlace(kind: StopKind): boolean {
+export function retriesInPlace(kind: StopKind): kind is RetriedTransportStopKind {
 	return isTransportStopKind(kind) && TRANSPORT_STOP_RETRIES[kind]
 }
+
+/** Iterable form of the retried subset — the use cases' output schemas validate the kind they report against it. */
+export const RETRIED_TRANSPORT_STOP_KINDS: readonly RetriedTransportStopKind[] = TRANSPORT_STOP_KINDS.filter(retriesInPlace)

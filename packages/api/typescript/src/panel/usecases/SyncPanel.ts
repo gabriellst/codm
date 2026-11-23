@@ -17,6 +17,10 @@ export const PanelIssueInputSchema = z.object({
 	status: z.enum(IssueStatus),
 	lifeState: z.enum(IssueLifeState),
 	waitingForProviderUntil: z.iso.datetime().optional(),
+	/** Fase 5 — a failed turn's next attempt (`WAITING_RETRY`). */
+	retryingAt: z.iso.datetime().optional(),
+	/** Fase 5 — the supervisor's last escalation of the issue (badge only). */
+	escalatedAt: z.iso.datetime().optional(),
 	archived: z.boolean(),
 	timeline: z.array(IssueTimelineItemSchema).max(2000),
 	/** When the daemon last saw this issue change — a late retry never overwrites a newer snapshot. */
@@ -88,6 +92,8 @@ export class SyncPanel extends Handler<typeof SyncPanelInputSchema, typeof SyncP
 						status: issue.status,
 						lifeState: issue.lifeState,
 						waitingForProviderUntil: issue.waitingForProviderUntil ? new Date(issue.waitingForProviderUntil) : null,
+						retryingAt: issue.retryingAt ? new Date(issue.retryingAt) : null,
+						escalatedAt: issue.escalatedAt ? new Date(issue.escalatedAt) : null,
 						archived: issue.archived,
 						timeline: issue.timeline,
 						updatedAt: new Date(issue.updatedAt),

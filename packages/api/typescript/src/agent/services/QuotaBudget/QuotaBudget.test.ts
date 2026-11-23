@@ -95,6 +95,15 @@ describe('QuotaBudget — the orchestrator floor (max(5%, measured))', () => {
 		expect(budget.reserveShare(NOW, withTriage)).toBeCloseTo(0.2)
 	})
 
+	// Fase 5 (S4): the supervisor's small-model runs serve the orchestration too — inside the reserve, never the tasks'.
+	it('the supervisor counts on the orchestrator’s side', () => {
+		const withSupervisor = ledger({
+			firstRoleFactAt: NOW - 8 * DAY,
+			usage: [turn(NOW - DAY, 800), turn(NOW - DAY, 100, UsageRole.ORCHESTRATOR), turn(NOW - DAY, 100, UsageRole.SUPERVISOR)],
+		})
+		expect(budget.reserveShare(NOW, withSupervisor)).toBeCloseTo(0.2)
+	})
+
 	it('the floor is the orchestrator’s spend when it already spent more than its share — never counted twice', () => {
 		const spentMore = ledger({ usage: [turn(NOW - H, 400, UsageRole.ORCHESTRATOR), turn(NOW - H, 200)] })
 		const account = budget.admit({ inFlight: 0, now: NOW, ledger: spentMore }).accounts[ProviderLimitWindow.FIVE_HOUR]
