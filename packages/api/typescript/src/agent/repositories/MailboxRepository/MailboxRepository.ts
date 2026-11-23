@@ -1,4 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
+import type { MailboxFailureClass } from '../../enums/MailboxFailureClass'
 import type {
 	MailboxClaimClass,
 	MailboxDeferCause,
@@ -58,6 +59,22 @@ export interface EnqueueMailboxItem {
  * every key the producer wrote stays as it was).
  */
 export type HoldSettlement = { consume: true } | { consume: false; merge?: Record<string, unknown> }
+
+/** A failed turn, as whoever recorded it DECLARED it (fase 5, S2) — the class picks the calendar, never the text. */
+export interface MailboxFailure {
+	class: MailboxFailureClass
+	/** What happened, for `last_error` and the stop's detail — never parsed. */
+	detail: string
+}
+
+/**
+ * What `fail` decided — the dispatcher drives the retry fact and the stop from THIS, never from a second count of its
+ * own. `attempts` is the head's count of runs (charged at claim).
+ * - retried: `retryAt` is when it may run again (`now` for a wait of 0).
+ * - dead: the calendar is spent; `since` is its first hand-off (`first_claimed_at`), so the stop can say how long it
+ *   was tried.
+ */
+export type MailboxFailOutcome = { dead: false; attempts: number; retryAt: Date } | { dead: true; attempts: number; since: Date | null }
 
 /** A leased item, ready to run. */
 export interface ClaimedMailboxItem {
@@ -127,7 +144,15 @@ export interface DeferredMailboxItem {
  * target is in flight while different targets run in parallel.
  */
 export abstract class MailboxRepository {
-	/** @returns true when this item was newly queued; false when its `dedupKey` was already present. */
+	/**
+	 * @returns true when this item was newly queued; false when its `dedupKey` was already present.
+	 *
+	 * A NEW item ends the target's `RETRY` wait (fase 5, item 2 — `DEFER_RELEASE.onNewItem`), in the same write: the
+	 * claim always hands the target's oldest item, so the failed head runs again now with the message riding along —
+	 * and the attempt that wait stood for is HANDED BACK, so a person's message never uses one up (a re-failure waits the
+	 * same step of the calendar again). Only a real insert releases (a redelivered fact releases nothing), only a wait
+	 * still pending with no holder, and once (the released row is no longer deferred).
+	 */
 	abstract enqueue(item: EnqueueMailboxItem, tx?: Transaction): Promise<boolean>
 
 	/**
@@ -260,15 +285,28 @@ export abstract class MailboxRepository {
 	abstract complete(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
-	 * Record a failed turn: attempts++, lease released. Past `maxAttempts` the item is POISONED
-	 * (`dead_at`) rather than retried forever — a turn that keeps dying must stop being scheduled, or
-	 * it starves every later item for the same target.
+	 * Record a failed turn and schedule what comes next (fase 5, item 2) — the head's `attempts` was already charged at
+	 * claim, so it counts RUNS. With `waits` the calendar for the item's lane and failure class:
+	 *  - `attempts <= waits.length` ⇒ RETRIED after `waits[attempts - 1]`: deferred with cause `RETRY` (no holder, lease
+	 *    in the future — the target keeps its order behind it), or, for a wait of 0, released NOW with no lease and no
+	 *    cause. The attempt stays CHARGED either way — unlike `giveBack`, whose refund would let a login failure retry
+	 *    forever.
+	 *  - otherwise ⇒ POISONED (`dead_at`): a turn that keeps dying must stop being scheduled, or it starves every later
+	 *    item for the same target.
+	 *
+	 * Before this the item was released at once and came back on the next poll (250 ms): three attempts in seconds, dead
+	 * before a provider overload had passed.
 	 *
 	 * ONLY THE HEAD PAYS (fase 4, item 6b): the steers that rode with it (`followers`) get the attempt their claim
-	 * charged back and are released beside it, never poisoned — a turn that died is the head's failure to run, and a
-	 * steer that arrived while it was queued must not die of it. One write for the whole group.
+	 * charged back and are released beside it, never poisoned nor deferred. One write for the whole group.
 	 */
-	abstract fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: Transaction): Promise<void>
+	abstract fail(
+		head: string,
+		followers: readonly string[],
+		failure: MailboxFailure,
+		waits: readonly number[],
+		tx?: Transaction,
+	): Promise<MailboxFailOutcome>
 
 	/**
 	 * Release every lease held by a daemon boot that is PROVABLY gone — the boot sweep, made honest.

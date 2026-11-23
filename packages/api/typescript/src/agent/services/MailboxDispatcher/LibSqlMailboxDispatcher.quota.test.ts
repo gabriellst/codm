@@ -123,6 +123,8 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			testBed.resolve(CommandQueue),
 			gate,
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 	/** A task of `threadId` with one queued work item, and a message to the orchestrator in the same conversation. */
@@ -298,6 +300,8 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			testBed.resolve(CommandQueue),
 			gate,
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 		const held = script.lane
 		await dispatcher.drain() // held: told

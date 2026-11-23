@@ -1,15 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import type { RetriedTransportStopKind } from '@agent/enums/TransportStopKind'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { CommandQueue, type Handler, LibSqlDatabaseDriver, MockCommandQueue, type Transaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import {
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
 	ProviderKind,
+	StopKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -42,7 +45,7 @@ class RecordingCommandQueue extends MockCommandQueue {
 
 /** What the issue turn reports, one per run, in order — the last one repeats. */
 type Outcome =
-	| { spoke: boolean; transportStop?: { detail: string; retryAfter?: number } }
+	| { spoke: boolean; transportStop?: { kind: RetriedTransportStopKind; detail: string; retryAfter?: number } }
 	| { held: true }
 	| { interrupted: { sessionKept: boolean } }
 
@@ -276,25 +279,32 @@ describe('steers pending together for one task ride ONE turn', () => {
 		])
 	})
 
-	it('a failed turn charges only the head; past the cap the head alone is poisoned and the followers run on', async () => {
+	it('a failed turn charges only the head; past the calendar the head alone is poisoned and the followers run on', async () => {
 		const { thread, issue } = await scene()
 		const scope = { threadId: thread.id.value, issueId: issue.id.value }
 		await steer(scope, 'um')
 		await steer(scope, 'dois')
 		await steer(scope, 'tres')
 
-		const fail = { spoke: false, transportStop: { detail: 'server error' } }
-		const inputs = await drainWith([fail, fail, fail, { spoke: true }])
+		// Each failure parks the head on its calendar (fase 5, S2 — 5 attempts for a provider error on the task lane); the
+		// test plays the clock forward by lapsing that wait between drains.
+		const fail: Outcome = { spoke: false, transportStop: { kind: StopKind.SERVER_ERROR, detail: 'server error' } }
+		const outcomes: Outcome[] = [fail, fail, fail, fail, fail, { spoke: true }]
+		const inputs: TurnInput[] = []
+		for (let pass = 0; pass < 5; pass++) {
+			inputs.push(...(await drainWith(outcomes.slice(pass))))
+			await testBed
+				.resolve(LibSqlDatabaseDriver)
+				.db.update(agentMailbox)
+				.set({ leaseUntil: new Date(Date.now() - 1) })
+				.where(and(eq(agentMailbox.targetId, issue.id.value), eq(agentMailbox.deferCause, MailboxDeferCause.RETRY)))
+		}
 
-		expect(inputs.map(input => input.prompt)).toEqual([
-			'Pessoa: um\n\nPessoa: dois\n\nPessoa: tres',
-			'Pessoa: um\n\nPessoa: dois\n\nPessoa: tres',
-			'Pessoa: um\n\nPessoa: dois\n\nPessoa: tres',
-			'Pessoa: dois\n\nPessoa: tres',
-		])
+		const group = 'Pessoa: um\n\nPessoa: dois\n\nPessoa: tres'
+		expect(inputs.map(input => input.prompt)).toEqual([group, group, group, group, group, 'Pessoa: dois\n\nPessoa: tres'])
 		const after = await rows(issue.id.value)
 		expect(after.map(row => [row.deadAt !== null, row.consumedAt !== null, row.attempts])).toEqual([
-			[true, false, 3],
+			[true, false, 5],
 			[false, true, 1],
 			[false, true, 1],
 		])
@@ -325,7 +335,7 @@ describe('steers pending together for one task ride ONE turn', () => {
 		await steer(scope, 'um')
 		await steer(scope, 'dois')
 
-		await drainWith([{ spoke: false, transportStop: { detail: 'limit', retryAfter: Date.now() + 3_600_000 } }])
+		await drainWith([{ spoke: false, transportStop: { kind: StopKind.SERVER_ERROR, detail: 'limit', retryAfter: Date.now() + 3_600_000 } }])
 
 		expect((await rows(issue.id.value)).map(row => [row.consumedAt, row.attempts, row.leaseUntil !== null])).toEqual([
 			[null, 0, true],

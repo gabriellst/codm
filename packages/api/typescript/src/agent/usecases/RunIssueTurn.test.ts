@@ -622,7 +622,7 @@ describe('RunIssueTurn use case', () => {
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.stopId).toBeDefined()
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 
@@ -830,7 +830,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		const out = await useCase.execute(baseInput(issueId))
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 
 		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
@@ -854,7 +854,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.spoke).toBe(false)
-		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+		expect(out.transportStop).toEqual({ kind: StopKind.SERVER_ERROR, detail: 'provider exited with code 1' })
 
 		// NADA foi dito: nem o resultado composto, nem o alarme do Stop.
 		expect(await mailbox.claimNext('run-issue-turn-silent-test', 60_000)).toBeUndefined()

@@ -44,7 +44,7 @@ import {
 	MessageVia,
 	TurnAbortReason,
 } from '../enums'
-import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
+import { isTransportStopKind, RETRIED_TRANSPORT_STOP_KINDS, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
 
 /**
  * THE TWO HANDOFF THRESHOLDS (fase 4, item 6a), in tokens of the session's measured context (`lastContextTokens`).
@@ -163,7 +163,14 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * to retry via `fail()` instead of consuming the item with `complete()`. `retryAfter` (epoch ms) is set
 	 * when the provider named the earliest instant a retry can succeed (its usage limit).
 	 */
-	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
+	transportStop: z
+		.object({
+			/** WHICH retried kind (fase 5, S2) — the dispatcher classifies the failure by it, never by `detail`. */
+			kind: z.enum(RETRIED_TRANSPORT_STOP_KINDS),
+			detail: z.string(),
+			retryAfter: z.number().int().optional(),
+		})
+		.optional(),
 	/**
 	 * The turn was KILLED because its issue was paused (fase 2, item 2 — `IssueTurnAborter`), or the
 	 * pause landed before it could start. Nothing of its conclusion was persisted — no ISSUE_RESULT, no
@@ -376,8 +383,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
 		// it says to RECORD (PERMISSION_DENIED) was already minted by `persistOutcome` and consumes the item.
 		const transportStop =
-			retried && observed.outcome.kind === 'STOPPED'
-				? { detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
+			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind)
+				? { kind: observed.outcome.stopKind, detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
 				: undefined
 
 		return {

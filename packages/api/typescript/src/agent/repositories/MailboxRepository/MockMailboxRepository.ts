@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import { type MailboxDeferCause, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxDeferCause, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
 	type ClaimedMailboxBundle,
@@ -8,7 +8,10 @@ import {
 	type DeferredMailboxItem,
 	type EnqueueMailboxItem,
 	type HoldSettlement,
+	type MailboxFailOutcome,
+	type MailboxFailure,
 } from './MailboxRepository'
+import { DEFER_RELEASE } from '../../objects/DeferRelease'
 import { IssueAttributesRepository } from '../IssueAttributesRepository'
 import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
 import { claimRankOf } from '../../utils/ClaimRank'
@@ -54,6 +57,16 @@ export class MockMailboxRepository extends MailboxRepository {
 			dead: false,
 			seq: this.seq,
 		})
+		// Same rule as the SQL twin: a new item ends the target's RETRY wait, handing back the attempt it stood for.
+		const now = Date.now()
+		for (const deferred of this.deferredRows(now)) {
+			if (deferred.targetKind !== item.targetKind || deferred.targetId !== item.targetId || !DEFER_RELEASE[deferred.deferCause].onNewItem)
+				continue
+			const row: Row = deferred
+			row.leaseUntil = undefined
+			row.deferCause = null
+			row.attempts = Math.max(row.attempts - 1, 0)
+		}
 		return true
 	}
 
@@ -168,17 +181,35 @@ export class MockMailboxRepository extends MailboxRepository {
 		}
 	}
 
-	async fail(head: string, followers: readonly string[], _error: string, maxAttempts: number): Promise<void> {
+	async fail(head: string, followers: readonly string[], _failure: MailboxFailure, waits: readonly number[]): Promise<MailboxFailOutcome> {
+		const now = Date.now()
 		const row = this.rows.find(r => r.id === head)
-		if (row) {
-			this.release(row)
-			if (row.attempts >= maxAttempts) row.dead = true
+		const attempts = row?.attempts ?? 0
+		const wait = waits[Math.max(attempts, 1) - 1]
+		let outcome: MailboxFailOutcome
+		if (wait === undefined) {
+			if (row) {
+				this.release(row)
+				row.dead = true
+			}
+			outcome = { dead: true, attempts, since: row?.firstClaimedAt === undefined ? null : new Date(row.firstClaimedAt) }
+		} else {
+			if (row) {
+				this.release(row)
+				// A wait of 0 is "again now" (no lease, no cause); the attempt stays charged either way.
+				if (wait > 0) {
+					row.leaseUntil = now + wait
+					row.deferCause = MailboxDeferCause.RETRY
+				}
+			}
+			outcome = { dead: false, attempts, retryAt: new Date(now + wait) }
 		}
 		// Only the head pays: the steers that rode with it get their attempt back.
 		for (const follower of this.rows.filter(r => followers.includes(r.id) && !r.consumed && !r.dead)) {
 			this.release(follower)
 			follower.attempts = Math.max(follower.attempts - 1, 0)
 		}
+		return outcome
 	}
 
 	async defer(ids: readonly string[], until: Date, cause: MailboxDeferCause): Promise<void> {

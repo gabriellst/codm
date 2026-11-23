@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue, givenThread } from '@test/support'
@@ -121,7 +122,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		expect(deliveredAt).toBeDefined()
 
 		// A retry is the same delivery tried again — the hand-off instant does not move.
-		await mailbox.fail(first.id, [], 'transport', 3)
+		await mailbox.fail(first.id, [], { class: MailboxFailureClass.CRASH, detail: 'transport' }, [0, 0])
 		await new Promise(resolve => setTimeout(resolve, 5))
 		const retry = await mailbox.claimNext('steer-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!retry) throw new Error('no retry claimed')

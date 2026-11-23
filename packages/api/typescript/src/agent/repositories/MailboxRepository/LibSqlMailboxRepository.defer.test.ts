@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
@@ -114,7 +115,7 @@ describe('MailboxRepository — the deferral cause is declared, and cleared with
 		for (const settle of [
 			(id: string) => repo().giveBack([id]),
 			(id: string) => repo().complete([id]),
-			(id: string) => repo().fail(id, [], 'boom', 3),
+			(id: string) => repo().fail(id, [], { class: MailboxFailureClass.CRASH, detail: 'boom' }, [0, 0]),
 		]) {
 			// A deferral whose lease is overwritten by a write that releases it — set the cause on a CLAIMED row by hand, the
 			// one state those three writes see, so the assertion is about THEIR write and nothing else.
@@ -153,10 +154,104 @@ describe('MailboxRepository — the deferral cause is declared, and cleared with
 			const claimed = await repo().claimNext('w', 60_000)
 			if (claimed?.targetId !== targetId) throw new Error('unexpected claim')
 			await db().update(agentMailbox).set({ deferCause: MailboxDeferCause.RETRY }).where(eq(agentMailbox.id, claimed.id))
-			await repo().fail(claimed.id, [], 'boom', 3)
+			await repo().fail(claimed.id, [], { class: MailboxFailureClass.CRASH, detail: 'boom' }, [0, 0])
 		}
 		const [row] = await db().select().from(agentMailbox).where(eq(agentMailbox.targetId, targetId))
 		expect(row?.deadAt).not.toBeNull()
 		expect(row?.deferCause).toBeNull()
+	})
+
+	/**
+	 * `fail` DECIDES and says what it decided (fase 5, S2): a wait > 0 parks the item with cause RETRY, a wait of 0 frees
+	 * it now with no lease and no cause, and past the calendar it dies — the attempt the claim charged stays charged in
+	 * all three (a refund, like `giveBack`'s, would let a login failure retry forever).
+	 *
+	 * Falsifier: write `lease = now` for the wait of 0 and the item is not claimable in the same millisecond; refund the
+	 * attempt and the third claim reads 1 instead of 3.
+	 */
+	it('fail parks on the calendar (RETRY), frees at once for a wait of 0, and kills past it — attempts kept', async () => {
+		const { targetId } = await enqueue()
+		const row = async () => (await db().select().from(agentMailbox).where(eq(agentMailbox.targetId, targetId)))[0]
+		const failure = { class: MailboxFailureClass.PROVIDER_ERROR, detail: 'overloaded' }
+		const waits = [60_000, 0]
+
+		const first = await repo().claimNext('w', 60_000)
+		const before = Date.now()
+		const parked = await repo().fail(first?.id ?? '', [], failure, waits)
+		expect(parked).toMatchObject({ dead: false, attempts: 1 })
+		const one = await row()
+		expect(one?.deferCause).toBe(MailboxDeferCause.RETRY)
+		expect(one?.attempts).toBe(1)
+		expect(one?.claimedBy).toBeNull()
+		expect((one?.leaseUntil?.getTime() ?? 0) - before).toBeGreaterThanOrEqual(60_000)
+		expect(await repo().claimNext('w', 60_000)).toBeUndefined()
+
+		await db()
+			.update(agentMailbox)
+			.set({ leaseUntil: new Date(Date.now() - 1) })
+			.where(eq(agentMailbox.targetId, targetId))
+		const second = await repo().claimNext('w', 60_000)
+		expect(second?.attempts).toBe(2)
+		expect(await repo().fail(second?.id ?? '', [], failure, waits)).toMatchObject({ dead: false, attempts: 2 })
+		const two = await row()
+		expect([two?.leaseUntil, two?.deferCause, two?.attempts]).toEqual([null, null, 2])
+
+		const third = await repo().claimNext('w', 60_000)
+		expect(third?.attempts).toBe(3)
+		const dead = await repo().fail(third?.id ?? '', [], failure, waits)
+		expect(dead).toMatchObject({ dead: true, attempts: 3 })
+		expect(dead.dead && dead.since).toBeInstanceOf(Date)
+		const three = await row()
+		expect(three?.deadAt).not.toBeNull()
+		expect(three?.lastError).toBe('overloaded')
+	})
+
+	/**
+	 * A NEW ITEM ENDS THE TARGET'S RETRY WAIT, handing the attempt back — once, and only for a real insert (fase 5, S2).
+	 *
+	 * Falsifier: release on a dedup conflict and a redelivered fact rewinds the calendar; drop the cause filter and a
+	 * provider-limit pause is broken by any message; drop the refund and three messages in one wait spend three attempts.
+	 */
+	it('a new item ends a RETRY wait once, handing the attempt back — a redelivery or another cause releases nothing', async () => {
+		const retried = await enqueue()
+		const head = await repo().claimNext('w', 60_000)
+		await repo().fail(head?.id ?? '', [], { class: MailboxFailureClass.PROVIDER_ERROR, detail: 'x' }, [60_000])
+		const limited = await deferred(MailboxDeferCause.PROVIDER_LIMIT)
+		const [limitedRow] = await db().select().from(agentMailbox).where(eq(agentMailbox.id, limited.id))
+		const kind = MailboxItemKind.OPERATOR_MESSAGE
+		const message = (targetId: string, dedupKey: string) =>
+			repo().enqueue({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId,
+				kind,
+				claimClass: CLAIM_CLASS_OF_KIND[kind],
+				posture: PermissionPosture.AUTO,
+				payload: { note: dedupKey },
+				dedupKey,
+			})
+
+		// A redelivered fact (the head's own dedup key) inserts nothing and releases nothing.
+		expect(await message(retried.targetId, retried.dedupKey)).toBe(false)
+		expect(await causeOf(head?.id ?? '')).toBe(MailboxDeferCause.RETRY)
+
+		// A real message: released, attempt handed back.
+		expect(await message(retried.targetId, `recado-${crypto.randomUUID()}`)).toBe(true)
+		const [released] = await db()
+			.select()
+			.from(agentMailbox)
+			.where(eq(agentMailbox.id, head?.id ?? ''))
+		expect([released?.deferCause, released?.leaseUntil, released?.attempts]).toEqual([null, null, 0])
+		// A second message finds no wait left — no second refund.
+		expect(await message(retried.targetId, `recado-${crypto.randomUUID()}`)).toBe(true)
+		const [again] = await db()
+			.select()
+			.from(agentMailbox)
+			.where(eq(agentMailbox.id, head?.id ?? ''))
+		expect(again?.attempts).toBe(0)
+
+		// A message for a target paused by the provider's limit leaves that pause alone.
+		expect(await message(limitedRow?.targetId ?? '', `recado-${crypto.randomUUID()}`)).toBe(true)
+		expect(await causeOf(limited.id)).toBe(MailboxDeferCause.PROVIDER_LIMIT)
 	})
 })

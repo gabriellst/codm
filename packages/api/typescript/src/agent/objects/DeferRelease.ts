@@ -29,3 +29,7 @@ export const DEFER_RELEASE: Record<MailboxDeferCause, DeferReleasers> = {
 	[MailboxDeferCause.HOLD]: { onProviderCredit: true, onIssueResume: true, onNewItem: false },
 	[MailboxDeferCause.RETRY]: { onProviderCredit: false, onIssueResume: false, onNewItem: true },
 }
+
+/** The causes a releaser ends — the column filter it applies in SQL. */
+export const causesReleasedBy = (releaser: keyof DeferReleasers): MailboxDeferCause[] =>
+	Object.values(MailboxDeferCause).filter(cause => DEFER_RELEASE[cause][releaser])

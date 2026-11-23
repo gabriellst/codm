@@ -14,14 +14,31 @@ import { MailboxDeferCause, MailboxTargetKind } from '@codm/contracts-typescript
  *
  * `issueIds` narrows the read for a single-issue view; absent reads every waiting issue (the overview).
  */
-export async function providerWaitByIssue(driver: LibSqlDatabaseDriver, issueIds?: readonly string[]): Promise<Map<string, Date>> {
+export function providerWaitByIssue(driver: LibSqlDatabaseDriver, issueIds?: readonly string[]): Promise<Map<string, Date>> {
+	return deferredUntilByIssue(driver, MailboxDeferCause.PROVIDER_LIMIT, issueIds)
+}
+
+/**
+ * Per issue, the instant its next attempt runs — a failed turn waiting out its calendar (`defer_cause = RETRY`, fase 5
+ * S2): "nova tentativa às hh:mm". The sibling of `providerWaitByIssue`, by the same declared column.
+ */
+export function retryWaitByIssue(driver: LibSqlDatabaseDriver, issueIds?: readonly string[]): Promise<Map<string, Date>> {
+	return deferredUntilByIssue(driver, MailboxDeferCause.RETRY, issueIds)
+}
+
+/** Per issue, the latest instant an item of the issue is deferred to, for ONE declared cause. */
+async function deferredUntilByIssue(
+	driver: LibSqlDatabaseDriver,
+	cause: MailboxDeferCause,
+	issueIds?: readonly string[],
+): Promise<Map<string, Date>> {
 	const rows = await driver.db
 		.select({ issueId: agentMailbox.targetId, until: max(agentMailbox.leaseUntil) })
 		.from(agentMailbox)
 		.where(
 			and(
 				eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
-				eq(agentMailbox.deferCause, MailboxDeferCause.PROVIDER_LIMIT),
+				eq(agentMailbox.deferCause, cause),
 				isNull(agentMailbox.consumedAt),
 				isNull(agentMailbox.deadAt),
 				isNull(agentMailbox.claimedBy),

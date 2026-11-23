@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import type { RetriedTransportStopKind } from '@agent/enums/TransportStopKind'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { CommandQueue, type Handler, MockCommandQueue, type Transaction } from '@codm/core-typescript'
@@ -8,6 +9,7 @@ import {
 	MailboxTargetKind,
 	PermissionPosture,
 	ProviderKind,
+	StopKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -40,7 +42,7 @@ class RecordingCommandQueue extends MockCommandQueue {
 }
 
 /** What the issue turn reports, one per run, in order — the last one repeats. */
-type Outcome = { spoke: boolean; held?: true; transportStop?: { detail: string } }
+type Outcome = { spoke: boolean; held?: true; transportStop?: { kind: RetriedTransportStopKind; detail: string } }
 
 /**
  * ENTREGUE / LIDO NO WHATSAPP (fase 2, item 5) — a steer routed from a channel message walks 👀 → ☑️ → ✅
@@ -139,7 +141,11 @@ describe('a routed steer answers delivered and read on the message it came from'
 		const { thread, issue, origin } = await scene()
 		await enqueueSteer(issue.id.value, thread.id.value, origin)
 
-		const runs = await drainWith({ spoke: false, transportStop: { detail: 'server error' } }, { spoke: true })
+		// A login failure is retried AT ONCE (its calendar is two waits of 0 — fase 5), so the retry lands in this drain.
+		const runs = await drainWith(
+			{ spoke: false, transportStop: { kind: StopKind.AUTH_REQUIRED, detail: 'login required' } },
+			{ spoke: true },
+		)
 
 		expect(runs).toBe(2)
 		expect(queue.reactions).toEqual([CUE_DELIVERED, CUE_READ])

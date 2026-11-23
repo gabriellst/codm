@@ -2,7 +2,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import type { ZodType } from 'zod'
-import { AgentIdentityService, CommandQueue, LibSqlDatabaseDriver, LoggingService } from '@codm/core-typescript'
+import {
+	AgentIdentityService,
+	CommandQueue,
+	DatabaseDriver,
+	DomainEventRepository,
+	LibSqlDatabaseDriver,
+	LoggingService,
+} from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
@@ -124,6 +131,8 @@ describe('a turn runs with the posture of the item it consumed', () => {
 				testBed.resolve(CommandQueue),
 				testBed.resolve(ThroughputGate),
 				testBed.resolve(IssueAttributesRepository),
+				testBed.resolve(DatabaseDriver),
+				testBed.resolve(DomainEventRepository),
 			).bind(spyContainer)
 			await dispatcher.drain()
 

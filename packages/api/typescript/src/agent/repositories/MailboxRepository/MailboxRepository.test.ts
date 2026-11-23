@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
+import { MailboxFailureClass } from '@agent/enums/MailboxFailureClass'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
@@ -112,7 +113,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		await r.enqueue(item(THREAD_A, 'behind-it'))
 
 		const doomed = await r.claimNext('w1', 60_000)
-		await r.fail(doomed!.id, [], 'provider exploded', 1)
+		await r.fail(doomed!.id, [], { class: MailboxFailureClass.CRASH, detail: 'provider exploded' }, [])
 
 		// Dead, so the queue moves on to what was stuck behind it.
 		const next = await r.claimNext('w1', 60_000)
@@ -123,7 +124,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const r = repo()
 		await r.enqueue(item(THREAD_A, 'flaky'))
 		const first = await r.claimNext('w1', 60_000)
-		await r.fail(first!.id, [], 'transient', 5)
+		await r.fail(first!.id, [], { class: MailboxFailureClass.CRASH, detail: 'transient' }, [0, 0, 0, 0])
 
 		const retry = await r.claimNext('w1', 60_000)
 		expect(retry?.id).toBe(first!.id)
@@ -350,7 +351,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 			const claimed = await r.claimNext('w1', 60_000)
 			expect(claimed).toBeDefined()
 			await r.renewLease([claimed!.id], 'w1', 60_000)
-			await r.fail(claimed!.id, [], 'boom', 3)
+			await r.fail(claimed!.id, [], { class: MailboxFailureClass.CRASH, detail: 'boom' }, [0, 0])
 			const again = await r.claimNext('w1', 60_000)
 			await r.complete([again!.id])
 			expect(gate).toHaveBeenCalledTimes(6)

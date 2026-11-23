@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
-import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 
@@ -84,6 +84,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			.where(eq(issues.ownerId, input.ownerId))
 
 		const waiting = await providerWaitByIssue(this.driver)
+		const retrying = await retryWaitByIssue(this.driver)
 		const life = await lifeStateByIssue(
 			this.driver,
 			rows.filter(r => !r.archived).map(r => ({ issueId: r.issueId, status: r.status as IssueStatus })),
@@ -101,6 +102,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			threadId: r.threadId,
 			threadDisplayName: r.threadDisplayName,
 			waitingForProviderUntil: waiting.get(r.issueId)?.toISOString(),
+			retryingAt: retrying.get(r.issueId)?.toISOString(),
 			// Archived issues are off the board; they read as DONE rather than paying the queue read.
 			lifeState: life.get(r.issueId) ?? IssueLifeState.DONE,
 		}))

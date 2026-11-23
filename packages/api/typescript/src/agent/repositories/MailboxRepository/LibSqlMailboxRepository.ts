@@ -16,7 +16,10 @@ import {
 	type DeferredMailboxItem,
 	type EnqueueMailboxItem,
 	type HoldSettlement,
+	type MailboxFailOutcome,
+	type MailboxFailure,
 } from './MailboxRepository'
+import { causesReleasedBy } from '../../objects/DeferRelease'
 import { ISSUE_ATTRIBUTE_DEFAULTS } from '../../entities/IssueAttributes'
 import { claimRankSql } from '../../utils/ClaimRank'
 import { coalescedPrefix, MAX_COALESCED, type CoalescingCandidate } from '../../utils/SteerCoalescing'
@@ -88,8 +91,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 	}
 
 	async enqueue(item: EnqueueMailboxItem, tx?: LibSqlTransaction): Promise<boolean> {
-		const inserted = await this.write(tx, dbc =>
-			dbc
+		return this.write(tx, async dbc => {
+			const inserted = await dbc
 				.insert(agentMailbox)
 				.values({
 					// uuid v7, monotonic: the claim's LAST tie-break is `id`, so it must be arrival order too (fase 4, S4).
@@ -114,9 +117,23 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					}),
 				})
 				.onConflictDoNothing({ target: agentMailbox.dedupKey })
-				.returning({ id: agentMailbox.id }),
-		)
-		return inserted.length > 0
+				.returning({ id: agentMailbox.id })
+			if (inserted.length === 0) return false
+			// THE NEW ITEM ENDS THE TARGET'S RETRY WAIT (fase 5, item 2 — see the port), handing back the attempt the wait
+			// stood for. Re-asserted predicate: still deferred (no holder, lease pending) by a cause `onNewItem` releases.
+			await dbc
+				.update(agentMailbox)
+				.set({ leaseUntil: null, deferCause: null, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
+				.where(
+					and(
+						eq(agentMailbox.targetKind, item.targetKind),
+						eq(agentMailbox.targetId, item.targetId),
+						deferredAt(new Date()),
+						inArray(agentMailbox.deferCause, causesReleasedBy('onNewItem')),
+					),
+				)
+			return true
+		})
 	}
 
 	/**
@@ -387,26 +404,47 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		)
 	}
 
-	async fail(head: string, followers: readonly string[], error: string, maxAttempts: number, tx?: LibSqlTransaction): Promise<void> {
-		const released = noLease
-		await this.write(tx, async dbc => {
-			// `attempts` was already incremented at claim, so the comparison here reads the real count of
-			// runs, not of scheduling opportunities.
-			await dbc
-				.update(agentMailbox)
-				.set({
-					...released,
-					lastError: error,
-					deadAt: sql`CASE WHEN ${agentMailbox.attempts} >= ${maxAttempts} THEN ${Date.now()} ELSE NULL END`,
-				})
+	async fail(
+		head: string,
+		followers: readonly string[],
+		failure: MailboxFailure,
+		waits: readonly number[],
+		tx?: LibSqlTransaction,
+	): Promise<MailboxFailOutcome> {
+		return this.write(tx, async dbc => {
+			const now = Date.now()
+			// `attempts` was already incremented at claim, so it reads the real count of runs, not of scheduling chances.
+			const [row] = await dbc
+				.select({ attempts: agentMailbox.attempts, firstClaimedAt: agentMailbox.firstClaimedAt })
+				.from(agentMailbox)
 				.where(eq(agentMailbox.id, head))
+			const attempts = row?.attempts ?? 0
+			const wait = waits[Math.max(attempts, 1) - 1]
+			let outcome: MailboxFailOutcome
+			if (wait === undefined) {
+				await dbc
+					.update(agentMailbox)
+					.set({ ...noLease, lastError: failure.detail, deadAt: new Date(now) })
+					.where(eq(agentMailbox.id, head))
+				outcome = { dead: true, attempts, since: row?.firstClaimedAt ?? null }
+			} else {
+				// A wait of 0 is "again now": no lease, no cause — never `lease = now`, which `claimNext` (`lease < now`)
+				// refuses until the clock ticks (the millisecond bug `giveBack` documents). Either way the attempt stays.
+				const retry = wait > 0 ? { leaseUntil: new Date(now + wait), deferCause: MailboxDeferCause.RETRY } : {}
+				await dbc
+					.update(agentMailbox)
+					.set({ ...noLease, ...retry, lastError: failure.detail })
+					.where(eq(agentMailbox.id, head))
+				outcome = { dead: false, attempts, retryAt: new Date(now + wait) }
+			}
 			// The steers that rode with it: released beside it, the attempt their claim charged given back (fase 4, 6b).
 			if (followers.length > 0) {
 				await dbc
 					.update(agentMailbox)
-					.set({ ...released, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
+					.set({ ...noLease, attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
 					.where(and(inArray(agentMailbox.id, [...followers]), runnable()))
 			}
+			return outcome
 		})
 	}
 

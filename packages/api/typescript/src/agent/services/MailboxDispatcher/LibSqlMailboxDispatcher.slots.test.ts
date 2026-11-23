@@ -127,6 +127,8 @@ describe('LibSqlMailboxDispatcher — effective task slots', () => {
 			testBed.resolve(CommandQueue),
 			gate,
 			testBed.resolve(IssueAttributesRepository),
+			testBed.resolve(DatabaseDriver),
+			testBed.resolve(DomainEventRepository),
 		).bind(testContainer)
 
 		const mailbox = testBed.resolve(MailboxRepository)
