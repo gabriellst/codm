@@ -3,7 +3,13 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { TestBed } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MockIssueAttributesRepository } from '../IssueAttributesRepository'
@@ -177,7 +183,7 @@ for (const env of ['libsql', 'mock'] as const) {
 		it('a pause gives the whole group back — attempts refunded, held until the instant, then whole again', async () => {
 			for (const text of ['s1', 's2']) await enqueue(text)
 			const claimed = await bundle()
-			await mailbox.defer(idsOf(claimed), new Date(Date.now() + 60_000))
+			await mailbox.defer(idsOf(claimed), new Date(Date.now() + 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 			expect(await bundle()).toBeUndefined()
 			expect((await mailbox.deferred()).map(item => item.id).sort()).toEqual([...idsOf(claimed)].sort())
 

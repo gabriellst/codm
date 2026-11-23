@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus, MailboxDeferCause } from '@codm/contracts-typescript/wire/enums'
 import { lifeStateOf, type PendingItem } from './issueLifeState'
 
-const item = (overrides: Partial<PendingItem> = {}): PendingItem => ({ running: false, deferred: false, reminder: false, ...overrides })
+const item = (overrides: Partial<PendingItem> = {}): PendingItem => ({ running: false, reminder: false, ...overrides })
 
 describe('lifeStateOf — where an issue stands, by rule', () => {
 	it('a completed issue is DONE whatever is left around it', () => {
@@ -32,7 +32,7 @@ describe('lifeStateOf — where an issue stands, by rule', () => {
 				held: false,
 				budgetHeld: false,
 				status: IssueStatus.WORKING,
-				pending: [item({ deferred: true }), item()],
+				pending: [item({ deferCause: MailboxDeferCause.PROVIDER_LIMIT }), item()],
 				openStops: 0,
 			}),
 		).toBe(IssueLifeState.WAITING_PROVIDER)
@@ -57,7 +57,13 @@ describe('lifeStateOf — where an issue stands, by rule', () => {
 	// issue with a deferred item reads WAITING_PROVIDER ("esperando cota") — a usage limit nobody hit.
 	it('a held issue is PAUSED over a running, deferred or queued turn — but a completed one stays DONE', () => {
 		expect(
-			lifeStateOf({ held: true, budgetHeld: false, status: IssueStatus.WORKING, pending: [item({ deferred: true })], openStops: 0 }),
+			lifeStateOf({
+				held: true,
+				budgetHeld: false,
+				status: IssueStatus.WORKING,
+				pending: [item({ deferCause: MailboxDeferCause.PROVIDER_LIMIT })],
+				openStops: 0,
+			}),
 		).toBe(IssueLifeState.PAUSED)
 		expect(lifeStateOf({ held: true, budgetHeld: false, status: IssueStatus.NEEDS_INPUT, pending: [item()], openStops: 1 })).toBe(
 			IssueLifeState.PAUSED,
@@ -84,7 +90,13 @@ describe('lifeStateOf — where an issue stands, by rule', () => {
 			IssueLifeState.WAITING_BUDGET,
 		)
 		expect(
-			lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.WORKING, pending: [item({ deferred: true })], openStops: 0 }),
+			lifeStateOf({
+				held: false,
+				budgetHeld: true,
+				status: IssueStatus.WORKING,
+				pending: [item({ deferCause: MailboxDeferCause.PROVIDER_LIMIT })],
+				openStops: 0,
+			}),
 		).toBe(IssueLifeState.WAITING_PROVIDER)
 		expect(
 			lifeStateOf({ held: false, budgetHeld: true, status: IssueStatus.WORKING, pending: [item({ running: true })], openStops: 0 }),
@@ -95,5 +107,26 @@ describe('lifeStateOf — where an issue stands, by rule', () => {
 		expect(lifeStateOf({ held: false, budgetHeld: false, status: IssueStatus.WORKING, pending: [item()], openStops: 0 })).toBe(
 			IssueLifeState.QUEUED,
 		)
+	})
+
+	// Fase 5 (S1): the deferral's state comes from its DECLARED cause. Falsifier: read every deferred item as
+	// WAITING_PROVIDER again and the `HOLD` case below reads "esperando cota" for a pause that was already lifted.
+	it('a deferral reads by its cause — a hold that outlived its resume is QUEUED, never a provider wait', () => {
+		const at = (deferCause: MailboxDeferCause, budgetHeld = false) =>
+			lifeStateOf({ held: false, budgetHeld, status: IssueStatus.WORKING, pending: [item({ deferCause })], openStops: 0 })
+		expect(at(MailboxDeferCause.PROVIDER_LIMIT)).toBe(IssueLifeState.WAITING_PROVIDER)
+		expect(at(MailboxDeferCause.RETRY)).toBe(IssueLifeState.WAITING_RETRY)
+		expect(at(MailboxDeferCause.HOLD)).toBe(IssueLifeState.QUEUED)
+		expect(at(MailboxDeferCause.HOLD, true)).toBe(IssueLifeState.WAITING_BUDGET)
+		// Provider before retry when both are declared on the same issue.
+		expect(
+			lifeStateOf({
+				held: false,
+				budgetHeld: false,
+				status: IssueStatus.WORKING,
+				pending: [item({ deferCause: MailboxDeferCause.RETRY }), item({ deferCause: MailboxDeferCause.PROVIDER_LIMIT })],
+				openStops: 0,
+			}),
+		).toBe(IssueLifeState.WAITING_PROVIDER)
 	})
 })

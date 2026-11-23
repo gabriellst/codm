@@ -1,5 +1,11 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import type {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -105,6 +111,8 @@ export interface DeferredMailboxItem {
 	targetKind: MailboxTargetKind
 	targetId: string
 	payload: unknown
+	/** WHY it waits (fase 5, S1) — the releaser asks this (`DEFER_RELEASE`), never a join on `paused`. */
+	cause: MailboxDeferCause
 }
 
 /**
@@ -182,14 +190,14 @@ export abstract class MailboxRepository {
 	 * (`CODM_AGENT_LIMIT_RECHECK_MS`), and a turn the same provider accepts afterwards ends it at once
 	 * (`deferred` + `releaseDeferred`).
 	 *
-	 * ### This is the ONLY writer of a lease with no holder
-	 * `claimNext` writes a lease WITH a holder, `renewLease` keeps the holder in its predicate, and
-	 * `complete` / `fail` / `releaseOrphanedClaims` write `lease_until = NULL`. So "runnable, no holder,
-	 * lease in the future" is exactly a pause written here, and the release needs no marker column to
-	 * find it. A second writer of an ownerless lease would have to give the release a way to tell the two
-	 * apart — that is the condition under which a marker becomes necessary.
+	 * ### The CAUSE is declared, not inferred (fase 5, S1)
+	 * Three writers park an item this way: the provider's limit (`PROVIDER_LIMIT`), a paused issue (`HOLD`) and a
+	 * retry waiting out its schedule (`RETRY`). The shape cannot tell them apart, so `cause` is REQUIRED and lands in
+	 * `defer_cause`; every write that clears or replaces the lease clears it, so `null` ⇔ not deferred, also after a
+	 * lease lapses and the item is claimed. Releasers decide by it (`DEFER_RELEASE`). Gated by
+	 * `tests/architecture/mailbox-defer-cause.test.ts`.
 	 */
-	abstract defer(ids: readonly string[], until: Date, tx?: Transaction): Promise<void>
+	abstract defer(ids: readonly string[], until: Date, cause: MailboxDeferCause, tx?: Transaction): Promise<void>
 
 	/**
 	 * Give a claim back NOW: no holder, NO lease, the attempt the claim charged refunded — claimable by the very next
@@ -202,7 +210,7 @@ export abstract class MailboxRepository {
 	abstract giveBack(ids: readonly string[], tx?: Transaction): Promise<void>
 
 	/**
-	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
+	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future — each with its cause.
 	 *
 	 * The SQL half of the release, and the split mirrors `releaseOrphanedClaims`: SQL picks the
 	 * candidates, and the dispatcher decides which of them belong to the provider that just answered —
@@ -216,7 +224,7 @@ export abstract class MailboxRepository {
 	 * The predicate (runnable, no holder, lease in the future) is RE-ASSERTED in the same UPDATE, not
 	 * just the ids: between `deferred` and here an item whose pause lapsed can have been claimed, and
 	 * clearing a lease that has a holder would start a second turn beside a live one — the double turn
-	 * this queue exists to prevent. The attempt `defer` refunded is untouched.
+	 * this queue exists to prevent. The attempt `defer` refunded is untouched; the cause is cleared with the lease.
 	 *
 	 * @returns how many pauses were released.
 	 */

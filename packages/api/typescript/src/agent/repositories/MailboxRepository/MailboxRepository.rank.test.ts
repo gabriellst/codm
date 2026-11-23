@@ -7,6 +7,7 @@ import {
 	IssuePriority,
 	IssueWorkKind,
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -153,7 +154,7 @@ for (const env of ['libsql', 'mock'] as const) {
 			const held = await claim()
 			expect(held?.targetId).toBe(paused)
 			// What the dispatcher does with a held issue's item: given back deferred, attempt refunded.
-			await mailbox.defer([held?.id ?? ''], new Date(Date.now() + 30_000))
+			await mailbox.defer([held?.id ?? ''], new Date(Date.now() + 30_000), MailboxDeferCause.HOLD)
 
 			const normal = await task(IssuePriority.LOW)
 			await enqueue(paused, MailboxClaimClass.DECISION_ANSWER)

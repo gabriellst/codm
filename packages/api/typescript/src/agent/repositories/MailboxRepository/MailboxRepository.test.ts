@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
 import { agentMailbox } from '@codm/contracts/db'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import { MailboxDeferCause, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from './MailboxRepository'
 import { CLAIM_CLASS_OF_KIND } from '../../utils/ClaimClassOfKind'
@@ -225,13 +225,13 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const claimed = await r.claimNext('w1', 60_000)
 		expect(claimed?.attempts).toBe(1)
 
-		await r.defer([claimed!.id], new Date(Date.now() + 60_000))
+		await r.defer([claimed!.id], new Date(Date.now() + 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 		expect(await r.claimNext('w1', 60_000)).toBeUndefined()
 		const [row] = await db.select().from(agentMailbox).where(eq(agentMailbox.id, claimed!.id))
 		expect(row?.attempts).toBe(0)
 		expect(row?.claimedBy).toBeNull()
 
-		await r.defer([claimed!.id], new Date(Date.now() - 1))
+		await r.defer([claimed!.id], new Date(Date.now() - 1), MailboxDeferCause.PROVIDER_LIMIT)
 		expect((await r.claimNext('w1', 60_000))?.attempts).toBe(1)
 	})
 
@@ -257,9 +257,9 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const running = await r.claimNext('w-segurando', 600_000)
 		const lapsed = await r.claimNext('w1', 60_000)
 		const dead = await r.claimNext('w1', 60_000)
-		await r.defer([paused!.id], new Date(Date.now() + 600_000))
-		await r.defer([lapsed!.id], new Date(Date.now() - 1))
-		await r.defer([dead!.id], new Date(Date.now() + 600_000))
+		await r.defer([paused!.id], new Date(Date.now() + 600_000), MailboxDeferCause.PROVIDER_LIMIT)
+		await r.defer([lapsed!.id], new Date(Date.now() - 1), MailboxDeferCause.PROVIDER_LIMIT)
+		await r.defer([dead!.id], new Date(Date.now() + 600_000), MailboxDeferCause.PROVIDER_LIMIT)
 		await db.update(agentMailbox).set({ deadAt: new Date() }).where(eq(agentMailbox.id, dead!.id))
 		// o quinto nunca foi reivindicado: lease nulo
 
@@ -290,8 +290,8 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const released = await r.claimNext('w1', 60_000)
 		const kept = await r.claimNext('w1', 60_000)
 		const held = await r.claimNext('w-segurando', 600_000)
-		await r.defer([released!.id], new Date(Date.now() + 600_000))
-		await r.defer([kept!.id], new Date(Date.now() + 600_000))
+		await r.defer([released!.id], new Date(Date.now() + 600_000), MailboxDeferCause.PROVIDER_LIMIT)
+		await r.defer([kept!.id], new Date(Date.now() + 600_000), MailboxDeferCause.PROVIDER_LIMIT)
 
 		expect(await r.releaseDeferred([released!.id, held!.id])).toBe(1)
 

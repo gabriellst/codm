@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import {
 	IssueControlSource,
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -99,5 +100,29 @@ describe('the dispatcher holds a paused issue’s work without spending it', () 
 		await drain()
 
 		expect(await isHeld(issue.id.value)).toBe(true)
+	})
+
+	// Fase 5 (S1): a resume ends only the deferrals `DEFER_RELEASE` gives it — the hold and the provider wait, never a
+	// retry waiting its schedule. Falsifier: drop the cause filter from `ReleaseIssueWorkOnResume` and the RETRY item is
+	// claimable at once, spending its next attempt before the wait.
+	it('resume releases the hold, never a retry waiting its schedule', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-14' })
+		await enqueueWork(issue.id.value, thread.id.value)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const claimed = await claim()
+		if (!claimed) throw new Error('nothing claimed')
+		await mailbox.defer([claimed.id], new Date(Date.now() + 600_000), MailboxDeferCause.RETRY)
+
+		await testBed.resolve(ReleaseIssueWorkOnResume).handle(
+			new IssueResumedEvent({
+				entityId: issue.id.value,
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: { issueId: issue.id.value, threadId: thread.id.value, source: IssueControlSource.CONSOLE },
+			}),
+		)
+
+		expect(await isHeld(issue.id.value)).toBe(true)
+		expect(await claim()).toBeUndefined()
 	})
 })

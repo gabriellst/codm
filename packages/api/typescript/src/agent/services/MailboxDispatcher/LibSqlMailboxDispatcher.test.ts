@@ -6,6 +6,7 @@ import { CommandQueue, LoggingService } from '@codm/core-typescript'
 import {
 	AgentModelId,
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -529,7 +530,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
 		const parkAsAPreviousRunDid = async () => {
 			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-			await mailbox.defer([claimed!.id], new Date(weeklyReset))
+			await mailbox.defer([claimed!.id], new Date(weeklyReset), MailboxDeferCause.PROVIDER_LIMIT)
 		}
 		await mailbox.enqueue({
 			ownerId: testBed.ownerId,
@@ -582,7 +583,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		await operatorMessage(paused.id.value, 'pausado-antes')
 		const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
-		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000))
+		await mailbox.defer([claimed!.id], new Date(Date.now() + 5 * 24 * 60 * 60_000), MailboxDeferCause.PROVIDER_LIMIT)
 		await operatorMessage(spokeThenLimited.id.value, 'falou-e-bateu')
 
 		await dispatcher.drain()

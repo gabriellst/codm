@@ -9,6 +9,7 @@ import {
 	GroupOutputMode,
 	IssueTimelineItemKind,
 	Language,
+	MailboxDeferCause,
 	MailboxTargetKind,
 	OutputRouting,
 	PermissionPosture,
@@ -204,7 +205,7 @@ describe('RecordBatch — one destination per item, one receipt per batch', () =
 		expect(await sweep.execute({ now: at(BATCH_REMIND_AFTER_MS + 1000) })).toEqual({ reminded: 0, stalled: 0 })
 		// Nor while a provider pause defers it — long past the stall mark.
 		const [own] = await mailboxDb().select().from(agentMailbox).where(eq(agentMailbox.dedupKey, ingested.entryId))
-		await testBed.resolve(MailboxRepository).defer([own?.id ?? ''], at(BATCH_STALL_AFTER_MS * 10))
+		await testBed.resolve(MailboxRepository).defer([own?.id ?? ''], at(BATCH_STALL_AFTER_MS * 10), MailboxDeferCause.PROVIDER_LIMIT)
 		expect(await sweep.execute({ now: at(BATCH_STALL_AFTER_MS + 1000) })).toEqual({ reminded: 0, stalled: 0 })
 		await mailboxDb().update(agentMailbox).set({ consumedAt: new Date() }).where(eq(agentMailbox.dedupKey, ingested.entryId))
 

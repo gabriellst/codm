@@ -193,7 +193,7 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 			lifeStateOf({
 				status: IssueStatus.WORKING,
 				held: false,
-				pending: [{ running: false, deferred: false, reminder: false }],
+				pending: [{ running: false, reminder: false }],
 				openStops: 0,
 				budgetHeld: status.holdsIssueLane(),
 			}),

@@ -1,7 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { CommandQueue, LoggingService, type PollingService, z } from '@codm/core-typescript'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxDeferCause,
+	MailboxItemKind,
+	MailboxTargetKind,
+	type ProviderKind,
+	StopKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -16,6 +23,7 @@ import { AgentSessionRepository } from '../../repositories/AgentSessionRepositor
 import { MailboxRepository, type ClaimedMailboxBundle, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
 import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
 import { issueTurnModel } from '../../utils/ModelByWorkKind'
+import { DEFER_RELEASE } from '../../objects/DeferRelease'
 import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
@@ -822,7 +830,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			},
 		})
 		try {
-			await this.mailbox.defer(idsOf(bundle), new Date(recheckAt))
+			await this.mailbox.defer(idsOf(bundle), new Date(recheckAt), MailboxDeferCause.PROVIDER_LIMIT)
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -876,6 +884,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		try {
 			const ids: string[] = []
 			for (const candidate of await this.mailbox.deferred()) {
+				// Only the causes an accepted turn ends (`DEFER_RELEASE`): a RETRY waits its schedule — another turn
+				// passing proves nothing about this one.
+				if (!DEFER_RELEASE[candidate.cause].onProviderCredit) continue
 				const threadId = this.threadIdOf(candidate)
 				const thread = threadId ? await this.threads.findById(threadId) : undefined
 				if (thread && this.providerFor(candidate, thread) === provider) ids.push(candidate.id)
@@ -1202,7 +1213,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		this.logging.info({ content: { message: 'issue work held — paused', itemId: item.id, issueId: item.targetId } })
 		try {
 			// The whole group goes back held, attempts refunded — the steers come back together on resume.
-			await this.mailbox.defer(idsOf(bundle), new Date(Date.now() + HOLD_RECHECK_MS))
+			await this.mailbox.defer(idsOf(bundle), new Date(Date.now() + HOLD_RECHECK_MS), MailboxDeferCause.HOLD)
 		} catch (error) {
 			this.logging.error({
 				content: {
