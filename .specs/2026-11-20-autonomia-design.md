@@ -348,6 +348,59 @@ select json_extract(payload, '$.window') w, json_extract(payload, '$.status') s,
 
 Fixture (item 4): `python3 -I` sobre `tests/fixtures/quota/usage-2026-11.json` — soma dos baldes por papel, horas com turno de issue, baldes por hora ativa (feito em 20/11, números no item 4).
 
+## Como medi (depois)
+
+Medido no código desta fase (S7, 23/11), sem banco vivo: o que o aceite imprime (`ACEITE FASE 5 {…}` no fim de `tests/flows/fase5-acceptance.test.ts`). São números **roteirizados** — turnos do provedor substituídos pelo roteiro, modelo do supervisor pelo `MockIssueSupervisor`, relógio movido por lease vencido / `raised_at` envelhecido —, não números de produção. A instalação medida no "antes" ainda é a 0.9.0: **não há número "depois" de produção** até a fase 5 ser instalada.
+
+**Critério de aceite da fase** (objetivo: *tarefa parada sem motivo recebe empurrão e, sem reação, vira bloqueio visível; tarefa esperando pessoa não é empurrada*), num test bed `integration`, fila, dispatcher e reconciliador reais:
+1. *Parada sem motivo:* turno mudo → empurrão 1 → empurrão 2 (`REMINDER`, AUTO) → `STALLED` com `DETAIL_AFTER_NUDGES` e **um** aviso de bloqueio no grupo; os empurrões não escrevem a ninguém.
+2. *Esperando pessoa:* decisão aberta, pergunta aberta, feedback pedido no último turno e conversa pausada — **0 empurrões em 10 passadas** (fatos reais: `agent.issue_spoke`, `threads.paused`, stops com pergunta; sem mock de `DeclaredWaitReader` nem `IssueHold`). Controle na mesma passada: a tarefa muda sem espera recebe os 2 empurrões.
+3. *Erro do provedor:* 5 tentativas, esperas de 1, 4, 15 e 60 min (80 min ao todo) e só então `SERVER_ERROR`; nenhum stop durante o calendário.
+4. *Supervisor:* em `OBSERVE` grava o veredito (`acted: false`) e não muda stop, fila nem grupo; em `ACT` resolve o `STALLED` com `AUTO_RETRY`, **1** turno automático (`REMINDER`, AUTO, `ordinal = 2`, `source: SUPERVISOR`), e calado depois dele vira `STALLED` direto; nada vai ao grupo pelo supervisor.
+
+| Métrica | Antes (instalação, 09–23/11) | Aceite (roteirizado, 23/11) | Depois da instalação |
+|---|---|---|---|
+| Paradas silenciosas | 51 em 14 dias | — (por construção: 2 empurrões antes de cada uma) | **a medir** (consulta 1) |
+| …resolvidas por alguém assumindo | 38, mediana ~18 h | — | **a medir** (consulta 2) |
+| …resolvidas respondendo | 13, mediana ~2,7 h | — | **a medir** (consulta 2) |
+| …resolvidas pelo supervisor (`AUTO_RETRY`) | não existia | 1 turno automático por ação | **a medir** (consulta 2) |
+| Empurrões antes do bloqueio | 1 lembrete | 2 | **a medir** (consulta 3: por ordinal e o que veio depois) |
+| Empurrões a tarefa esperando pessoa | não mensurável (sem `agent.issue_spoke`) | 0 em 10 passadas | **a medir** (consulta 4) |
+| Do item envenenado ao próximo turno concluído | mediana ~15 min, p90 ~130 min (n = 9) | calendário cobre 80 min antes do stop | **a medir** (consulta 5: tentativas por classe e quantas passaram antes do stop) |
+| Tentativas antes de pedir alguém (pista ISSUE) | 3 em segundos | 5 em ~80 min | **a medir** (consulta 5) |
+| Suspeitas por dia | média ~3,9, máximo 10 | — | **a medir** (consulta 6: vereditos por motivo e modo) |
+| Horas paradas pelo provedor (item 4) | ≥ 37 h/semana (fase 4, limite inferior) | — | **a medir** (consulta 11 do "antes") |
+
+**Só medível depois da instalação** (cópia `sqlite3 -readonly … .backup`, só agregados, scripts fora do repo, janela de 14 dias, instantes em ms):
+```sql
+-- 1. STALLED por semana (e o resto dos stops silenciosos antigos, para emendar com o "antes")
+select strftime('%Y-W%W', raised_at/1000, 'unixepoch') wk, kind, count(*) from issue_stops
+ where kind in ('STALLED','SERVER_ERROR','AUTH_REQUIRED') group by 1, 2;
+-- 2. como terminam e em quanto tempo (mediana/p90 no script), AUTO_RETRY incluído
+select kind, coalesce(resolution, 'ABERTA') res, count(*), avg((resolved_at - raised_at)/60000.0) min_avg
+  from issue_stops where kind in ('STALLED','SERVER_ERROR','AUTH_REQUIRED') group by 1, 2;
+-- 3. empurrões por ordinal e fonte; o que veio depois (script): declaração em até 10 min, outro empurrão ou STALLED
+select json_extract(payload,'$.ordinal') ord, json_extract(payload,'$.source') src, count(*)
+  from shared_events where name = 'agent.issue.nudged' group by 1, 2;
+-- 4. empurrão depois de feedback pedido no mesmo turno (deve ser 0)
+select count(*) from shared_events n join shared_events f on f.entity_id = n.entity_id
+ where n.name = 'agent.issue.nudged' and f.name = 'agent.issue_spoke'
+   and json_extract(f.payload,'$.level') = 'FEEDBACK' and f.occurred_at < n.occurred_at
+   and f.occurred_at >= (select max(m.first_claimed_at) from agent_mailbox m
+                          where m.target_id = n.entity_id and m.consumed_at is not null and m.consumed_at <= n.occurred_at);
+-- 5. tentativas por classe; quantos itens passaram antes do stop × morreram
+select json_extract(payload,'$.failureClass') cls, json_extract(payload,'$.attempt') att, count(*)
+  from shared_events where name = 'agent.mailbox.retry_scheduled' group by 1, 2;
+select target_kind, attempts, (dead_at is not null) dead, count(*) from agent_mailbox where attempts > 1 group by 1, 2, 3;
+-- 6. vereditos do supervisor por motivo, modo, se agiu e por que não (fallback) — a auditoria
+select json_extract(payload,'$.reason'), json_extract(payload,'$.verdict'), json_extract(payload,'$.mode'),
+       json_extract(payload,'$.acted'), json_extract(payload,'$.fallback'), count(*)
+  from shared_events where name = 'agent.supervisor.reviewed' group by 1, 2, 3, 4, 5;
+-- 7. trocas de sessão pedidas pelo supervisor
+select json_extract(payload,'$.reason'), count(*) from shared_events where name = 'agent.session.handed_off' group by 1;
+```
+O que decide se a fase pegou: paradas silenciosas por semana caindo do piso de 51/14 dias com tempo até a resolução abaixo de ~18 h (mediana de quem assumia); zero empurrão a tarefa esperando pessoa (consulta 4); itens envenenados que antes paravam em segundos agora passando dentro do calendário (consulta 5); e, na auditoria do supervisor, poucos `fallback` de trava e nenhum veredito agido sobre stop de pessoa (garantido pelas travas; a consulta 6 confere).
+
 ## Riscos
 
 - Empurrão 2 que trabalha pode fazer algo que ninguém pediu: sempre AUTO, filtro de permissão e janela de arrependimento valem, o texto proíbe publicar/merge; no pior caso é um "continue" de quem não tem "pode liberar".

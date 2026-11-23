@@ -54,6 +54,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: 'the retry CALENDAR is the subject (fase 5, S2): each step reads the head row’s `lease_until` / `defer_cause` / `attempts` against `RETRY_SCHEDULE`, and the clock is played forward by lapsing `lease_until` — a write AND a read of lease columns the probe deliberately does not expose (it counts rows, it does not read them). Same exception class as LibSqlMailboxRepository.defer.test.ts',
 	},
 	{
+		path: 'tests/flows/fase5-acceptance.test.ts',
+		why: 'the CLOCK of the acceptance (fase 5, S7): the retry calendar is read off the head row (`lease_until` / `defer_cause` / `attempts`) and played forward by lapsing `lease_until`, and a stall is aged past the suspicion threshold by moving its `raised_at` — writes AND reads of columns the probe deliberately does not expose. Same exception class as LibSqlMailboxDispatcher.retry.test.ts, whose calendar case this acceptance repeats end to end',
+	},
+	{
 		path: 'src/agent/repositories/MailboxRepository/MailboxRepository.legacyPosture.test.ts',
 		why: 'the SCHEMA DEFAULT is the subject (participant-permission-posture, AC-5): a pre-deploy producer wrote `agent_mailbox` rows whose INSERT never named the `posture` column, and the invariant is that such a row is claimed as AUTO. Reproducing that needs a RAW INSERT that omits the column — the repository (which always stamps a posture) and the probe (which counts rows, never writes) both make the legacy shape unreachable. Same exception class as MailboxRepository.test.ts next door',
 	},
