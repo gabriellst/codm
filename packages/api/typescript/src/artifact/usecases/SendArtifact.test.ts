@@ -10,7 +10,7 @@ import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { SendArtifact } from './SendArtifact'
 import { ChannelSender, MockChannelSender, type ChannelCapabilities } from '@thread/services/ChannelSender'
-import { MediaStore, MockMediaStore } from '../services/MediaStore'
+import { MediaStore, MockMediaStore } from '@shared/services/MediaStore'
 
 /**
  * "envio de artefatos pelo canal" design — decision 6: every refusal is a USE-CASE-TIME throw, before

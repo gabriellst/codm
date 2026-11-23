@@ -15,6 +15,7 @@ import { alertActionButton, alertSurface } from '@codm/app-ui/surfaces'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
+import { StopAskCard } from '../StopAskCard'
 
 type Stop = GetNeedsYouPanelQueryResponse['stops'][number]
 
@@ -113,6 +114,8 @@ function StopRow({ threadId, stop, className, ...props }: ComponentProps<'div'> 
 					</Button>
 				))}
 			</div>
+			{/* Fase 3 — an ask is answered with its answer (an option or text), never a bare button. */}
+			{stop.ask && <StopAskCard ask={stop.ask} stopId={stop.stopId} threadId={threadId} issueId={stop.issueId} className="basis-full" />}
 		</div>
 	)
 }

@@ -1,0 +1,11 @@
+namespace TemplateContracts;
+
+@doc("The level of something an issue wants to say (fase 3, §6.1) — what decides, per group output mode, whether it becomes its own message in the group, joins a per-person digest, or stays on the panel/timeline. DECISION: an answer is required before the issue goes on (no deadline). QUESTION: an answer is welcome; after the deadline the issue goes on with its declared default. FEEDBACK: a preview to look at — does not hold the issue. CLOSING: the issue is done (the reply to whoever asked). BLOCK_NOTICE: work stopped for a cause someone must clear (one notice per cause). PROGRESS: what the issue did — timeline only by default.")
+enum IssueSignalLevel {
+  DECISION: "DECISION",
+  QUESTION: "QUESTION",
+  FEEDBACK: "FEEDBACK",
+  CLOSING: "CLOSING",
+  BLOCK_NOTICE: "BLOCK_NOTICE",
+  PROGRESS: "PROGRESS",
+}

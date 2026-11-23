@@ -6,3 +6,9 @@ export * from './SteerProgress'
 export * from './SteerUrgency'
 // Agir pelo painel (fase 2, item 6b) — the verb of the echo line the group gets.
 export * from './PanelActionEcho'
+// Responder (fase 3, item 3) — a bare "sim"/"não", how a reply answers a stop kind, and who may answer.
+export * from './BareAnswer'
+export * from './ReplyAnswerWay'
+export * from './AnswerGate'
+// Relatório como consulta (fase 3, item 4) — a command about the whole conversation, and the board's sections.
+export * from './ThreadCommand'

@@ -41,6 +41,7 @@ import {
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadIssueSignalEventSchema,
 	ThreadMessageIngestedEventSchema,
 	ThreadStopRaisedEventSchema,
 	ThreadStopResolvedEventSchema,
@@ -80,6 +81,7 @@ export const IssueOpenedEventMaterializedSchema = IssueOpenedEventSchema
 export const OrchestratorRepliedEventMaterializedSchema = OrchestratorRepliedEventSchema
 export const SubscriptionChangedEventMaterializedSchema = SubscriptionChangedEventSchema
 export const ThreadAttachedEventMaterializedSchema = ThreadAttachedEventSchema
+export const ThreadIssueSignalEventMaterializedSchema = ThreadIssueSignalEventSchema
 export const ThreadMessageIngestedEventMaterializedSchema = ThreadMessageIngestedEventSchema
 export const ThreadStopRaisedEventMaterializedSchema = ThreadStopRaisedEventSchema
 export const ThreadStopResolvedEventMaterializedSchema = ThreadStopResolvedEventSchema
@@ -119,6 +121,7 @@ export const materializedIntegrationEventSchemas = [
 	IssueOpenedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
+	ThreadIssueSignalEventMaterializedSchema,
 	ThreadMessageIngestedEventMaterializedSchema,
 	ThreadStopRaisedEventMaterializedSchema,
 	ThreadStopResolvedEventMaterializedSchema,
@@ -158,6 +161,7 @@ export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
 	IssueOpenedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
+	ThreadIssueSignalEventMaterializedSchema,
 	ThreadMessageIngestedEventMaterializedSchema,
 	ThreadStopRaisedEventMaterializedSchema,
 	ThreadStopResolvedEventMaterializedSchema,

@@ -5,6 +5,7 @@ import { panelIssues } from '@codm/contracts/db/pg'
 import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { IssueTimelineItemSchema, PanelOpenStopSchema } from '@shared/schemas'
 import type { ApplicationErrors } from '../errors'
+import { parseOpenStops } from '../utils/openStops'
 import { panelGroupByToken } from './panelGroupByToken'
 
 export const GetPanelIssueInputSchema = z.object({ token: z.string().min(16).max(128), issueId: z.uuid() })
@@ -20,10 +21,11 @@ export const GetPanelIssueOutputSchema = z.object({
 	}),
 	timeline: z.array(IssueTimelineItemSchema),
 	/**
-	 * The issue's open stop the panel may answer, with the answers it admits there (fase 2, item 6b) — as
-	 * the daemon last reported it with the roster. Absent when there is none.
+	 * The issue's open stops the panel may answer, with the answers each admits there (fase 2, item 6b) — as
+	 * the daemon last reported them with the roster. A LIST since fase 3: an issue can hold more than one
+	 * open ask at once (D1 and D2). Empty when there is none.
 	 */
-	openStop: PanelOpenStopSchema.omit({ issueId: true }).optional(),
+	openStops: z.array(PanelOpenStopSchema.omit({ issueId: true })),
 })
 
 /**
@@ -53,7 +55,7 @@ export class GetPanelIssue extends Handler<typeof GetPanelIssueInputSchema, type
 			: []
 		if (!issue) throw new BaseError<ApplicationErrors>('PANEL_NOT_FOUND', 'no panel for this link')
 		const timeline = z.array(IssueTimelineItemSchema).safeParse(issue.timeline)
-		const open = group?.openStops.find(stop => stop.issueId === issue.issueId)
+		const open = parseOpenStops(group?.openStops ?? []).filter(stop => stop.issueId === issue.issueId)
 		return {
 			issue: {
 				issueId: issue.issueId,
@@ -66,7 +68,7 @@ export class GetPanelIssue extends Handler<typeof GetPanelIssueInputSchema, type
 			},
 			// Stored verbatim from a validated sync; a row that no longer parses shows no timeline rather than failing the page.
 			timeline: timeline.success ? timeline.data : [],
-			openStop: open ? { stopId: open.stopId, kind: open.kind, resolutions: open.resolutions } : undefined,
+			openStops: open.map(({ issueId: _issueId, ...stop }) => stop),
 		}
 	}
 }

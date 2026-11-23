@@ -260,6 +260,11 @@
 			"LINK": "Preview deploy",
 			"VIDEO": "Video"
 		},
+		"AskAnswerKind": {
+			"DEFAULT": "went on with the default",
+			"OPTION": "option",
+			"TEXT": "text"
+		},
 		"ChannelKind": {
 			"INTERNAL": "Internal",
 			"WHATSAPP": "WhatsApp"
@@ -367,6 +372,19 @@
 			"TUESDAY": "Tuesday",
 			"WEDNESDAY": "Wednesday"
 		},
+		"GroupOutputMode": {
+			"DECISIONS_AND_LIVE": "Decisions and previews (default)",
+			"DECISIONS_ONLY": "Decisions and questions only",
+			"EVERYTHING": "Everything, progress included"
+		},
+		"IrreversibleActionKind": {
+			"DEPLOY": "deploy",
+			"GIT_FORCE_PUSH": "git force-push",
+			"GIT_PUSH": "git push",
+			"PACKAGE_PUBLISH": "package publish",
+			"PR_MERGE": "PR merge",
+			"RELEASE": "release"
+		},
 		"IssueControlSource": {
 			"CONSOLE": "Console",
 			"PANEL": "Panel",
@@ -382,6 +400,11 @@
 			"WAITING_PERSON": "Waiting on someone",
 			"WAITING_PROVIDER": "Waiting on usage limit"
 		},
+		"IssueStatus": {
+			"COMPLETED": "Completed",
+			"NEEDS_INPUT": "Needs input",
+			"WORKING": "Working"
+		},
 		"IssueTimelineItemKind": {
 			"ARCHIVED": "Archived",
 			"ARTIFACT": "Artifact",
@@ -395,11 +418,6 @@
 			"STOP_RAISED": "Asked for someone",
 			"STOP_RESOLVED": "Answered",
 			"TURN_STARTED": "Turn started"
-		},
-		"IssueStatus": {
-			"COMPLETED": "Completed",
-			"NEEDS_INPUT": "Needs input",
-			"WORKING": "Working"
 		},
 		"Language": {
 			"en-US": "English (US)",
@@ -418,20 +436,35 @@
 			"OTHER": "Other",
 			"SYNC_ERROR": "Sync error"
 		},
+		"OutputRouting": {
+			"DIGEST": "in a digest",
+			"GROUP": "in the group",
+			"PANEL": "panel only"
+		},
 		"ProviderStatus": {
 			"DETECTED": "Detected",
 			"NOT_INSTALLED": "Not installed"
+		},
+		"RegretWindowOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelled by the pause",
+			"CANCELLED_BY_STEER": "cancelled by a message",
+			"PROCEEDED": "went ahead"
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Approval needed",
 			"AUTH_REQUIRED": "Sign-in required",
 			"BLOCKED_BY_CLASSIFICATION": "Blocked",
+			"DECISION_REQUESTED": "Decision requested",
 			"HUMAN_REQUESTED": "Human requested",
 			"PERMISSION_DENIED": "Permission denied",
-			"SERVER_ERROR": "Server error"
+			"QUESTION_ASKED": "Question",
+			"SERVER_ERROR": "Server error",
+			"STALLED": "Stalled"
 		},
 		"StopResolution": {
+			"ANSWER": "Answer",
 			"APPROVE": "Approve",
+			"DEFAULT_APPLIED": "Went on with the default",
 			"DENY": "Deny",
 			"RETRY": "Retry",
 			"REVIEW_AND_SEND": "Review & send",
@@ -453,31 +486,24 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
 			"GIT": "git"
-		},
-		"IrreversibleActionKind": {
-			"DEPLOY": "deploy",
-			"GIT_FORCE_PUSH": "git force-push",
-			"GIT_PUSH": "git push",
-			"PACKAGE_PUBLISH": "package publish",
-			"PR_MERGE": "PR merge",
-			"RELEASE": "release"
-		},
-		"RegretWindowOutcome": {
-			"CANCELLED_BY_PAUSE": "cancelled by the pause",
-			"CANCELLED_BY_STEER": "cancelled by a message",
-			"PROCEEDED": "went ahead"
 		}
 	},
 	"errors": {
 		"AGENT_ENTRY_FORBIDS_SENDER": "A system or operator message cannot carry a contact sender.",
 		"AGENT_RUN_SCOPE_MISMATCH": "The agent tried to act on a different issue than the one it is running on. The action was blocked.",
 		"AGENT_RUN_TOKEN_INVALID": "The agent run token is missing, expired or was revoked. The run it belonged to is no longer active.",
+		"AGENT_STOP_KIND_NOT_DECLARABLE": "That stop kind is not declared by the agent through this door — a question uses AskQuestion, and a stall is observed by the system.",
 		"AGENT_TOOLS_UNSUPPORTED": "This agent needs tools, but the selected CLI does not support them.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "That stop kind is observed by the runtime and cannot be declared by the agent.",
 		"ARTIFACT_FILE_MISSING": "This artifact's file is no longer on disk, so it cannot be sent to the contact.",
 		"ARTIFACT_NOT_FOUND": "Artifact not found, or its file is no longer on disk.",
 		"ARTIFACT_NOT_PREVIEWABLE": "This artifact is a link — open the URL instead of requesting its content.",
 		"ARTIFACT_TOO_LARGE": "This artifact is too large to send over the channel.",
+		"ASK_ANSWER_REQUIRED": "Answering a question needs the answer itself — pick an option or write a reply.",
+		"ASK_DEFAULT_REQUIRED": "A question needs a default to go on with when nobody answers.",
+		"ASK_NOT_DUE": "This question's deadline has not passed yet.",
+		"ASK_OPTIONS_DUPLICATED": "Each option of a question needs its own id.",
+		"ASK_OPTION_UNKNOWN": "That option is not one of the choices of this question.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_DEVICE_INVALIDATED": "This channel's connection was invalidated by the messaging platform. Reconnect it to generate a new pairing code.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "This channel cannot deliver media messages.",
@@ -571,6 +597,7 @@
 		"RESOLUTION_NOT_APPLICABLE": "That resolution does not apply to this stop.",
 		"SESSION_ALREADY_STREAMING": "This session is already streaming.",
 		"SESSION_EXPIRED": "Session expired",
+		"SIGNAL_ALREADY_FLUSHED": "This message was already sent to the group.",
 		"SOCIAL_SIGN_IN_FAILED": "Could not start sign-in with that provider. If it persists, tell whoever runs the deploy — it is usually a provider credential.",
 		"STOP_ALREADY_RESOLVED": "This stop has already been resolved.",
 		"STOP_CRITERION_DISABLED": "This stop criterion is disabled in settings.",
@@ -660,15 +687,19 @@
 		"agentStopped": "Agent stopped and is waiting",
 		"allIssues": "All issues",
 		"archive": "Archive",
-		"pauseIssue": "Pause",
-		"resumeIssue": "Resume",
-		"issuePausedBadge": "Paused",
-		"timelineControlBy": "{{source}} · {{by}}",
 		"archived": "Archived",
 		"artifactOpenExternally": "Open outside the console",
 		"artifactOpenFull": "View {{name}} full size",
 		"artifactsEmptyDescription": "Preview deploys, screenshots and files produced by your agents land here.",
 		"artifactsEmptyTitle": "No artifacts yet",
+		"ask": {
+			"dueAt": "deadline: {{time}}",
+			"goesOnAfterDelivery": "Goes on with “{{label}}” 15 min after it reaches the group, if nobody answers.",
+			"goesOnAt": "Goes on with “{{label}}” at {{time}} if nobody answers.",
+			"placeholder": "Answer in your own words…",
+			"releaseRequired": "Only someone who can release answers this decision.",
+			"send": "Send answer"
+		},
 		"autoArchiveNote": "Completed issues auto-archive after 24 hours.",
 		"autonomyFull": "Autonomous — replies send without review",
 		"autonomyMentionGated": "Only replies when mentioned with {{tag}}",
@@ -705,6 +736,7 @@
 			"hint": "Deleting removes this conversation from the console. The history is kept, and you can re-attach the contact from the wizard later.",
 			"sectionTitle": "Danger zone"
 		},
+		"issuePausedBadge": "Paused",
 		"issuesEmptyDescription": "Routed messages that spawn work will show up here as issues.",
 		"issuesEmptyTitle": "No issues in this thread",
 		"issuesStats": "{{awaiting}} awaiting input · {{working}} working · {{completed}} completed",
@@ -743,6 +775,12 @@
 		},
 		"mentionTag": "Mention tag",
 		"mentionTagPlaceholder": "@codm",
+		"messagesRoutedHere": "Messages routed here",
+		"needsYou": "Needs you",
+		"onlyWhenMentioned": "Only reply when mentioned",
+		"onlyWhenMentionedHint": "Otherwise agents respond to every message in the thread.",
+		"outputMode": "What reaches the group",
+		"outputModeHint": "Decisions only: decisions and questions go to the group, the rest stays on the panel. Decisions and previews: previews and closings too. Everything: each task’s progress as well.",
 		"panelLink": {
 			"copied": "Panel link copied.",
 			"copy": "Copy link",
@@ -754,17 +792,15 @@
 			"rotated": "Link replaced. The old one stopped working.",
 			"sectionTitle": "Panel link"
 		},
-		"messagesRoutedHere": "Messages routed here",
-		"needsYou": "Needs you",
-		"onlyWhenMentioned": "Only reply when mentioned",
-		"onlyWhenMentionedHint": "Otherwise agents respond to every message in the thread.",
 		"participants": "Participants",
 		"participantsWhoCanInvoke": "Participants — who can invoke",
 		"pause": "Pause",
+		"pauseIssue": "Pause",
 		"reactions": "Reactions",
 		"reactionsHint": "Reacts 👀 to the message that wakes the agent and 🤖 to its reply on the channel.",
 		"respondTrigger": "Respond trigger",
 		"resume": "Resume",
+		"resumeIssue": "Resume",
 		"send": "Send",
 		"settingsDescription": "Tune how agents behave in this thread.",
 		"settingsDescriptionNamed": "How agents behave in {{name}}.",
@@ -789,15 +825,16 @@
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
 		"timeline": "Timeline",
+		"timelineControlBy": "{{source}} · {{by}}",
 		"timelineFromAgent": "agent",
 		"timelineFromPerson": "person",
+		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
+		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting",
 		"timelineReplyQuote": "replied quoting",
 		"timelineTriage": "routed by triage",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
-		"waitingTerminal": "Waiting for terminal output…",
-		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
-		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting"
+		"waitingTerminal": "Waiting for terminal output…"
 	},
 	"settings": {
 		"agentProviders": "Agent providers",

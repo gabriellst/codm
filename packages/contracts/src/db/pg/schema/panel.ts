@@ -32,6 +32,12 @@ export interface PanelOpenStop {
 	issueId: string
 	kind: StopKind
 	resolutions: StopResolution[]
+	/**
+	 * Fase 3 — the issue's ask (decision or question) as people answer it on the panel. JSON whose shape is
+	 * owned by the TS core (`AskViewSchema`), parsed on read — the same rule as the `ask` column of
+	 * `issue_stops`. Absent on a stop that asks nothing and on rosters from daemons before fase 3.
+	 */
+	ask?: unknown
 }
 
 /** One WhatsApp group (a daemon thread) that has a panel link. The token IS the access: whoever has it sees the group. */

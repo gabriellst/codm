@@ -50,6 +50,13 @@
       "when": 1794960917892,
       "tag": "0006_melted_dark_phoenix",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795031827003,
+      "tag": "0007_outstanding_chat",
+      "breakpoints": true
     }
   ]
 }

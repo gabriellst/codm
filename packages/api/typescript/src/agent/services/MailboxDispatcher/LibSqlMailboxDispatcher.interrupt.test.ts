@@ -106,6 +106,8 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 	let testContainer: DependencyContainer
 	const runner = new BlockingRunner()
 	let answered = 0
+	/** What each orchestrator turn was handed — the dispatcher's mapping of the ISSUE_RESULT item. */
+	let orchestratorInputs: { issueId?: string; originEntryId?: string }[] = []
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
@@ -116,6 +118,7 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 		await testBed.reset()
 		runner.reset()
 		answered = 0
+		orchestratorInputs = []
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -154,7 +157,8 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 			bindContainer() {
 				return this
 			},
-			async execute() {
+			async execute(input: { issueId?: string; originEntryId?: string }) {
+				orchestratorInputs.push(input)
 				answered += 1
 				return { spoke: true }
 			},
@@ -189,6 +193,9 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 		expect((await testBed.resolve(AgentSessionRepository).findByIssueId(issueId))?.agentSessionId).toBe(runner.sessions[0]?.newId)
 		// One answer — the steer's. The cut turn queued nothing and raised nothing.
 		expect(issueResults()).toBe(1)
+		// The answer's turn knows WHICH issue it speaks for (fase 3: it used to get none, and the reply was
+		// recorded with no issue) and quotes the person's message the steer came from.
+		expect(orchestratorInputs[0]).toMatchObject({ issueId, originEntryId: entryId })
 		expect(await testBed.resolve(DomainEventRepository).findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 	})
 
@@ -249,7 +256,8 @@ describe('"agora" cuts the running issue turn and the steer resumes its session'
 
 		expect(runner.killed).toBe(false)
 		expect(runner.prompts.map(prompt => prompt.includes('tira o rodapé'))).toEqual([false, true])
-		// Both turns concluded, so both answered.
-		expect(issueResults()).toBe(2)
+		// Both turns concluded; only the steer ANSWERS someone (a person routed to the issue) — the brief's
+		// words are the issue's progress since fase 3 (item 5), no orchestrator turn. Was 2.
+		expect(issueResults()).toBe(1)
 	})
 })

@@ -1,12 +1,18 @@
 import { testId } from '@test/support'
 import { describe, expect, it, mock } from 'bun:test'
 import type { ExternalMediator } from '@codm/core-typescript'
-import { IssueOpenedEvent, IssueCompletedEvent, ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
-import { ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssueOpenedEvent,
+	IssueCompletedEvent,
+	ThreadIssueSignalEvent,
+	ThreadStopRaisedEvent,
+} from '@codm/contracts-typescript/wire/events'
+import { IssueSignalLevel, ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { PublishAgentIntegrationEvents } from './PublishAgentIntegrationEvents'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { FactSource } from '../enums'
 
 const ownerId = testId('terminal-bridge', 'owner')
@@ -72,6 +78,28 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		expect(event.payload).toEqual({ issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', completedAt })
 	})
 
+	/** Fase 3 — the declared summary AND final artifact cross: the thread's closing line carries both. */
+	it('agent.run.completed → integration.issue.completed carries the final artifact', async () => {
+		const { handler, published } = makeHandler()
+		const completedAt = new Date('2026-07-22T00:00:00.000Z')
+		await handler.handle(
+			new AgentRunCompletedEvent({
+				entityId: 'issue-1',
+				ownerId,
+				payload: {
+					issueId: 'issue-1',
+					threadId: 'thread-1',
+					key: 'coupon-focus',
+					completedAt,
+					source: FactSource.DECLARED,
+					summary: 'live',
+					finalArtifactId: 'artifact-1',
+				},
+			}) as never,
+		)
+		expect((published[0] as IssueCompletedEvent).payload).toMatchObject({ summary: 'live', finalArtifactId: 'artifact-1' })
+	})
+
 	/**
 	 * The stop half of the same rule — plus the one field that DOES cross (D6-5).
 	 *
@@ -108,6 +136,56 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
+	/** Fase 3 — what an issue SAID crosses whole: the thread's output policy needs every field to route it. */
+	it('agent.issue_spoke → integration.thread.issue_signal', async () => {
+		const { handler, published } = makeHandler()
+		const spoke = new IssueSpokeEvent({
+			entityId: 'issue-1',
+			ownerId,
+			payload: {
+				issueId: 'issue-1',
+				threadId: 'thread-1',
+				level: IssueSignalLevel.FEEDBACK,
+				text: 'preview of the page',
+				artifactIds: ['artifact-1', 'artifact-2'],
+				mainArtifactId: 'artifact-1',
+			},
+		})
+		await handler.handle(spoke as never)
+		const event = published[0] as ThreadIssueSignalEvent
+		expect(event).toBeInstanceOf(ThreadIssueSignalEvent)
+		expect(event.name).toBe('integration.thread.issue_signal')
+		expect(event.payload).toEqual({
+			issueId: 'issue-1',
+			threadId: 'thread-1',
+			level: IssueSignalLevel.FEEDBACK,
+			text: 'preview of the page',
+			artifactIds: ['artifact-1', 'artifact-2'],
+			mainArtifactId: 'artifact-1',
+			signalId: spoke.id,
+		})
+	})
+
+	/**
+	 * The outbox is at-least-once: the SAME `agent.issue_spoke` (same persisted id) can reach this bridge
+	 * twice, and each pass mints a NEW integration event with a new id. What the two share is `signalId` —
+	 * the key the thread records the signal under, so the group never hears it twice.
+	 */
+	it('a redelivered agent.issue_spoke republishes under a new event id but the SAME signalId', async () => {
+		const { handler, published } = makeHandler()
+		const spoke = new IssueSpokeEvent({
+			entityId: 'issue-1',
+			ownerId,
+			payload: { issueId: 'issue-1', threadId: 'thread-1', level: IssueSignalLevel.PROGRESS, text: 'done', artifactIds: [] },
+		})
+		await handler.handle(spoke as never)
+		await handler.handle(spoke as never)
+		const [first, second] = published as ThreadIssueSignalEvent[]
+		expect(first?.id).not.toBe(second?.id)
+		expect(first?.payload.signalId).toBe(spoke.id)
+		expect(second?.payload.signalId).toBe(spoke.id)
+	})
+
 	/**
 	 * Asserted EXACTLY, in order, because this bridge is the only thing that turns a context-private
 	 * fact into something another service can see. A fact added here with no mapping is silence; a
@@ -133,6 +211,7 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 			'agent.orchestrator_replied',
 			'agent.run.completed',
 			'agent.run.stop_raised',
+			'agent.issue_spoke',
 		])
 	})
 })

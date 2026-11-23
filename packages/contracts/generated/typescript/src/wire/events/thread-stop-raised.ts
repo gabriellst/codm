@@ -10,6 +10,7 @@ export const ThreadStopRaisedEventSchema = z.integrationEvent('integration.threa
 	threadId: z.string(),
 	kind: z.enum(StopKind),
 	detail: z.string(),
+	ask: z.unknown().optional(),
 })
 
 export class ThreadStopRaisedEvent extends BaseIntegrationEvent<typeof ThreadStopRaisedEventSchema> {

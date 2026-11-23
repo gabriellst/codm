@@ -18,6 +18,8 @@ export { SetParticipantElevationController } from './SetParticipantElevation'
 export { SteerThreadController } from './SteerThread'
 export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 export { ResolveStopController } from './ResolveStop'
+export { AnswerStopController } from './AnswerStop'
+export { ConfigureOutputModeController } from './ConfigureOutputMode'
 export { UpdateStopCriteriaController } from './UpdateStopCriteria'
 // Thread LOOPS — the recurring scheduled whisper, five doors in one file (T11 / C21-C24).
 export {
@@ -53,6 +55,8 @@ import { SetParticipantElevationController } from './SetParticipantElevation'
 import { SteerThreadController } from './SteerThread'
 import { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 import { ResolveStopController } from './ResolveStop'
+import { AnswerStopController } from './AnswerStop'
+import { ConfigureOutputModeController } from './ConfigureOutputMode'
 import { UpdateStopCriteriaController } from './UpdateStopCriteria'
 import {
 	ListThreadLoopsController,
@@ -94,6 +98,8 @@ const productionControllers = {
 	SteerThreadController,
 	GetNeedsYouPanelController,
 	ResolveStopController,
+	AnswerStopController,
+	ConfigureOutputModeController,
 	UpdateStopCriteriaController,
 	ListThreadLoopsController,
 	CreateThreadLoopController,

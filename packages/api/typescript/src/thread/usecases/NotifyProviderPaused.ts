@@ -1,11 +1,12 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueSignalLevel, MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { THREAD_MESSAGES } from '../i18n/messages'
+import { routeSignal, SENDS_NOW } from '../utils/OutputPolicy'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
 
 export const NotifyProviderPausedInputSchema = z.object({
@@ -31,6 +32,10 @@ export const NotifyProviderPausedOutputSchema = z.object({ notified: z.boolean()
  * Same durable shape as `RaiseStop`'s channel notice: transcript entry and `deliver_channel_message` in
  * one transaction, `jobId` = the entry id, no agent runner involved (which is the point: the agent cannot
  * speak right now).
+ *
+ * ### Through the output policy (fase 3)
+ * It is the `PROVIDER_LIMIT` block notice: already one per pause, so it only asks the group's mode where a
+ * `BLOCK_NOTICE` goes (`ROUTING_BY_MODE`) and records the routing on the entry. Every mode sends it today.
  */
 @injectable()
 export class NotifyProviderPaused extends Handler<typeof NotifyProviderPausedInputSchema, typeof NotifyProviderPausedOutputSchema> {
@@ -54,11 +59,15 @@ export class NotifyProviderPaused extends Handler<typeof NotifyProviderPausedInp
 		const language = resolveThreadLanguage(thread.language, ownerLanguage)
 
 		return this.withTransaction(tx, async tx => {
+			const routing = routeSignal(thread.outputMode, IssueSignalLevel.BLOCK_NOTICE)
 			const entry = thread.recordEntry({
 				kind: TranscriptKind.SYSTEM,
 				text: THREAD_MESSAGES.providerPausedNotice(language, { until: input.until, now: new Date() }),
+				level: IssueSignalLevel.BLOCK_NOTICE,
+				routing,
 			})
 			await this.threads.save(thread, tx)
+			if (!SENDS_NOW[routing]) return { notified: false }
 			await this.commands.enqueueCommand<DeliverChannelMessage>(
 				'deliver_channel_message',
 				{

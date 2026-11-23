@@ -5,6 +5,7 @@
 
 import type { AgentModelId } from "./AgentModelId.ts";
 import type { BufferSize } from "./BufferSize.ts";
+import type { GroupOutputMode } from "./GroupOutputMode.ts";
 import type { Language } from "./Language.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 
@@ -73,6 +74,10 @@ export type GetThreadSettings200 = {
         */
         enabled: boolean;
     };
+    /**
+     * @type string
+    */
+    outputMode: GroupOutputMode;
     /**
      * @type object
     */

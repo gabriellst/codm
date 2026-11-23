@@ -15,6 +15,9 @@ import {
 	MessageType,
 	PanelActionKind,
 	PanelActionOutcome,
+	GroupOutputMode,
+	IssueSignalLevel,
+	OutputRouting,
 } from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -110,6 +113,17 @@ export const threads = sqliteTable(
 		 * fecha o conjunto é o `z.enum(Language)` do agregado, na hidratação (`LibSqlThreadRepository`).
 		 */
 		language: text('language').$type<Language>(),
+		/**
+		 * HOW MUCH OF WHAT ITS ISSUES SAY REACHES THIS GROUP (fase 3, item 2) — `GroupOutputMode`, read by the
+		 * output policy's total table (`ROUTING_BY_MODE`). `NOT NULL DEFAULT 'DECISIONS_AND_LIVE'`: the owner
+		 * decided (18/11) that existing and new groups alike start there, so every pre-existing row backfills
+		 * to the decided default and there is no "never chosen" spelling to keep apart.
+		 *
+		 * Sem CHECK, pelo mesmo motivo de `language` acima: SQLite não ADICIONA constraint a tabela existente,
+		 * e um `enumCheck` aqui faria o drizzle-kit reconstruir `thread_threads` em vez de um `ADD COLUMN`
+		 * aditivo. Quem fecha o conjunto é o `z.enum(GroupOutputMode)` do agregado, na hidratação.
+		 */
+		outputMode: text('output_mode').$type<GroupOutputMode>().notNull().default(GroupOutputMode.DECISIONS_AND_LIVE),
 		participants: text('participants', { mode: 'json' }).$type<ThreadParticipant[]>().notNull(),
 		// BufferSize string tiers (25 | 50 | 100 | 200).
 		bufferSize: text('buffer_size').$type<BufferSize>().notNull(),
@@ -245,6 +259,25 @@ export const transcriptEntries = sqliteTable(
 		 */
 		artifactId: text('artifact_id'),
 
+		/**
+		 * FASE 3 — what an issue said, and where the output policy sent it. All NULL on every entry that is
+		 * not an issue's own signal (a contact's message, the orchestrator's reply, a whisper…).
+		 *
+		 * `level` is the `IssueSignalLevel` of the signal; `routing` the `OutputRouting` the group's mode gave
+		 * it (GROUP = sent as its own message, DIGEST = waiting for / folded into a per-person digest, PANEL =
+		 * never sent). No CHECK on either, for the same reason as `thread_threads.language`: a table-level
+		 * constraint on an existing table makes drizzle-kit REBUILD it (this one is the biggest table in the
+		 * file) instead of an additive `ADD COLUMN`; the aggregate's `z.enum` closes the set on hydration.
+		 */
+		level: text('level').$type<IssueSignalLevel>(),
+		routing: text('routing').$type<OutputRouting>(),
+		/** The stop (an ask) this entry put to the group — the anchor a quoted reply resolves. */
+		stopId: text('stop_id'),
+		/** The digest entry that carried this one to the group, when it was folded into a per-person digest. */
+		digestEntryId: text('digest_entry_id'),
+		/** Who the signal is addressed to (a participant id) — the key the digest groups by. */
+		addresseeId: text('addressee_id'),
+
 		at: integer('at', { mode: 'timestamp_ms' }).notNull(),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
@@ -257,6 +290,8 @@ export const transcriptEntries = sqliteTable(
 		enumCheck('thread_transcript_entries_message_type_check', t.messageType, Object.values(MessageType)),
 		index('transcript_entries_thread_at_idx').on(t.threadId, t.at),
 		index('transcript_entries_issue_id_idx').on(t.issueId),
+		// The digest flush: "the DIGEST entries of this thread not yet carried by a digest".
+		index('transcript_entries_digest_idx').on(t.threadId, t.routing, t.digestEntryId),
 	],
 )
 
@@ -297,12 +332,33 @@ export const stops = sqliteTable(
 		// StopResolution (must match the kind) — null while open.
 		resolution: text('resolution').$type<StopResolution>(),
 		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
+
+		/**
+		 * FASE 3 — the ASK of a DECISION_REQUESTED / QUESTION_ASKED stop; every column NULL on the other kinds.
+		 *
+		 * `ask` / `answer` are JSON whose shape is owned by the TS core (`StopAskSchema` / `StopAnswerSchema`
+		 * in `@shared/objects`) and parsed on hydration — no type is redeclared here. `answered_by` is the
+		 * participant id of whoever answered (NULL when the default applied). `seq` numbers the asks PER
+		 * ISSUE — the `D1` of `APP-12 · D1` — read as `max(seq)+1` inside the raising transaction, with the
+		 * unique index below refusing the race (NULL seqs of the non-ask stops never collide in SQLite).
+		 * `due_at` is set ONCE, when the message carrying a question is accepted by the gateway (NULL
+		 * until then, and always NULL for a decision); the deadline sweep reads it through its index.
+		 * `ask_entry_id` is the transcript entry that put the ask to the group.
+		 */
+		ask: text('ask', { mode: 'json' }),
+		answer: text('answer', { mode: 'json' }),
+		answeredBy: text('answered_by'),
+		seq: integer('seq'),
+		dueAt: integer('due_at', { mode: 'timestamp_ms' }),
+		askEntryId: text('ask_entry_id'),
 	},
 	t => [
 		enumCheck('issue_stops_kind_check', t.kind, Object.values(StopKind)),
 		enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
 		index('stops_issue_id_idx').on(t.issueId),
 		index('stops_thread_id_idx').on(t.threadId),
+		uniqueIndex('stops_issue_seq_unq').on(t.issueId, t.seq),
+		index('stops_due_at_idx').on(t.dueAt),
 	],
 )
 

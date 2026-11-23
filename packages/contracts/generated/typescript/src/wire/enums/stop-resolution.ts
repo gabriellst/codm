@@ -6,4 +6,6 @@ export enum StopResolution {
 	TAKE_OVER = 'TAKE_OVER',
 	APPROVE = 'APPROVE',
 	DENY = 'DENY',
+	ANSWER = 'ANSWER',
+	DEFAULT_APPLIED = 'DEFAULT_APPLIED',
 }

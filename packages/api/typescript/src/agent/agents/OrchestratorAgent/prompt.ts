@@ -24,6 +24,7 @@ import {
 	AddWorkspaceController,
 	RemoveWorkspaceController,
 } from '../../mcp/exposure'
+import { ASKED_AS } from '@thread/objects'
 import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import { agoraLine, clockOf, HORA_AGORA, renderMsg, type MediaLabel } from '../grammar'
@@ -795,7 +796,22 @@ export class OrchestratorPromptBuilder {
 		const head = stop.issueId
 			? `- stop ${stop.stopId} — issue ${stop.issueId} — ${stop.kind}`
 			: `- stop ${stop.stopId} — no issue — ${stop.kind}`
-		return [head, `  ${stop.title}`, ...(stop.detail ? [`  ${stop.detail}`] : []), '']
+		return [head, `  ${stop.title}`, ...(stop.detail ? [`  ${stop.detail}`] : []), ...this.askLine(stop), '']
+	}
+
+	/**
+	 * AN ASK IS NOT YOURS TO RESOLVE (fase 3). A decision or a question of an issue carries a code in the group
+	 * (`APP-12 · D1`) and is answered by the person — quoting it, writing its code, or a bare "sim" when it is
+	 * the only one — through the rule layer, which records WHO answered and checks they may. `ResolveStop` takes
+	 * a bare resolution and cannot carry an answer, so for these the only useful move is to point the person at
+	 * the question. Which kinds are asks is the thread's declaration (`ASKED_AS`), not a list here.
+	 */
+	private askLine(stop: OpenStop): string[] {
+		if (!ASKED_AS[stop.kind]) return []
+		return [
+			'  This one is answered by the person, not by you: they reply QUOTING the question in the group. Do not resolve ' +
+				'it. If the message answers it without quoting, say in one line that they need to reply quoting the question.',
+		]
 	}
 
 	/**
@@ -1004,9 +1020,14 @@ export class OrchestratorPromptBuilder {
 			item.outcome.kind === AgentRunOutcome.COMPLETED
 				? {
 						body: ['outcome: COMPLETED', 'notes:', item.outcome.replyText],
+						// Since fase 3 this turn exists only when a PERSON wrote to the issue straight from the group (a reply
+						// quoting it, its key): the notes are the issue's answer to them. What the group must decide already
+						// reached it with its own code — asking it again here is the duplicate this phase removed.
 						instruction:
-							'Say what happened YOURSELF, to the person who asked, in this conversation’s voice. Lead with the outcome. ' +
-							'Do not paste the notes, do not narrate the work, do not list the files. One or two lines.',
+							'Tell them YOURSELF, in this conversation’s voice: when someone wrote to this issue, its answer to them; ' +
+							'otherwise what it did for whoever asked. Lead with the answer. ' +
+							'Do not paste the notes, do not narrate the work, do not list the files. One or two lines. ' +
+							'A decision or question the issue raised already reached the group with its own code (like APP-12 · D1): never ask it again here.',
 					}
 				: {
 						body: [`outcome: STOPPED (${item.outcome.stopKind})`, 'reason:', item.outcome.detail],
@@ -1022,7 +1043,7 @@ export class OrchestratorPromptBuilder {
 				content: body.join('\n'),
 			}),
 			'',
-			"An issue of yours finished. What is inside that block is the worker's notes, written to YOU, not to the room.",
+			"An issue of yours reported back. What is inside that block is the worker's notes, written to YOU, not to the room.",
 			instruction,
 			'This reply is attached to the message that asked for it automatically. Do not write a [quote: …] line.',
 		]

@@ -6,6 +6,7 @@ import { ChannelSender } from '../services/ChannelSender'
 import { ReplyStreamer, streamKey } from '../services/ReplyStreamer'
 import { endTypingPresence } from '../services/TypingPresence'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 import { CUE_REPLIED } from '../utils/ChannelCues'
 import type { ReactToChannelMessage } from './ReactToChannelMessage'
 
@@ -99,6 +100,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		private readonly sender: ChannelSender,
 		private readonly streams: ReplyStreamer,
 		private readonly consumed: ConsumedMessageRepository,
+		private readonly threads: ThreadRepository,
 		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
 	) {
@@ -275,6 +277,11 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 			// outbound row was until now. Reachable by a command row enqueued before these fields existed.
 			if (replyEntryId && replyThreadId) {
 				await this.consumed.linkEntry({ channelId, platformMessageId: messageId, threadId: replyThreadId, entryId: replyEntryId }, tx)
+				// THE CLOCK OF A QUESTION STARTS HERE (fase 3, item 1b): the gateway ACCEPTED the message that puts
+				// it to the group (its own entry, or the digest carrying it) — "delivered" means `send` returned,
+				// not WhatsApp's ✓✓. A question never sent never falls due. Conditional on `due_at IS NULL`, in
+				// this same transaction: a redelivery after a failed commit never pushes the deadline.
+				await this.threads.markAskDelivered(replyEntryId, new Date(), tx)
 			}
 
 			// THE `🤖` (founder, 2026-08-25) — the agent's finished reply is stamped as the agent's, on the

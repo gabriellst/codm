@@ -25,6 +25,19 @@ export const AgentRunCompletedEventSchema = z.domainEvent({
 	 * this value was destructured in `DeclareIssueComplete` and thrown away.
 	 */
 	summary: z.string().optional(),
+	/** The artifact the agent DECLARED as the final result (fase 3) — the closing line carries it to the group. */
+	finalArtifactId: z.string().optional(),
+	/**
+	 * Why the artifact the agent declared as the result did NOT go with the closing (the refusal's error code:
+	 * not this issue's, file gone, too large, channel without media). The completion stands without it — the
+	 * record of what was dropped lives here, on the fact, and never crosses to the integration event.
+	 */
+	finalArtifactRefusal: z.string().optional(),
+	/**
+	 * The person's message the turn that declared this was answering (a routed steer) — the closing quotes it
+	 * and is their answer (`IssueTurnAborter.answerWithClosing`). Crosses as `integration.issue.completed`'s.
+	 */
+	answersEntryId: z.string().optional(),
 })
 
 export class AgentRunCompletedEvent extends BaseDomainEvent<typeof AgentRunCompletedEventSchema> {

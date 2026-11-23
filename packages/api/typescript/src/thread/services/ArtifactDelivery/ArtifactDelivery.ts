@@ -45,16 +45,20 @@ export async function enqueueArtifactLinkDelivery(
  * resolves the conversation (`channelId`/`contactExternalId`) itself from `input.threadId`; see its
  * own docblock for why the payload carries `threadId` rather than the resolved pair every OTHER
  * delivery command's enqueuer passes.
+ *
+ * `jobId`, when the caller's send has an identity of its own (an issue's feedback — its entry), makes a
+ * re-run of the caller schedule nothing new while the first send is still pending.
  */
 export async function enqueueArtifactAttachmentDelivery(
 	commands: CommandQueue,
 	input: DeliverChannelAttachment['input'],
 	tx?: Transaction,
+	opts?: { jobId: string },
 ): Promise<void> {
 	await commands.enqueueCommand<DeliverChannelAttachment>(
 		'deliver_channel_attachment' satisfies DeliverChannelAttachment['name'],
 		input,
-		undefined,
+		opts,
 		tx,
 	)
 }

@@ -26,7 +26,11 @@ describe('AttachThread use case', () => {
 		await testBed.reset()
 		// Default: the channel is connected (no gateway.channels row is seeded in these tests). The
 		// CHANNEL_NOT_CONNECTED case re-overrides to false below.
-		testBed.override(ChannelConnectivity, { isConnected: async () => true, anyConnected: async () => true } as ChannelConnectivity)
+		testBed.override(ChannelConnectivity, {
+			isConnected: async () => true,
+			anyConnected: async () => true,
+			connectedSince: async () => new Date(0),
+		} as ChannelConnectivity)
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -81,7 +85,11 @@ describe('AttachThread use case', () => {
 
 	it('rejects when the channel is not connected (CHANNEL_NOT_CONNECTED)', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
-		testBed.override(ChannelConnectivity, { isConnected: async () => false, anyConnected: async () => false } as ChannelConnectivity)
+		testBed.override(ChannelConnectivity, {
+			isConnected: async () => false,
+			anyConnected: async () => false,
+			connectedSince: async () => undefined,
+		} as ChannelConnectivity)
 		const useCase = testBed.resolve(AttachThread)
 		await expect(
 			useCase.execute({ ownerId: MOCK_CLOUD_OWNER_ID, contactRef, workspaceId: workspace.id.value, providers: [ProviderKind.CLAUDE_CODE] }),

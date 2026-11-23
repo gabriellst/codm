@@ -13,6 +13,7 @@ import {
 	StopKind,
 	ArtifactKind,
 	Language,
+	OutputRouting,
 } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
@@ -75,6 +76,13 @@ export const GetSessionChatOutputSchema = z.object({
 			provider: z.enum(ProviderKind).optional(),
 			quotedEntryId: z.string().optional(),
 			classification: z.enum(ClassificationMethod).optional(),
+			/**
+			 * Where the output policy sent this entry, when it is something an ISSUE said (fase 3, item 2) —
+			 * `GROUP` went to the group, `PANEL` stayed on the panel/console and never reached WhatsApp, `DIGEST`
+			 * went (or is waiting to go) inside a per-person digest. Absent on every other entry. The console
+			 * marks the ones that never went out on their own, so a line the group never saw does not read as sent.
+			 */
+			routing: z.enum(OutputRouting).optional(),
 			/**
 			 * The artifact THIS entry delivered to the contact ("envio de artefatos pelo canal" design,
 			 * decisions 4/8) — present only on the SYSTEM entry `DeliverChannelAttachment` writes, absent on
@@ -297,6 +305,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				provider: (e.provider ?? undefined) as ProviderKind | undefined,
 				quotedEntryId: e.quotedEntryId ?? undefined,
 				classification: (e.classification ?? undefined) as ClassificationMethod | undefined,
+				routing: e.routing ?? undefined,
 				artifact: this.artifactOf(e.artifactId, artifactBook),
 				sender: this.senderOf(e.senderExternalId, thread.channelId, contactBook, operatorRemoteId),
 			})),

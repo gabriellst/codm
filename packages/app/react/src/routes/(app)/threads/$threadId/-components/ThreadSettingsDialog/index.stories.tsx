@@ -18,6 +18,7 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					thinkingIndicator: { enabled: true },
 					reactions: { enabled: true },
 					streaming: { enabled: true },
+					outputMode: 'DECISIONS_AND_LIVE',
 					// DECLARADO diferente do efetivo de propósito: é o único estado em que a seção mostra as
 					// duas coisas que ela tem para dizer — o valor escolhido no seletor E o botão de voltar
 					// ao padrão da conta, que só existe quando há escolha a desfazer.

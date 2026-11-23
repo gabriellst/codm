@@ -1,0 +1,8 @@
+namespace TemplateContracts;
+
+@doc("How much of what its issues say reaches a group (fase 3, item 2) — chosen per conversation by the operator; the routing per IssueSignalLevel is a total table on the thread. DECISIONS_ONLY: decisions, questions and block notices only. DECISIONS_AND_LIVE (the default for every group): also previews and closings. EVERYTHING: progress too — the per-group way back to the chattier behaviour.")
+enum GroupOutputMode {
+  DECISIONS_ONLY: "DECISIONS_ONLY",
+  DECISIONS_AND_LIVE: "DECISIONS_AND_LIVE",
+  EVERYTHING: "EVERYTHING",
+}

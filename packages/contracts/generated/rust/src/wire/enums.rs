@@ -85,6 +85,44 @@ pub enum ArtifactKind {
 	LINK,
 }
 
+/// The discriminant of an ask's answer (fase 3, item 3) — cross-boundary for the same reason LoopScheduleKind is: it discriminates the console's and the panel's answer union (and therefore the SDK member each validates against), the stop's recorded answer and the ask's default. OPTION: one of the ask's options, by id. TEXT: free text. DEFAULT: the deadline passed and the declared default applied — recorded on the stop by the deadline job only, never accepted from a person.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum AskAnswerKind {
+	#[serde(rename = "OPTION")]
+	#[strum(serialize = "OPTION")]
+	OPTION,
+	#[serde(rename = "TEXT")]
+	#[strum(serialize = "TEXT")]
+	TEXT,
+	#[serde(rename = "DEFAULT")]
+	#[strum(serialize = "DEFAULT")]
+	DEFAULT,
+}
+
+/// What the answer to an issue's ask authorizes (fase 3, item 1) — DECLARED by the issue on the tool, never inferred. Any effect escalates the ask to a decision (StopKind.DECISION_REQUESTED, no deadline) answerable only by someone who may release. PUBLISH: putting something live / sending it out. IRREVERSIBLE: an action that cannot be undone. CLIENT_DATA: touching a client's data.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum AskEffect {
+	#[serde(rename = "PUBLISH")]
+	#[strum(serialize = "PUBLISH")]
+	PUBLISH,
+	#[serde(rename = "IRREVERSIBLE")]
+	#[strum(serialize = "IRREVERSIBLE")]
+	IRREVERSIBLE,
+	#[serde(rename = "CLIENT_DATA")]
+	#[strum(serialize = "CLIENT_DATA")]
+	CLIENT_DATA,
+}
+
 /// How the Attach-Thread wizard is presented. FULLSCREEN takeover or SIDE_PANEL. A general preference surfaced in Settings.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -99,6 +137,31 @@ pub enum AttachFlowStyle {
 	#[serde(rename = "SIDE_PANEL")]
 	#[strum(serialize = "SIDE_PANEL")]
 	SIDE_PANEL,
+}
+
+/// Why work stopped, as a BLOCK_NOTICE says it (fase 3, item 2) — the key of 'one notice per cause'. Derived from the stop kind (or the provider pause), never stored. PROVIDER_LIMIT: the provider account hit its usage limit. PROVIDER_ERROR: the provider failed the turn. CLI_LOGIN: the agent CLI needs a new sign-in. STALLED: the issue stopped without saying what it needs, even after the reminder. CLASSIFICATION: a reply was blocked by classification.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum BlockCause {
+	#[serde(rename = "PROVIDER_LIMIT")]
+	#[strum(serialize = "PROVIDER_LIMIT")]
+	PROVIDER_LIMIT,
+	#[serde(rename = "PROVIDER_ERROR")]
+	#[strum(serialize = "PROVIDER_ERROR")]
+	PROVIDER_ERROR,
+	#[serde(rename = "CLI_LOGIN")]
+	#[strum(serialize = "CLI_LOGIN")]
+	CLI_LOGIN,
+	#[serde(rename = "STALLED")]
+	#[strum(serialize = "STALLED")]
+	STALLED,
+	#[serde(rename = "CLASSIFICATION")]
+	#[strum(serialize = "CLASSIFICATION")]
+	CLASSIFICATION,
 }
 
 /// Rolling per-thread context buffer size, in messages. A closed set of tiers {25,50,100,200}. Modeled as a STRING enum (the wire codegen carries string enums; numeric-literal unions are not first-class) — the domain narrows it to the numeric tiers and the DB stores it as text via the shared text-column convention.
@@ -521,6 +584,25 @@ pub enum Direction {
 	RECEIVED,
 }
 
+/// How much of what its issues say reaches a group (fase 3, item 2) — chosen per conversation by the operator; the routing per IssueSignalLevel is a total table on the thread. DECISIONS_ONLY: decisions, questions and block notices only. DECISIONS_AND_LIVE (the default for every group): also previews and closings. EVERYTHING: progress too — the per-group way back to the chattier behaviour.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum GroupOutputMode {
+	#[serde(rename = "DECISIONS_ONLY")]
+	#[strum(serialize = "DECISIONS_ONLY")]
+	DECISIONS_ONLY,
+	#[serde(rename = "DECISIONS_AND_LIVE")]
+	#[strum(serialize = "DECISIONS_AND_LIVE")]
+	DECISIONS_AND_LIVE,
+	#[serde(rename = "EVERYTHING")]
+	#[strum(serialize = "EVERYTHING")]
+	EVERYTHING,
+}
+
 /// Role of a member inside a group. Descends the origin channel GroupRole. Lowercase wire values preserved verbatim. Defined-and-dormant: the gateway.remote_memberships projection stores the boolean `is_admin` today; this enum is the harmonized closed set for consumers that need the full member/admin/super_admin gradient.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -656,6 +738,34 @@ pub enum IssueLifeState {
 	DONE,
 }
 
+/// The level of something an issue wants to say (fase 3, §6.1) — what decides, per group output mode, whether it becomes its own message in the group, joins a per-person digest, or stays on the panel/timeline. DECISION: an answer is required before the issue goes on (no deadline). QUESTION: an answer is welcome; after the deadline the issue goes on with its declared default. FEEDBACK: a preview to look at — does not hold the issue. CLOSING: the issue is done (the reply to whoever asked). BLOCK_NOTICE: work stopped for a cause someone must clear (one notice per cause). PROGRESS: what the issue did — timeline only by default.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueSignalLevel {
+	#[serde(rename = "DECISION")]
+	#[strum(serialize = "DECISION")]
+	DECISION,
+	#[serde(rename = "QUESTION")]
+	#[strum(serialize = "QUESTION")]
+	QUESTION,
+	#[serde(rename = "FEEDBACK")]
+	#[strum(serialize = "FEEDBACK")]
+	FEEDBACK,
+	#[serde(rename = "CLOSING")]
+	#[strum(serialize = "CLOSING")]
+	CLOSING,
+	#[serde(rename = "BLOCK_NOTICE")]
+	#[strum(serialize = "BLOCK_NOTICE")]
+	BLOCK_NOTICE,
+	#[serde(rename = "PROGRESS")]
+	#[strum(serialize = "PROGRESS")]
+	PROGRESS,
+}
+
 /// Lifecycle of an Issue (a unit of work with its own terminal session). NEEDS_INPUT → WORKING → COMPLETED. Richer than whatscode's ChatSessionStatus{ACTIVE,CLOSED}.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -675,7 +785,7 @@ pub enum IssueStatus {
 	COMPLETED,
 }
 
-/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause.
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause. Fase 3 adds fields, not kinds: MESSAGE carries its IssueSignalLevel and OutputRouting (group vs panel only); STOP_RAISED of an ask carries its code (D1), question, options and deadline; STOP_RESOLVED carries the answer (or the default that applied).
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -953,6 +1063,25 @@ pub enum OutboxSource {
 	integration,
 }
 
+/// Where the output policy sent one thing an issue said (fase 3, item 2), recorded on its transcript entry. GROUP: its own message in the group. DIGEST: one message together with the other questions/previews for the same person within the digest window. PANEL: timeline/panel only — never sent to the channel.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum OutputRouting {
+	#[serde(rename = "GROUP")]
+	#[strum(serialize = "GROUP")]
+	GROUP,
+	#[serde(rename = "DIGEST")]
+	#[strum(serialize = "DIGEST")]
+	DIGEST,
+	#[serde(rename = "PANEL")]
+	#[strum(serialize = "PANEL")]
+	PANEL,
+}
+
 /// Discriminator for the tenant aggregate (Owner). Generic, product-agnostic placeholder values — a product specializes them (e.g. CLINIC / SOLO_DOCTOR, STORE / MERCHANT) by re-labelling. The kernel only cares that an ownerId resolves to some kind. Persisted on owner.owners.kind.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -969,7 +1098,7 @@ pub enum OwnerKind {
 	INDIVIDUAL,
 }
 
-/// What an identified person asked for on the group's cloud panel (fase 2, item 6b). PAUSE / RESUME hold or release one issue; STEER sends that issue's session a short instruction; ANSWER_STOP answers the issue's open stop (only a member who may release). Requested in the cloud, executed by the daemon as that member on its next pull.
+/// What an identified person asked for on the group's cloud panel (fase 2, item 6b). PAUSE / RESUME hold or release one issue; STEER sends that issue's session a short instruction; ANSWER_STOP answers the issue's open stop (only a member who may release). ANSWER_ASK (fase 3) answers one of the issue's asks — a decision or a question — with an option or text (who may answer follows the ask: with a declared effect only a member who may release; otherwise anyone who may act). Requested in the cloud, executed by the daemon as that member on its next pull.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -989,6 +1118,9 @@ pub enum PanelActionKind {
 	#[serde(rename = "ANSWER_STOP")]
 	#[strum(serialize = "ANSWER_STOP")]
 	ANSWER_STOP,
+	#[serde(rename = "ANSWER_ASK")]
+	#[strum(serialize = "ANSWER_ASK")]
+	ANSWER_ASK,
 }
 
 /// What the daemon did with a panel action (fase 2, item 6b), reported on its next pull. DONE: executed as the member who asked. REFUSED: not executed — the outcome carries the error code (the member lost the release grant, the issue was not pausable, the stop was already answered…).
@@ -1182,6 +1314,15 @@ pub enum StopKind {
 	#[serde(rename = "PERMISSION_DENIED")]
 	#[strum(serialize = "PERMISSION_DENIED")]
 	PERMISSION_DENIED,
+	#[serde(rename = "DECISION_REQUESTED")]
+	#[strum(serialize = "DECISION_REQUESTED")]
+	DECISION_REQUESTED,
+	#[serde(rename = "QUESTION_ASKED")]
+	#[strum(serialize = "QUESTION_ASKED")]
+	QUESTION_ASKED,
+	#[serde(rename = "STALLED")]
+	#[strum(serialize = "STALLED")]
+	STALLED,
 }
 
 /// How an operator resolves a stop. The resolution must match the stop kind (e.g. APPROVE/DENY only for APPROVAL_NEEDED); TAKE_OVER additionally pauses the thread for direct conversation.
@@ -1207,6 +1348,12 @@ pub enum StopResolution {
 	#[serde(rename = "DENY")]
 	#[strum(serialize = "DENY")]
 	DENY,
+	#[serde(rename = "ANSWER")]
+	#[strum(serialize = "ANSWER")]
+	ANSWER,
+	#[serde(rename = "DEFAULT_APPLIED")]
+	#[strum(serialize = "DEFAULT_APPLIED")]
+	DEFAULT_APPLIED,
 }
 
 /// Operator composer mode on a Thread. STEER = agents live, typed text is a whisper injected into agent context (never sent to the channel); DIRECT = thread paused, the owner talks directly on the channel as themselves. Promoted from the modeling's inline composerMode (mirrors the MessageAuthor promotion).

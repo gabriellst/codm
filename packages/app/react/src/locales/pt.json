@@ -260,6 +260,11 @@
 			"LINK": "Deploy de preview",
 			"VIDEO": "Vídeo"
 		},
+		"AskAnswerKind": {
+			"DEFAULT": "seguiu com o padrão",
+			"OPTION": "opção",
+			"TEXT": "texto"
+		},
 		"ChannelKind": {
 			"INTERNAL": "Interno",
 			"WHATSAPP": "WhatsApp"
@@ -367,6 +372,19 @@
 			"TUESDAY": "Terça",
 			"WEDNESDAY": "Quarta"
 		},
+		"GroupOutputMode": {
+			"DECISIONS_AND_LIVE": "Decisões e prévias (padrão)",
+			"DECISIONS_ONLY": "Só decisões e perguntas",
+			"EVERYTHING": "Tudo, até o progresso"
+		},
+		"IrreversibleActionKind": {
+			"DEPLOY": "deploy",
+			"GIT_FORCE_PUSH": "git push forçado",
+			"GIT_PUSH": "git push",
+			"PACKAGE_PUBLISH": "publicar pacote",
+			"PR_MERGE": "merge de PR",
+			"RELEASE": "criar release"
+		},
 		"IssueControlSource": {
 			"CONSOLE": "Console",
 			"PANEL": "Painel",
@@ -382,6 +400,11 @@
 			"WAITING_PERSON": "Aguardando pessoa",
 			"WAITING_PROVIDER": "Esperando cota"
 		},
+		"IssueStatus": {
+			"COMPLETED": "Concluída",
+			"NEEDS_INPUT": "Precisa de entrada",
+			"WORKING": "Em andamento"
+		},
 		"IssueTimelineItemKind": {
 			"ARCHIVED": "Arquivada",
 			"ARTIFACT": "Artefato",
@@ -395,11 +418,6 @@
 			"STOP_RAISED": "Pediu alguém",
 			"STOP_RESOLVED": "Respondida",
 			"TURN_STARTED": "Turno iniciado"
-		},
-		"IssueStatus": {
-			"COMPLETED": "Concluída",
-			"NEEDS_INPUT": "Precisa de entrada",
-			"WORKING": "Em andamento"
 		},
 		"Language": {
 			"en-US": "English (US)",
@@ -418,20 +436,35 @@
 			"OTHER": "Outro",
 			"SYNC_ERROR": "Erro de sincronização"
 		},
+		"OutputRouting": {
+			"DIGEST": "no resumo",
+			"GROUP": "no grupo",
+			"PANEL": "só no painel"
+		},
 		"ProviderStatus": {
 			"DETECTED": "Detectado",
 			"NOT_INSTALLED": "Não instalado"
+		},
+		"RegretWindowOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelado pela pausa",
+			"CANCELLED_BY_STEER": "cancelado por recado",
+			"PROCEEDED": "seguiu"
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Aprovação necessária",
 			"AUTH_REQUIRED": "Login necessário",
 			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
+			"DECISION_REQUESTED": "Decisão pedida",
 			"HUMAN_REQUESTED": "Humano solicitado",
 			"PERMISSION_DENIED": "Permissão negada",
-			"SERVER_ERROR": "Erro de servidor"
+			"QUESTION_ASKED": "Pergunta",
+			"SERVER_ERROR": "Erro de servidor",
+			"STALLED": "Parada sem motivo"
 		},
 		"StopResolution": {
+			"ANSWER": "Responder",
 			"APPROVE": "Aprovar",
+			"DEFAULT_APPLIED": "Seguiu com o padrão",
 			"DENY": "Negar",
 			"RETRY": "Tentar novamente",
 			"REVIEW_AND_SEND": "Revisar e enviar",
@@ -453,31 +486,24 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Projeto Claude",
 			"GIT": "git"
-		},
-		"IrreversibleActionKind": {
-			"DEPLOY": "deploy",
-			"GIT_FORCE_PUSH": "git push forçado",
-			"GIT_PUSH": "git push",
-			"PACKAGE_PUBLISH": "publicar pacote",
-			"PR_MERGE": "merge de PR",
-			"RELEASE": "criar release"
-		},
-		"RegretWindowOutcome": {
-			"CANCELLED_BY_PAUSE": "cancelado pela pausa",
-			"CANCELLED_BY_STEER": "cancelado por recado",
-			"PROCEEDED": "seguiu"
 		}
 	},
 	"errors": {
 		"AGENT_ENTRY_FORBIDS_SENDER": "Uma mensagem do agente ou do operador não pode ter um remetente de contato.",
 		"AGENT_RUN_SCOPE_MISMATCH": "O agente tentou agir sobre uma issue diferente daquela em que está executando. A ação foi bloqueada.",
 		"AGENT_RUN_TOKEN_INVALID": "O token da execução do agente está ausente, expirou ou foi revogado. A execução a que pertencia não está mais ativa.",
+		"AGENT_STOP_KIND_NOT_DECLARABLE": "Esse tipo de parada não é declarado pelo agente por esta porta — uma pergunta usa AskQuestion, e a parada sem resposta é observada pelo sistema.",
 		"AGENT_TOOLS_UNSUPPORTED": "Este agente precisa de ferramentas, mas a CLI selecionada não as suporta.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "Esse tipo de parada é observado pelo runtime e não pode ser declarado pelo agente.",
 		"ARTIFACT_FILE_MISSING": "O arquivo deste artefato não está mais no disco, então não pode ser enviado ao contato.",
 		"ARTIFACT_NOT_FOUND": "Artefato não encontrado, ou o arquivo dele não está mais no disco.",
 		"ARTIFACT_NOT_PREVIEWABLE": "Este artefato é um link — abra a URL em vez de pedir o conteúdo.",
 		"ARTIFACT_TOO_LARGE": "Este artefato é grande demais para ser enviado pelo canal.",
+		"ASK_ANSWER_REQUIRED": "Responder uma pergunta exige a resposta — escolha uma opção ou escreva.",
+		"ASK_DEFAULT_REQUIRED": "Uma pergunta precisa de um padrão para seguir quando ninguém responde.",
+		"ASK_NOT_DUE": "O prazo desta pergunta ainda não venceu.",
+		"ASK_OPTIONS_DUPLICATED": "Cada opção de uma pergunta precisa de um id próprio.",
+		"ASK_OPTION_UNKNOWN": "Essa opção não está entre as escolhas desta pergunta.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHANNEL_DEVICE_INVALIDATED": "A conexão deste canal foi invalidada pela plataforma de mensagens. Reconecte para gerar um novo código de pareamento.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "Este canal não pode entregar mensagens de mídia.",
@@ -571,6 +597,7 @@
 		"RESOLUTION_NOT_APPLICABLE": "Essa resolução não se aplica a este stop.",
 		"SESSION_ALREADY_STREAMING": "Esta sessão já está sendo transmitida.",
 		"SESSION_EXPIRED": "Sessão expirada",
+		"SIGNAL_ALREADY_FLUSHED": "Esta mensagem já foi enviada ao grupo.",
 		"SOCIAL_SIGN_IN_FAILED": "Não foi possível iniciar o login com esse provedor. Se persistir, avise quem opera o deploy — costuma ser credencial do provedor.",
 		"STOP_ALREADY_RESOLVED": "Este stop já foi resolvido.",
 		"STOP_CRITERION_DISABLED": "Este critério de stop está desativado nas configurações.",
@@ -660,15 +687,19 @@
 		"agentStopped": "O agente parou e está aguardando",
 		"allIssues": "Todas as tarefas",
 		"archive": "Arquivar",
-		"pauseIssue": "Pausar",
-		"resumeIssue": "Retomar",
-		"issuePausedBadge": "Pausada",
-		"timelineControlBy": "{{source}} · {{by}}",
 		"archived": "Arquivadas",
 		"artifactOpenExternally": "Abrir fora do console",
 		"artifactOpenFull": "Ver {{name}} em tamanho cheio",
 		"artifactsEmptyDescription": "Deploys de preview, capturas de tela e arquivos produzidos pelos seus agentes aparecem aqui.",
 		"artifactsEmptyTitle": "Nenhum artefato ainda",
+		"ask": {
+			"dueAt": "prazo: {{time}}",
+			"goesOnAfterDelivery": "Segue com “{{label}}” 15 min depois de chegar ao grupo, se ninguém responder.",
+			"goesOnAt": "Segue com “{{label}}” às {{time}} se ninguém responder.",
+			"placeholder": "Responda com suas palavras…",
+			"releaseRequired": "Só quem pode liberar responde a esta decisão.",
+			"send": "Enviar resposta"
+		},
 		"autoArchiveNote": "Issues concluídas são arquivadas automaticamente após 24 horas.",
 		"autonomyFull": "Autônoma — as respostas saem sem revisão",
 		"autonomyMentionGated": "Só responde quando mencionada com {{tag}}",
@@ -705,6 +736,7 @@
 			"hint": "Apagar remove esta conversa do console. O histórico fica salvo, e você pode reanexar o contato pelo assistente depois.",
 			"sectionTitle": "Zona de perigo"
 		},
+		"issuePausedBadge": "Pausada",
 		"issuesEmptyDescription": "Mensagens encaminhadas que geram trabalho aparecerão aqui como tarefas.",
 		"issuesEmptyTitle": "Nenhuma tarefa nesta conversa",
 		"issuesStats": "{{awaiting}} aguardando entrada · {{working}} em andamento · {{completed}} concluídas",
@@ -743,6 +775,12 @@
 		},
 		"mentionTag": "Tag de menção",
 		"mentionTagPlaceholder": "@codm",
+		"messagesRoutedHere": "Mensagens encaminhadas para cá",
+		"needsYou": "Precisa de você",
+		"onlyWhenMentioned": "Responder apenas quando mencionado",
+		"onlyWhenMentionedHint": "Caso contrário, os agentes respondem a todas as mensagens da conversa.",
+		"outputMode": "O que chega ao grupo",
+		"outputModeHint": "Só decisões: decisões e perguntas vão ao grupo, o resto fica no painel. Decisões e prévias: também prévias e fechamentos. Tudo: até o progresso de cada tarefa.",
 		"panelLink": {
 			"copied": "Link do painel copiado.",
 			"copy": "Copiar link",
@@ -754,17 +792,15 @@
 			"rotated": "Link trocado. O anterior parou de funcionar.",
 			"sectionTitle": "Link do painel"
 		},
-		"messagesRoutedHere": "Mensagens encaminhadas para cá",
-		"needsYou": "Precisa de você",
-		"onlyWhenMentioned": "Responder apenas quando mencionado",
-		"onlyWhenMentionedHint": "Caso contrário, os agentes respondem a todas as mensagens da conversa.",
 		"participants": "Participantes",
 		"participantsWhoCanInvoke": "Participantes — quem pode invocar",
 		"pause": "Pausar",
+		"pauseIssue": "Pausar",
 		"reactions": "Reações",
 		"reactionsHint": "Reage 👀 à mensagem que acorda o agente e 🤖 à resposta dele no canal.",
 		"respondTrigger": "Gatilho de resposta",
 		"resume": "Retomar",
+		"resumeIssue": "Retomar",
 		"send": "Enviar",
 		"settingsDescription": "Ajuste como os agentes se comportam nesta conversa.",
 		"settingsDescriptionNamed": "Como os agentes se comportam em {{name}}.",
@@ -789,15 +825,16 @@
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
 		"timeline": "Linha do tempo",
+		"timelineControlBy": "{{source}} · {{by}}",
 		"timelineFromAgent": "agente",
 		"timelineFromPerson": "pessoa",
+		"timelineRegretWindow": "esperou {{seconds}} s antes de {{action}} — {{outcome}}",
+		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} sem esperar",
 		"timelineReplyQuote": "respondeu citando",
 		"timelineTriage": "roteada pela triagem",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
-		"waitingTerminal": "Aguardando saída do terminal…",
-		"timelineRegretWindow": "esperou {{seconds}} s antes de {{action}} — {{outcome}}",
-		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} sem esperar"
+		"waitingTerminal": "Aguardando saída do terminal…"
 	},
 	"settings": {
 		"agentProviders": "Provedores de agentes",

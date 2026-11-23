@@ -19,3 +19,8 @@ export { DeliverChannelAttachment } from '../usecases/DeliverChannelAttachment'
 export { ReactToChannelMessage } from '../usecases/ReactToChannelMessage'
 export { StreamChannelReply } from '../usecases/StreamChannelReply'
 export { SustainTypingPresence } from '../usecases/SustainTypingPresence'
+// Fase 3 (item 2): a person's questions and feedback leave together when their window closes, and a
+// feedback that leaves alone carries its preview. Unregistered, both would queue and never run — a
+// question would never reach the group, so its 15 minutes would never start.
+export { FlushSignalDigest } from '../usecases/FlushSignalDigest'
+export { DeliverIssuePreview } from '../usecases/DeliverIssuePreview'

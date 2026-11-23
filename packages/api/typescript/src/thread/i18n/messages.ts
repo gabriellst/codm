@@ -1,6 +1,7 @@
-import { Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { BlockCause, IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
+import { BulletinSection } from '../enums/ThreadCommand'
 
 /**
  * O vocabulário que o contexto `thread` diz NO CANAL — a superfície que o frontend nunca traduz,
@@ -20,6 +21,11 @@ const STOP_TITLES_PT: Record<StopKind, string> = {
 	[StopKind.APPROVAL_NEEDED]: 'Uma ação precisa da sua aprovação',
 	[StopKind.AUTH_REQUIRED]: 'O CLI do agente precisa que você entre de novo',
 	[StopKind.PERMISSION_DENIED]: 'Uma ação foi barrada pelo filtro de permissões — ela precisa da sua aprovação',
+	// Fase 3: o título genérico das perguntas da issue. O cartão mostra a PERGUNTA (o `ask`), e o aviso no
+	// grupo sai pelo formato do nível — este título só aparece onde nenhum dos dois cabe.
+	[StopKind.DECISION_REQUESTED]: 'Uma tarefa precisa de uma decisão',
+	[StopKind.QUESTION_ASKED]: 'Uma tarefa fez uma pergunta',
+	[StopKind.STALLED]: 'Uma tarefa parou sem dizer o que falta',
 }
 
 /**
@@ -33,6 +39,9 @@ const STOP_TITLES_EN: Record<StopKind, string> = {
 	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
 	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
 	[StopKind.PERMISSION_DENIED]: 'An action was blocked by the permission filter — it needs your approval',
+	[StopKind.DECISION_REQUESTED]: 'A task needs a decision',
+	[StopKind.QUESTION_ASKED]: 'A task asked a question',
+	[StopKind.STALLED]: 'A task stopped without saying what it needs',
 }
 
 /** O verbo do eco de uma ação feita pelo painel (fase 2, item 6b). */
@@ -84,6 +93,224 @@ function whenEn(at: Date, now: Date): string {
 	return day('en-US', at) === day('en-US', now) ? `at ${clock('en-US', at)}` : `on ${day('en-US', at)} at ${clock('en-US', at)}`
 }
 
+/**
+ * What an issue says to the group, already decided by the output policy (fase 3) — the structured parts the
+ * format of each level picks from. `code` is the ask's (`APP-12 · D1`); `options` are the labels in order;
+ * `defaultLabel` is what a question goes on with; `link` is the issue on the cloud panel (absent without a
+ * cloud login). Every text the issue wrote (`text`, `options`) goes VERBATIM — it is the issue's voice.
+ * `text` may be empty only on a decision (it then asks the title — a `PERMISSION_DENIED` with no detail), a
+ * block notice (which then has no body) or a closing (an INFERRED completion said nothing: it reads
+ * "concluída"); the formats never print the title twice.
+ */
+export interface IssueSignalParams {
+	level: IssueSignalLevel
+	key: string
+	code?: string
+	title: string
+	text: string
+	options: readonly string[]
+	defaultLabel?: string
+	decider?: string
+	link?: string
+	/** A FEEDBACK's other artifacts — they stay on the console until the panel has a gallery (spec, pré-requisito). */
+	moreArtifacts?: number
+}
+
+/** The lines that appear only when their part exists — the format never renders an empty line or a hole. */
+function lines(...parts: (string | false | undefined)[]): string {
+	return parts.filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n')
+}
+
+function numbered(options: readonly string[]): string {
+	return options.map((label, index) => `${index + 1}) ${label}`).join('\n')
+}
+
+/** The format of each level — total over `IssueSignalLevel`, so a level added to the contract needs its words here. */
+const SIGNAL_PT: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
+	[IssueSignalLevel.DECISION]: p =>
+		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Quem decide: ${p.decider}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(
+			`${p.code ?? p.key} — ${p.text || p.title}`,
+			numbered(p.options),
+			p.defaultLabel && `Sigo com ${p.defaultLabel} se ninguém disser o contrário em 15 min.`,
+			p.link,
+		),
+	[IssueSignalLevel.FEEDBACK]: p =>
+		lines(`${p.key} · prévia — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} no console)` : ''}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'concluída'}`, p.link),
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
+	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+}
+
+const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
+	[IssueSignalLevel.DECISION]: p =>
+		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Who decides: ${p.decider}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(
+			`${p.code ?? p.key} — ${p.text || p.title}`,
+			numbered(p.options),
+			p.defaultLabel && `I'll go on with ${p.defaultLabel} unless someone says otherwise within 15 min.`,
+			p.link,
+		),
+	[IssueSignalLevel.FEEDBACK]: p =>
+		lines(`${p.key} · preview — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} on the console)` : ''}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'done'}`, p.link),
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
+	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+}
+
+/**
+ * Several signals for one person, folded into ONE message (fase 3, item 2) — each item is the signal's own
+ * text without its link; the group's panel link closes the message once. No attachment: the previews stay
+ * behind the link.
+ */
+export interface SignalDigestParams {
+	/** The person's roster name — absent when the signals have no person, or the roster does not know them. */
+	name?: string
+	items: readonly string[]
+	link?: string
+}
+
+/** One item of a digest — its first line bulleted, the following ones (options, the default) indented under it. */
+function bullet(item: string): string {
+	return item
+		.split('\n')
+		.map((line, index) => (index === 0 ? `• ${line}` : `  ${line}`))
+		.join('\n')
+}
+
+/** One ask a bare answer might be for — its code and its question (cut short in the message). */
+export interface PendingAskRef {
+	code: string
+	question: string
+}
+
+/** The question, cut to fit one line of the disambiguation. */
+function brief(question: string): string {
+	const flat = question.replace(/\s+/gu, ' ').trim()
+	return flat.length > 60 ? `${flat.slice(0, 59)}…` : flat
+}
+
+function alternatives(asks: readonly PendingAskRef[], or: string): string {
+	const each = asks.map(ask => `${ask.code} (${brief(ask.question)})`)
+	return each.length > 1 ? `${each.slice(0, -1).join(', ')} ${or} ${each[each.length - 1]}` : (each[0] ?? '')
+}
+
+interface DefaultAppliedParams {
+	/** The ask's number in its issue — the `2` of `D2`; the line already starts with the issue's key. */
+	seq: number
+	/** What it went on with, as people read it. */
+	label: string
+	/** The default applied well after the deadline — the daemon was off. */
+	late: boolean
+}
+
+/** One issue line of the board bulletin (fase 3, item 4) — what its section needs to say about it. */
+export interface BulletinRow {
+	key: string
+	title: string
+	lifeState: IssueLifeState
+	/** The codes of its open asks (`APP-12 · D1`) and who decides, when the issue declared it. */
+	codes: readonly string[]
+	decider?: string
+	/** What its open blocking stops are about (`CAUSE_OF_STOP`) — "parou sem dizer o que falta", a CLI login. */
+	causes: readonly BlockCause[]
+	/** STOPPED while waiting for the provider: when it runs again. */
+	until?: Date
+}
+
+/** The bulletin, its sections in order — each with its lines (at most the cap) and how many more stay behind the link. */
+export interface BoardBulletinParams {
+	sections: readonly { section: BulletinSection; rows: readonly BulletinRow[]; more: number }[]
+	link?: string
+	now: Date
+}
+
+const SECTION_PT: Record<BulletinSection, string> = {
+	[BulletinSection.WAITING]: 'Esperando decisão',
+	[BulletinSection.STOPPED]: 'Paradas',
+	[BulletinSection.DOING]: 'Fazendo',
+	[BulletinSection.DONE]: 'Concluídas nas últimas 24 h',
+}
+const SECTION_EN: Record<BulletinSection, string> = {
+	[BulletinSection.WAITING]: 'Waiting for a decision',
+	[BulletinSection.STOPPED]: 'Stopped',
+	[BulletinSection.DOING]: 'In progress',
+	[BulletinSection.DONE]: 'Done in the last 24 h',
+}
+
+/** What a line says about a blocking stop's cause — total over `BlockCause`. */
+const CAUSE_PT: Record<BlockCause, string> = {
+	[BlockCause.PROVIDER_LIMIT]: 'limite do provedor',
+	[BlockCause.PROVIDER_ERROR]: 'erro do provedor',
+	[BlockCause.CLI_LOGIN]: 'o CLI precisa de login',
+	[BlockCause.STALLED]: 'parou sem dizer o que falta',
+	[BlockCause.CLASSIFICATION]: 'barrada pela classificação',
+}
+const CAUSE_EN: Record<BlockCause, string> = {
+	[BlockCause.PROVIDER_LIMIT]: 'provider limit',
+	[BlockCause.PROVIDER_ERROR]: 'provider error',
+	[BlockCause.CLI_LOGIN]: 'the CLI needs a login',
+	[BlockCause.STALLED]: 'stopped without saying what it needs',
+	[BlockCause.CLASSIFICATION]: 'blocked by the classification',
+}
+
+/** What a line adds about where the issue's work stands — total over `IssueLifeState` (the asks speak for WAITING_PERSON). */
+const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
+	[IssueLifeState.WAITING_PERSON]: () => undefined,
+	[IssueLifeState.PAUSED]: () => 'pausada',
+	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
+	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
+	[IssueLifeState.RUNNING]: () => undefined,
+	[IssueLifeState.QUEUED]: () => 'na fila',
+	[IssueLifeState.REMINDED]: () => undefined,
+	[IssueLifeState.DONE]: () => undefined,
+}
+const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
+	[IssueLifeState.WAITING_PERSON]: () => undefined,
+	[IssueLifeState.PAUSED]: () => 'paused',
+	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
+	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
+	[IssueLifeState.RUNNING]: () => undefined,
+	[IssueLifeState.QUEUED]: () => 'queued',
+	[IssueLifeState.REMINDED]: () => undefined,
+	[IssueLifeState.DONE]: () => undefined,
+}
+
+/** The parts that exist, on one line — `undefined` when none does. */
+function inline(...parts: (string | false | undefined)[]): string | undefined {
+	const present = parts.filter((part): part is string => typeof part === 'string' && part.length > 0)
+	return present.length > 0 ? present.join(' · ') : undefined
+}
+
+function bulletin(
+	p: BoardBulletinParams,
+	words: { heading: string; empty: string; decides: string; more: (n: number, linked: boolean) => string },
+	section: Record<BulletinSection, string>,
+	cause: Record<BlockCause, string>,
+	life: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined>,
+): string {
+	const filled = p.sections.filter(s => s.rows.length > 0)
+	if (filled.length === 0) return lines(`📋 ${words.heading}`, words.empty, p.link)
+	const body = filled.map(s =>
+		lines(
+			`*${section[s.section]}* (${s.rows.length + s.more})`,
+			...s.rows.map(row => {
+				const extra = inline(
+					row.codes.join(', '),
+					row.decider && `${words.decides}: ${row.decider}`,
+					...row.causes.map(c => cause[c]),
+					life[row.lifeState](row, p.now),
+				)
+				return `• ${row.key} · ${row.title}${extra ? ` — ${extra}` : ''}`
+			}),
+			s.more > 0 && words.more(s.more, p.link !== undefined),
+		),
+	)
+	return [`📋 ${words.heading}`, ...body, p.link].filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n\n')
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -118,6 +345,45 @@ const PT_MESSAGES = {
 	 * quem e o quê — nunca o texto de uma orientação, que foi para a sessão da issue e não para a sala.
 	 */
 	panelActionEcho: (p: PanelEchoParams) => `${p.name} ${PANEL_ECHO_PT[p.echo]} ${p.key} pelo painel`,
+	/**
+	 * O que uma issue diz ao grupo depois da política de saída (fase 3) — o formato do NÍVEL, curto, com o
+	 * código da pergunta e o link da issue no painel.
+	 */
+	issueSignal: (p: IssueSignalParams) => SIGNAL_PT[p.level](p),
+	/**
+	 * Um "sim" solto com várias perguntas abertas que a pessoa pode responder (fase 3, item 3): UMA pergunta de
+	 * volta, curta, com os códigos — nunca um palpite.
+	 */
+	/**
+	 * A pergunta seguiu sozinha com o padrão (fase 3, item 1b) — o corpo de uma linha de PROGRESSO da issue
+	 * (a política decide: só o painel no modo padrão). Quando o prazo foi aplicado atrasado, diz por quê.
+	 */
+	defaultApplied: (p: DefaultAppliedParams) =>
+		`D${p.seq}: ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
+	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
+		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
+	/** Perguntas e prévias para a mesma pessoa em 60 s, numa mensagem só (fase 3, item 2). */
+	signalDigest: (p: SignalDigestParams) => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} coisas:`, ...p.items.map(bullet), p.link),
+	/**
+	 * Os rótulos das opções de uma aprovação pedida pela porta antiga (`RaiseStop APPROVAL_NEEDED`, fase 3):
+	 * ela vira uma decisão sim/não, e o grupo lê as opções na língua da conversa. Os ids (`yes`/`no`) são
+	 * os que as respostas soltas reconhecem.
+	 */
+	approvalYes: () => 'Sim',
+	approvalNo: () => 'Não',
+	/**
+	 * O boletim do grupo (fase 3, item 4) — a resposta ao `relatorio`, sem turno de modelo: o que espera
+	 * decisão, o que parou, o que está andando e o que terminou nas últimas 24 h; uma linha por tarefa, no
+	 * máximo 8 por seção, e o link do painel no fim.
+	 */
+	boardBulletin: (p: BoardBulletinParams) =>
+		bulletin(
+			p,
+			{ heading: 'Relatório', empty: 'Nada em andamento.', decides: 'decide', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
+			SECTION_PT,
+			CAUSE_PT,
+			ROW_DETAIL_PT,
+		),
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -129,5 +395,25 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
+		issueSignal: p => SIGNAL_EN[p.level](p),
+		defaultApplied: p =>
+			`D${p.seq}: nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
+		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
+		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
+		approvalYes: () => 'Yes',
+		approvalNo: () => 'No',
+		boardBulletin: p =>
+			bulletin(
+				p,
+				{
+					heading: 'Report',
+					empty: 'Nothing in progress.',
+					decides: 'decides',
+					more: (n, linked) => `+${n}${linked ? ' on the panel' : ''}`,
+				},
+				SECTION_EN,
+				CAUSE_EN,
+				ROW_DETAIL_EN,
+			),
 	},
 })

@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const panelActionKindSchema = z.enum(["ANSWER_STOP", "PAUSE", "RESUME", "STEER"])
+export const panelActionKindSchema = z.enum(["ANSWER_ASK", "ANSWER_STOP", "PAUSE", "RESUME", "STEER"])

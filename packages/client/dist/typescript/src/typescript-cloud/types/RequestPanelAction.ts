@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { AskAnswer } from "./AskAnswer.ts";
 import type { StopResolution } from "./StopResolution.ts";
 
 export type RequestPanelActionPathParams = {
@@ -56,6 +57,12 @@ export const RequestPanelActionMutationRequestKindEnum4 = {
 
 export type RequestPanelActionMutationRequestKindEnum4Key = (typeof RequestPanelActionMutationRequestKindEnum4)[keyof typeof RequestPanelActionMutationRequestKindEnum4];
 
+export const RequestPanelActionMutationRequestKindEnum5 = {
+    ANSWER_ASK: "ANSWER_ASK"
+} as const;
+
+export type RequestPanelActionMutationRequestKindEnum5Key = (typeof RequestPanelActionMutationRequestKindEnum5)[keyof typeof RequestPanelActionMutationRequestKindEnum5];
+
 export type RequestPanelActionMutationRequest = ({
     /**
      * @type string
@@ -106,6 +113,20 @@ export type RequestPanelActionMutationRequest = ({
      * @type string
     */
     resolution: StopResolution;
+} | {
+    /**
+     * @type string
+    */
+    kind: RequestPanelActionMutationRequestKindEnum5Key;
+    /**
+     * @type string, uuid
+    */
+    issueId: string;
+    /**
+     * @type string, uuid
+    */
+    stopId: string;
+    answer: AskAnswer;
 });
 
 export type RequestPanelActionMutationResponse = RequestPanelAction200;

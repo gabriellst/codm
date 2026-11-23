@@ -1,6 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { z, type LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { agentMailbox, artifacts, events, stops, transcriptEntries } from '@codm/contracts/db'
+import { agentMailbox, artifacts, events, issues, stops, transcriptEntries } from '@codm/contracts/db'
+import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
+import { askCode, labelOfAnswer } from '@shared/utils/askCode'
 import {
 	type ClassificationMethod,
 	IssueTimelineItemKind,
@@ -43,7 +45,7 @@ const ControlPayloadSchema = IssuePausedEventSchema.shape.payload.pick({ source:
  */
 export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueId: string, title: string): Promise<IssueTimelineItem[]> {
 	const db = driver.db
-	const [facts, entries, steers, files, stopRows] = await Promise.all([
+	const [facts, entries, steers, files, stopRows, issueRow] = await Promise.all([
 		db
 			.select({ id: events.id, name: events.name, occurredAt: events.occurredAt, payload: events.payload })
 			.from(events)
@@ -61,7 +63,10 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			),
 		db.select().from(artifacts).where(eq(artifacts.issueId, issueId)),
 		db.select().from(stops).where(eq(stops.issueId, issueId)),
+		db.select({ key: issues.key }).from(issues).where(eq(issues.id, issueId)).limit(1),
 	])
+	// The key the ask codes are spelled with (`APP-12 · D1`) — read here, so neither caller has to pass it.
+	const issueKey = issueRow[0]?.key ?? ''
 
 	const items: IssueTimelineItem[] = []
 	for (const fact of facts) {
@@ -88,6 +93,8 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			transcriptKind: entry.kind as TranscriptKind,
 			text: entry.text,
 			classification: (entry.classification ?? undefined) as ClassificationMethod | undefined,
+			level: entry.level ?? undefined,
+			routing: entry.routing ?? undefined,
 		})
 	}
 	for (const steer of steers) {
@@ -113,6 +120,10 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 		})
 	}
 	for (const stop of stopRows) {
+		// The ask / answer columns are JSON owned by the TS core: a row that does not parse shows the stop
+		// without them — the same posture as the steer payload above.
+		const ask = StopAskSchema.safeParse(stop.ask).data
+		const answer = StopAnswerSchema.safeParse(stop.answer).data
 		items.push({
 			kind: IssueTimelineItemKind.STOP_RAISED,
 			id: stop.id,
@@ -120,6 +131,12 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			stopId: stop.id,
 			stopKind: stop.kind as StopKind,
 			title: stop.title,
+			ask: ask && {
+				code: askCode(issueKey, stop.seq ?? undefined),
+				question: ask.question,
+				options: ask.options,
+				dueAt: stop.dueAt?.toISOString(),
+			},
 		})
 		if (stop.resolvedAt && stop.resolution) {
 			items.push({
@@ -128,6 +145,8 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 				at: stop.resolvedAt.toISOString(),
 				stopId: stop.id,
 				resolution: stop.resolution,
+				// What was answered, never who: `answered_by` is an address, and this item reaches the cloud.
+				answer: answer && { kind: answer.kind, label: labelOfAnswer(ask, answer) },
 			})
 		}
 	}

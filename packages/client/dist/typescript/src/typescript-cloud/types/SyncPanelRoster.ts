@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { AskAnswer } from "./AskAnswer.ts";
+import type { AskOption } from "./AskOption.ts";
 import type { PanelActionOutcome } from "./PanelActionOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
@@ -30,6 +32,12 @@ export const ActionKindEnum4 = {
 } as const;
 
 export type ActionKindEnum4Key = (typeof ActionKindEnum4)[keyof typeof ActionKindEnum4];
+
+export const ActionKindEnum5 = {
+    ANSWER_ASK: "ANSWER_ASK"
+} as const;
+
+export type ActionKindEnum5Key = (typeof ActionKindEnum5)[keyof typeof ActionKindEnum5];
 
 /**
  * @description Replace each group\'s panel roster (opaque member ids) and pull the identification codes to deliver
@@ -123,9 +131,47 @@ export type SyncPanelRoster200 = {
              * @type string
             */
             resolution: StopResolution;
+        } | {
+            /**
+             * @type string
+            */
+            kind: ActionKindEnum5Key;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+            /**
+             * @type string, uuid
+            */
+            stopId: string;
+            answer: AskAnswer;
         });
     }[];
 };
+
+export const AskKindEnum = {
+    DECISION_REQUESTED: "DECISION_REQUESTED"
+} as const;
+
+export type AskKindEnumKey = (typeof AskKindEnum)[keyof typeof AskKindEnum];
+
+export const ReplyKindEnum = {
+    OPTION: "OPTION"
+} as const;
+
+export type ReplyKindEnumKey = (typeof ReplyKindEnum)[keyof typeof ReplyKindEnum];
+
+export const ReplyKindEnum2 = {
+    TEXT: "TEXT"
+} as const;
+
+export type ReplyKindEnum2Key = (typeof ReplyKindEnum2)[keyof typeof ReplyKindEnum2];
+
+export const AskKindEnum2 = {
+    QUESTION_ASKED: "QUESTION_ASKED"
+} as const;
+
+export type AskKindEnum2Key = (typeof AskKindEnum2)[keyof typeof AskKindEnum2];
 
 export type SyncPanelRosterMutationRequest = {
     /**
@@ -178,6 +224,75 @@ export type SyncPanelRosterMutationRequest = {
              * @type array
             */
             resolutions: StopResolution[];
+            ask?: ({
+                /**
+                 * @type string
+                */
+                kind: AskKindEnumKey;
+                /**
+                 * @type string
+                */
+                code: string;
+                /**
+                 * @type string
+                */
+                question: string;
+                reply: ({
+                    /**
+                     * @type string
+                    */
+                    kind: ReplyKindEnumKey;
+                    /**
+                     * @type array
+                    */
+                    options: AskOption[];
+                } | {
+                    /**
+                     * @type string
+                    */
+                    kind: ReplyKindEnum2Key;
+                });
+                /**
+                 * @type boolean
+                */
+                releaseRequired: boolean;
+            } | {
+                /**
+                 * @type string
+                */
+                kind: AskKindEnum2Key;
+                /**
+                 * @type string
+                */
+                code: string;
+                /**
+                 * @type string
+                */
+                question: string;
+                reply: ({
+                    /**
+                     * @type string
+                    */
+                    kind: ReplyKindEnumKey;
+                    /**
+                     * @type array
+                    */
+                    options: AskOption[];
+                } | {
+                    /**
+                     * @type string
+                    */
+                    kind: ReplyKindEnum2Key;
+                });
+                /**
+                 * @type string
+                */
+                defaultLabel: string;
+                /**
+                 * @type string | undefined
+                */
+                dueAt?: string;
+            });
         }[];
     }[];
     /**

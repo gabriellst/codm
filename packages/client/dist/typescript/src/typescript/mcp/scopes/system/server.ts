@@ -9,6 +9,7 @@ import { configureContextBufferHandler } from "./configureContextBuffer.ts";
 import { configureLanguageHandler } from "./configureLanguage.ts";
 import { configureMentionGateHandler } from "./configureMentionGate.ts";
 import { configureModelHandler } from "./configureModel.ts";
+import { configureOutputModeHandler } from "./configureOutputMode.ts";
 import { configurePromptHandler } from "./configurePrompt.ts";
 import { configureReactionsHandler } from "./configureReactions.ts";
 import { configureStreamingHandler } from "./configureStreaming.ts";
@@ -36,6 +37,7 @@ import { configureContextBufferMutationRequestSchema, configureContextBufferMuta
 import { configureLanguageMutationRequestSchema, configureLanguageMutationResponseSchema } from "../../../zod/configureLanguageSchema.ts";
 import { configureMentionGateMutationRequestSchema, configureMentionGateMutationResponseSchema } from "../../../zod/configureMentionGateSchema.ts";
 import { configureModelMutationRequestSchema, configureModelMutationResponseSchema } from "../../../zod/configureModelSchema.ts";
+import { configureOutputModeMutationRequestSchema, configureOutputModeMutationResponseSchema } from "../../../zod/configureOutputModeSchema.ts";
 import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
 import { configureReactionsMutationRequestSchema, configureReactionsMutationResponseSchema } from "../../../zod/configureReactionsSchema.ts";
 import { configureStreamingMutationRequestSchema, configureStreamingMutationResponseSchema } from "../../../zod/configureStreamingSchema.ts";
@@ -199,6 +201,15 @@ server.registerTool("GetNeedsYouPanel", {
   inputSchema: { threadId: z.string() },
 }, async ({ threadId }) => {
   return getNeedsYouPanelHandler({ threadId })
+})
+          
+
+server.registerTool("ConfigureOutputMode", {
+  description: "Choose how much of its tasks' output this conversation's group receives",
+  outputSchema: { data: configureOutputModeMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configureOutputModeMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configureOutputModeHandler({ threadId, data })
 })
           
 

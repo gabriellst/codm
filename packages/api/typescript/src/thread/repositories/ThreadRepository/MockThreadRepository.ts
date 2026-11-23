@@ -1,6 +1,10 @@
 import { injectable } from 'tsyringe-neo'
+import { BaseError } from '@codm/core-typescript'
+import { OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
-import { ThreadRepository } from './ThreadRepository'
+import { askDueAt } from '../../objects/StopAsk'
+import type { DomainErrors } from '../../errors'
+import { ThreadRepository, type OverdueDigest } from './ThreadRepository'
 
 /**
  * Test double for `mock` mode.
@@ -33,11 +37,20 @@ export class MockThreadRepository extends ThreadRepository {
 	}
 
 	async save(entity: Thread): Promise<Thread> {
-		entity.incrementVersion()
-		this.store.set(entity.id.value, entity)
 		// `stops` aliased to `raised` — the drain key collides with nothing here, but the name mirrors
 		// what it is: the stops raised in this unit of work.
-		const { entries, stops: raised, stopResolutions, entryLinks } = entity.pullPendingWrites()
+		const { entries, stops: raised, stopResolutions, entryLinks, digestPatches } = entity.pullPendingWrites()
+		// The first resolution wins, as in `LibSqlThreadRepository.save` — and the refusal comes BEFORE any
+		// write, because this double has no transaction to roll back.
+		const lost = stopResolutions.find(patch => this.stopRows.find(s => s.stopId === patch.stopId)?.resolvedAt)
+		if (lost) throw new BaseError<DomainErrors>('STOP_ALREADY_RESOLVED', `stop ${lost.stopId} was resolved by someone else first`)
+		const flushed = digestPatches.find(patch => {
+			const row = this.entries.find(e => e.entryId === patch.entryId)
+			return !row || row.routing !== OutputRouting.DIGEST || row.digestEntryId
+		})
+		if (flushed) throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${flushed.entryId} was flushed by someone else first`)
+		entity.incrementVersion()
+		this.store.set(entity.id.value, entity)
 		this.entries.push(...entries)
 		this.stopRows.push(...raised)
 		for (const patch of stopResolutions) {
@@ -45,6 +58,15 @@ export class MockThreadRepository extends ThreadRepository {
 			if (row) {
 				row.resolution = patch.resolution
 				row.resolvedAt = patch.resolvedAt
+				row.answer = patch.answer
+				row.answeredBy = patch.answeredBy
+			}
+		}
+		for (const patch of digestPatches) {
+			const row = this.entries.find(e => e.entryId === patch.entryId)
+			if (row) {
+				row.routing = patch.routing
+				row.digestEntryId = patch.digestEntryId
 			}
 		}
 		for (const link of entryLinks) {
@@ -85,6 +107,52 @@ export class MockThreadRepository extends ThreadRepository {
 
 	async openStopsByIssue(issueId: string): Promise<Stop[]> {
 		return this.stopRows.filter(s => s.issueId === issueId && !s.resolvedAt)
+	}
+
+	async nextAskSeq(issueId: string): Promise<number> {
+		return Math.max(0, ...this.stopRows.filter(s => s.issueId === issueId).map(s => s.seq ?? 0)) + 1
+	}
+
+	async markAskDelivered(entryId: string, deliveredAt: Date): Promise<string[]> {
+		const carried = new Set([entryId, ...this.entries.filter(e => e.digestEntryId === entryId).map(e => e.entryId)])
+		const marked = this.stopRows.filter(
+			s => s.kind === StopKind.QUESTION_ASKED && !s.resolvedAt && !s.dueAt && s.askEntryId !== undefined && carried.has(s.askEntryId),
+		)
+		for (const stop of marked) stop.dueAt = askDueAt(deliveredAt)
+		return marked.map(s => s.stopId)
+	}
+
+	async findDueAsks(now: Date): Promise<Stop[]> {
+		return this.stopRows
+			.filter(s => s.kind === StopKind.QUESTION_ASKED && !s.resolvedAt && s.dueAt && s.dueAt.getTime() <= now.getTime())
+			.sort((a, b) => (a.dueAt?.getTime() ?? 0) - (b.dueAt?.getTime() ?? 0))
+	}
+
+	async findAsk(issueId: string, seq: number): Promise<Stop | undefined> {
+		return this.stopRows.find(s => s.issueId === issueId && s.seq === seq)
+	}
+
+	async stopsCarriedBy(entryId: string): Promise<Stop[]> {
+		const own = this.entries.find(e => e.entryId === entryId)?.stopId
+		const carried = new Set([entryId, ...this.entries.filter(e => e.digestEntryId === entryId).map(e => e.entryId)])
+		return this.stopRows
+			.filter(s => s.stopId === own || (s.askEntryId !== undefined && carried.has(s.askEntryId)))
+			.sort((a, b) => a.raisedAt.getTime() - b.raisedAt.getTime())
+	}
+
+	async pendingDigest(threadId: string, addresseeId: string | undefined): Promise<TranscriptEntry[]> {
+		return this.byThreadChronological(threadId).filter(
+			e => e.routing === OutputRouting.DIGEST && !e.digestEntryId && e.addresseeId === addresseeId,
+		)
+	}
+
+	async overdueDigests(cutoff: Date): Promise<OverdueDigest[]> {
+		const seen = new Map<string, OverdueDigest>()
+		for (const e of this.entries) {
+			if (e.routing !== OutputRouting.DIGEST || e.digestEntryId || e.at.getTime() > cutoff.getTime()) continue
+			seen.set(`${e.threadId}:${e.addresseeId ?? ''}`, { ownerId: e.ownerId, threadId: e.threadId, addresseeId: e.addresseeId })
+		}
+		return [...seen.values()]
 	}
 
 	private byThreadChronological(threadId: string): TranscriptEntry[] {

@@ -4,11 +4,15 @@
 */
 
 import { artifactKindSchema } from "./artifactKindSchema.ts";
+import { askAnswerKindSchema } from "./askAnswerKindSchema.ts";
+import { askOptionSchema } from "./askOptionSchema.ts";
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
 import { irreversibleActionKindSchema } from "./irreversibleActionKindSchema.ts";
 import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
+import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
+import { outputRoutingSchema } from "./outputRoutingSchema.ts";
 import { regretWindowOutcomeSchema } from "./regretWindowOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
@@ -57,6 +61,12 @@ get "transcriptKind"(){
 "text": z.string(),
 get "classification"(){
                 return classificationMethodSchema.optional()
+              },
+get "level"(){
+                return issueSignalLevelSchema.optional()
+              },
+get "routing"(){
+                return outputRoutingSchema.optional()
               }
     }), z.object({
     "kind": z.enum(["STEER"]),
@@ -83,7 +93,15 @@ get "artifactKind"(){
 get "stopKind"(){
                 return stopKindSchema
               },
-"title": z.string()
+"title": z.string(),
+"ask": z.optional(z.object({
+    "code": z.string(),
+"question": z.string(),
+get "options"(){
+                return z.array(askOptionSchema)
+              },
+"dueAt": z.optional(z.string())
+    }))
     }), z.object({
     "kind": z.enum(["STOP_RESOLVED"]),
 "id": z.string(),
@@ -91,7 +109,13 @@ get "stopKind"(){
 "stopId": z.uuid(),
 get "resolution"(){
                 return stopResolutionSchema
-              }
+              },
+"answer": z.optional(z.object({
+    get "kind"(){
+                return askAnswerKindSchema
+              },
+"label": z.string()
+    }))
     }), z.object({
     "kind": z.enum(["COMPLETED"]),
 "id": z.string(),
@@ -128,14 +152,42 @@ get "outcome"(){
               },
 "waitedMs": z.int().min(0).max(9007199254740991)
     })])),
-"openStop": z.optional(z.object({
+"openStops": z.array(z.object({
     "stopId": z.uuid(),
 get "kind"(){
                 return stopKindSchema
               },
 get "resolutions"(){
                 return z.array(stopResolutionSchema).max(8)
+              },
+"ask": z.optional(z.union([z.object({
+    "kind": z.enum(["DECISION_REQUESTED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
               }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"releaseRequired": z.boolean()
+    }), z.object({
+    "kind": z.enum(["QUESTION_ASKED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
+              }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"defaultLabel": z.string(),
+"dueAt": z.optional(z.string())
+    })]))
     }))
     })
 

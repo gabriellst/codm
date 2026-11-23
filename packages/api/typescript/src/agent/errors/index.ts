@@ -15,6 +15,9 @@ export type AgentDomainErrors =
 	// the runner on the process and the stream — a declared one would be an observation about a
 	// subsystem the model cannot see, and would make the FactSource column lie.
 	| 'AGENT_TRANSPORT_STOP_NOT_DECLARABLE'
+	// Fase 3: a kind the legacy `RaiseStop` door cannot declare that is not a transport stop either —
+	// `STALLED` is the reconciler's inference, and a question needs the default only `AskQuestion` carries.
+	| 'AGENT_STOP_KIND_NOT_DECLARABLE'
 export type DomainErrors = BaseDomainErrors | AgentDomainErrors
 
 // Application Errors — orchestration failures of the runtime: too many concurrent observers, a
@@ -26,6 +29,9 @@ export type AgentApplicationErrors =
 	| 'TERMINAL_SPAWN_FAILED'
 	| 'CLASSIFICATION_FAILED'
 	| 'AGENT_TOOLS_UNSUPPORTED'
+	// Fase 3: `RequestFeedback` cites artifacts THIS issue recorded — another owner's, conversation's or
+	// issue's is not found, the same answer `SendArtifact` gives (re-registered from `artifact`, same status).
+	| 'ARTIFACT_NOT_FOUND'
 export type ApplicationErrors = BaseApplicationErrors | AgentApplicationErrors
 
 /**
@@ -54,6 +60,7 @@ registerErrorCodes({
 	// aqui: é o lease por alvo do mailbox.
 	SESSION_ALREADY_STREAMING: HttpStatusCode.CONFLICT,
 	AGENT_TRANSPORT_STOP_NOT_DECLARABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	AGENT_STOP_KIND_NOT_DECLARABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// Application.
 	TOO_MANY_TERMINAL_STREAMS: HttpStatusCode.TOO_MANY_REQUESTS,
 	PROVIDER_NOT_DETECTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
@@ -64,6 +71,7 @@ registerErrorCodes({
 	// request, and silently dropping the scope would degrade the run into the inferred path without
 	// anyone noticing (§4.7).
 	AGENT_TOOLS_UNSUPPORTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ARTIFACT_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	// Interface — the MCP router's per-call boundary. See the union above for why these are two codes.
 	AGENT_RUN_TOKEN_INVALID: HttpStatusCode.UNAUTHORIZED,
 	AGENT_RUN_SCOPE_MISMATCH: HttpStatusCode.FORBIDDEN,

@@ -1,8 +1,9 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { TranscriptKindEnum } from '@codm/client-typescript/typescript'
-import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typescript'
+import { OutputRoutingEnum, TranscriptKindEnum } from '@codm/client-typescript/typescript'
+import type { GetSessionChatQueryResponse, OutputRouting } from '@codm/client-typescript/typescript'
+import { Badge } from '@codm/app-ui/badge'
 import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
 import { formatTimeOfDay } from '@/lib/format'
@@ -13,6 +14,19 @@ import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvata
 import { TranscriptArtifact } from '../TranscriptArtifact'
 
 type Entry = GetSessionChatQueryResponse['transcript'][number]
+
+/**
+ * Where the output policy sent what an issue said (fase 3) — how its bubble reads. Since every turn of an
+ * issue ends as PROGRESS, most of what a task says never reaches WhatsApp in the default mode; a line the
+ * group never saw is dimmed and badged ("só no painel"), so it does not pass for a sent message. A line
+ * that went inside a per-person digest is badged too — the group got it, folded with others. A style map
+ * keyed by the enum (exhaustive); the badge text comes from `enums.OutputRouting`.
+ */
+const ROUTING_LOOK: Record<OutputRouting, { bubble: string; badge: boolean }> = {
+	[OutputRoutingEnum.GROUP]: { bubble: '', badge: false },
+	[OutputRoutingEnum.DIGEST]: { bubble: '', badge: true },
+	[OutputRoutingEnum.PANEL]: { bubble: 'opacity-60', badge: true },
+}
 
 /**
  * O HORÁRIO DENTRO DO BALÃO, no canto inferior direito — o gesto do WhatsApp, e não um rótulo solto
@@ -146,11 +160,17 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 					</Link>
 				)}
 				<span>{caption}</span>
+				{entry.routing && ROUTING_LOOK[entry.routing].badge && (
+					<Badge variant="outline" data-testid="routing-badge">
+						{enumLabel('OutputRouting', entry.routing)}
+					</Badge>
+				)}
 			</div>
 			<div
 				className={cn(
 					'relative max-w-full whitespace-pre-wrap rounded-asymmetric-md px-4 py-2.5',
 					isWhisper ? 'border border-input bg-background italic text-muted-foreground' : 'bg-bubble-out text-bubble-out-fg',
+					entry.routing && ROUTING_LOOK[entry.routing].bubble,
 				)}
 			>
 				{entry.text}

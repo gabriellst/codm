@@ -13,7 +13,12 @@ import {
 	MessageType,
 	Language,
 	PermissionPosture,
+	GroupOutputMode,
+	IssueSignalLevel,
+	OutputRouting,
+	AskAnswerKind,
 } from '@codm/contracts-typescript/wire/enums'
+import { StopAnswerSchema, StopAskSchema, type AskAnswer, type StopAnswer } from '@shared/objects'
 // The DECLARED provider → models relation. A constant, no I/O — unlike the wire enums above (a
 // generated cross-language contract, `@codm/contracts-typescript`), `@catalog` is a single-reader
 // fact local to this package (`src/catalog/`, never emitted from TypeSpec — see its own docblock),
@@ -21,6 +26,7 @@ import {
 import { effectiveModel, offersModel } from '@catalog'
 import type { DomainErrors } from '../errors'
 import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
+import { admitsAnswer, ASKED_AS, type StopAsk } from '../objects/StopAsk'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable, RESUMES_WITH_RESOLVER_POSTURE } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
@@ -101,6 +107,19 @@ export const TranscriptEntrySchema = z.object({
 	 * decisions 4/8) — absent on every other entry.
 	 */
 	artifactId: z.string().optional(),
+	/**
+	 * FASE 3 — what an issue said and where the output policy sent it. All absent on every entry that is not
+	 * an issue's own signal. `level` is its `IssueSignalLevel`; `routing` the `OutputRouting` the group's mode
+	 * gave it (GROUP = its own message, DIGEST = folded into a per-person digest, PANEL = never sent).
+	 */
+	level: z.enum(IssueSignalLevel).optional(),
+	routing: z.enum(OutputRouting).optional(),
+	/** The stop (an ask) this entry put to the group — the anchor a quoted reply resolves. */
+	stopId: z.string().optional(),
+	/** The digest entry that carried this one to the group, when it was folded into a digest. */
+	digestEntryId: z.string().optional(),
+	/** Who the signal is addressed to (a participant id) — the key the digest groups by. */
+	addresseeId: z.string().optional(),
 	at: z.date(),
 })
 
@@ -144,13 +163,33 @@ export const StopSchema = z.object({
 	raisedAt: z.date(),
 	resolution: z.enum(StopResolution).optional(),
 	resolvedAt: z.date().optional(),
+	/**
+	 * FASE 3 — the ASK of a `DECISION_REQUESTED` / `QUESTION_ASKED` stop, as the issue put it (validated by
+	 * the `StopAsk` value object when raised); absent on every other kind. `seq` numbers the asks per issue
+	 * (the `D1` of `APP-12 · D1`); `dueAt` is set ONCE, when the message carrying a question is accepted by
+	 * the gateway (absent until then, always absent on a decision); `askEntryId` is the transcript entry that
+	 * put the ask to the group.
+	 */
+	ask: StopAskSchema.optional(),
+	seq: z.number().int().positive().optional(),
+	dueAt: z.date().optional(),
+	askEntryId: z.string().optional(),
+	/** The answer recorded by the resolution — a person's, or the default the deadline applied. */
+	answer: StopAnswerSchema.optional(),
+	/** The participant who answered — absent when nobody did (the default applied). */
+	answeredBy: z.string().optional(),
 })
 
-/** The UPDATE half of a resolution: `save` stamps these two columns on an already-persisted stop. */
+/**
+ * The UPDATE half of a resolution: `save` stamps these columns on an already-persisted stop — and ONLY on a
+ * stop still open (`resolved_at IS NULL`): the first resolution wins, the loser's transaction rolls back.
+ */
 export const StopResolutionPatchSchema = z.object({
 	stopId: z.uuid(),
 	resolution: z.enum(StopResolution),
 	resolvedAt: z.date(),
+	answer: StopAnswerSchema.optional(),
+	answeredBy: z.string().optional(),
 })
 
 export const ThreadSchema = z.object({
@@ -212,6 +251,12 @@ export const ThreadSchema = z.object({
 	 * (`@shared/i18n`), decided in one place so the channel and the console cannot disagree.
 	 */
 	language: z.enum(Language).optional(),
+	/**
+	 * HOW MUCH OF WHAT ITS ISSUES SAY REACHES THIS GROUP (fase 3, item 2) — read by the output policy's total
+	 * table. Every thread has one: the owner decided (18/11) that existing and new groups alike start at
+	 * `DECISIONS_AND_LIVE`, and `EVERYTHING` is the way back for a group that wants every line.
+	 */
+	outputMode: z.enum(GroupOutputMode),
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
 	/**
@@ -261,6 +306,51 @@ export type Stop = Z.infer<typeof StopSchema>
 export type StopResolutionPatch = Z.infer<typeof StopResolutionPatchSchema>
 
 /**
+ * What `Thread.raiseStop` takes — a stop of a given kind, OR an ask (fase 3), whose kind the `StopAsk` value
+ * object derives. `seq` is the ask's number within its issue, read by the raising use case inside its
+ * transaction (`ThreadRepository.nextAskSeq`) — the aggregate does not hold the other issues' stops.
+ */
+export type StopRaise = { stopId?: string; issueId?: string; title: string; detail: string } & (
+	| { kind: StopKind }
+	| { ask: StopAsk; seq?: number; askEntryId?: string }
+)
+
+/** What a resolution may carry besides its name — the answer, who gave it, and the instant it is judged at. */
+export interface StopAnswerGiven {
+	answer?: AskAnswer
+	answeredBy?: string
+	now?: Date
+}
+
+/**
+ * WHAT EACH RESOLUTION RECORDS on the stop (fase 3) — total over `StopResolution`, so a resolution added to
+ * the contract fails compilation here until somebody decides whether it carries an answer. Each entry also
+ * owns the refusals that belong to it.
+ */
+const ANSWER_RECORDED_BY: Record<StopResolution, (stop: Stop, given: StopAnswerGiven, now: Date) => StopAnswer | undefined> = {
+	[StopResolution.RETRY]: () => undefined,
+	[StopResolution.REVIEW_AND_SEND]: () => undefined,
+	[StopResolution.APPROVE]: () => undefined,
+	[StopResolution.DENY]: () => undefined,
+	[StopResolution.TAKE_OVER]: () => undefined,
+	[StopResolution.ANSWER]: (stop, given) => {
+		if (!stop.ask) throw new BaseError<DomainErrors>('RESOLUTION_NOT_APPLICABLE', `stop ${stop.stopId} carries no ask to answer`)
+		if (!given.answer) throw new BaseError<DomainErrors>('ASK_ANSWER_REQUIRED', `answering stop ${stop.stopId} needs the answer`)
+		if (!admitsAnswer(stop.ask, given.answer)) {
+			throw new BaseError<DomainErrors>('ASK_OPTION_UNKNOWN', `stop ${stop.stopId} offers no such option`)
+		}
+		return given.answer
+	},
+	[StopResolution.DEFAULT_APPLIED]: (stop, _given, now) => {
+		if (!stop.ask?.default) throw new BaseError<DomainErrors>('RESOLUTION_NOT_APPLICABLE', `stop ${stop.stopId} has no default to apply`)
+		if (!stop.dueAt || now.getTime() < stop.dueAt.getTime()) {
+			throw new BaseError<DomainErrors>('ASK_NOT_DUE', `stop ${stop.stopId} is not due yet`)
+		}
+		return { kind: AskAnswerKind.DEFAULT, default: stop.ask.default }
+	},
+}
+
+/**
  * The UPDATE half of a late routing (fase 2, triagem paralela): an entry recorded unrouted, linked to the
  * issue the triage sent it to. `save` stamps these two columns on the already-persisted entry.
  */
@@ -270,12 +360,25 @@ export interface EntryLinkPatch {
 	classification: ClassificationMethod
 }
 
+/**
+ * The UPDATE half of a per-person digest (fase 3, item 2): an entry that waited as `DIGEST` either goes out
+ * on its own (its routing becomes `GROUP`, the routing that actually happened) or is folded into a digest
+ * entry (`digestEntryId`). `save` writes it ONLY while the entry is still waiting — a second flush of the
+ * same entry is refused (`SIGNAL_ALREADY_FLUSHED`), so nothing goes out twice.
+ */
+export interface DigestPatch {
+	entryId: string
+	routing: OutputRouting
+	digestEntryId?: string
+}
+
 /** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
 export interface PendingThreadWrites {
 	entries: TranscriptEntry[]
 	stops: Stop[]
 	stopResolutions: StopResolutionPatch[]
 	entryLinks: EntryLinkPatch[]
+	digestPatches: DigestPatch[]
 }
 
 /**
@@ -360,6 +463,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	private pendingStops: Stop[] = []
 	private pendingStopResolutions: StopResolutionPatch[] = []
 	private pendingEntryLinks: EntryLinkPatch[] = []
+	private pendingDigestPatches: DigestPatch[] = []
 
 	static create(data: {
 		ownerId: string
@@ -394,6 +498,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			// the attach wizard asks about.
 			reactionsEnabled: true,
 			streamingEnabled: true,
+			// The owner's default (18/11) — the same one the migration backfilled every existing row with.
+			outputMode: GroupOutputMode.DECISIONS_AND_LIVE,
 			participants: data.participants,
 			bufferSize: data.bufferSize ?? BufferSize._50,
 			// A fresh conversation has chosen nothing, and "chosen nothing" is the empty map — never a
@@ -564,6 +670,17 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	configureLanguage(language: Language | undefined): void {
 		this.language = language
+		this.validate()
+	}
+
+	/**
+	 * Choose how much of what this group's issues say reaches the group (fase 3, item 2). No invariant either
+	 * value can violate — every mode is legal for every thread, and the closed set is `z.enum(GroupOutputMode)`,
+	 * checked by `validate()` — so a plain flip like its siblings. Like them it SURVIVES `revive`: the attach
+	 * wizard never asks for it.
+	 */
+	configureOutputMode(mode: GroupOutputMode): void {
+		this.outputMode = mode
 		this.validate()
 	}
 
@@ -739,6 +856,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * decision names covers three kinds, and inventing rules for the other two would be over-building.
 	 */
 	recordEntry(input: {
+		/** A STABLE id, when what is recorded has an identity of its own (a signal) — a second record of it is a duplicate key. */
+		entryId?: string
 		kind: TranscriptKind
 		text: string
 		senderExternalId?: string
@@ -750,6 +869,11 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		messageType?: MessageType
 		mediaPath?: string
 		artifactId?: string
+		level?: IssueSignalLevel
+		routing?: OutputRouting
+		stopId?: string
+		digestEntryId?: string
+		addresseeId?: string
 		at?: Date
 	}): TranscriptEntry {
 		if (input.kind === TranscriptKind.CONTACT && !input.senderExternalId) {
@@ -766,7 +890,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		}
 
 		const entry: TranscriptEntry = {
-			entryId: Id.value(),
+			entryId: input.entryId ?? Id.value(),
 			ownerId: this.ownerId,
 			threadId: this.id.value,
 			kind: input.kind,
@@ -780,6 +904,11 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			messageType: input.messageType,
 			mediaPath: input.mediaPath,
 			artifactId: input.artifactId,
+			level: input.level,
+			routing: input.routing,
+			stopId: input.stopId,
+			digestEntryId: input.digestEntryId,
+			addresseeId: input.addresseeId,
 			at: input.at ?? new Date(),
 		}
 		this.pendingEntries.push(entry)
@@ -802,6 +931,36 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
+	 * A signal that waited for its per-person digest (fase 3, item 2) and is the ONLY one when the window
+	 * closes: it goes out as itself, in its own format — its routing becomes `GROUP`, the routing that actually
+	 * happened. Takes the LOADED entry; refuses one that is not this conversation's or not waiting.
+	 */
+	releaseFromDigest(entry: TranscriptEntry): void {
+		this.assertWaitingForDigest(entry)
+		this.pendingDigestPatches.push({ entryId: entry.entryId, routing: OutputRouting.GROUP })
+		entry.routing = OutputRouting.GROUP
+	}
+
+	/**
+	 * Two or more signals for the same person within the window go out as ONE digest (fase 3, item 2): each
+	 * waiting entry points at the digest entry that carries it (`digestEntryId`) — the pointer a quoted reply
+	 * to the digest follows to its questions, and the one that starts their deadline when it is delivered.
+	 */
+	foldIntoDigest(entries: readonly TranscriptEntry[], digest: TranscriptEntry): void {
+		for (const entry of entries) {
+			this.assertWaitingForDigest(entry)
+			this.pendingDigestPatches.push({ entryId: entry.entryId, routing: OutputRouting.DIGEST, digestEntryId: digest.entryId })
+			entry.digestEntryId = digest.entryId
+		}
+	}
+
+	private assertWaitingForDigest(entry: TranscriptEntry): void {
+		if (entry.threadId !== this.id.value || entry.routing !== OutputRouting.DIGEST || entry.digestEntryId) {
+			throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${entry.entryId} is not waiting for a digest`)
+		}
+	}
+
+	/**
 	 * Raise a stop on this thread (B4, spec decision 4) — with or without an issue behind it.
 	 *
 	 * `stopId` is accepted rather than always minted because the id is frequently DECIDED UPSTREAM: the
@@ -818,18 +977,26 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * `AgentRunStopRaisedEvent`, and this is the consumer materializing it. Re-announcing it here would
 	 * be a loop.
 	 */
-	raiseStop(input: { stopId?: string; issueId?: string; kind: StopKind; title: string; detail: string }): Stop {
+	raiseStop(input: StopRaise): Stop {
+		// A decision or a question raised WITHOUT its ask is a stop nobody could answer (fase 3).
+		if ('kind' in input && ASKED_AS[input.kind]) {
+			throw new BaseError<DomainErrors>('INVALID_REQUEST', `a ${input.kind} stop needs its ask`)
+		}
+		// An ask decides its own kind (`StopAsk.kind`: any declared effect escalates it to a decision) — the
+		// caller says what it asked for, never what it becomes.
+		const asked =
+			'ask' in input ? { kind: input.ask.kind, ask: input.ask.toAsk(), seq: input.seq, askEntryId: input.askEntryId } : { kind: input.kind }
 		const stop: Stop = {
 			stopId: input.stopId ?? Id.value(),
 			ownerId: this.ownerId,
 			issueId: input.issueId,
 			threadId: this.id.value,
-			kind: input.kind,
 			title: input.title,
 			detail: input.detail,
 			raisedAt: new Date(),
 			resolution: undefined,
 			resolvedAt: undefined,
+			...asked,
 		}
 		this.pendingStops.push(stop)
 		return stop
@@ -853,8 +1020,17 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * `resolverPosture` is WHO resolved — a run's minted posture, or the `operator` participant's grant for
 	 * the console — and the fact carries the posture the resume will run under, already reduced by
 	 * `RESUMES_WITH_RESOLVER_POSTURE`.
+	 *
+	 * ### Answering an ask (fase 3)
+	 * What a resolution RECORDS on the stop is the total table `ANSWER_RECORDED_BY`: `ANSWER` records the
+	 * person's answer (`ASK_ANSWER_REQUIRED` without one, `ASK_OPTION_UNKNOWN` naming an option the ask does
+	 * not offer); `DEFAULT_APPLIED` records the ask's own default, and only once `now ≥ dueAt`
+	 * (`ASK_NOT_DUE` before, or while the question was never delivered); every other resolution records
+	 * nothing. `now` is a parameter so the deadline job decides with the instant it was handed. The
+	 * `resolved_at IS NULL` guard of `ThreadRepository.save` is what makes the FIRST of two concurrent
+	 * resolutions win — the check above only sees the stop as the caller loaded it.
 	 */
-	resolveStop(stop: Stop, resolution: StopResolution, resolverPosture: PermissionPosture): void {
+	resolveStop(stop: Stop, resolution: StopResolution, resolverPosture: PermissionPosture, given: StopAnswerGiven = {}): void {
 		if (stop.threadId !== this.id.value) {
 			throw new BaseError<DomainErrors>('STOP_NOT_IN_THREAD', `stop ${stop.stopId} belongs to thread ${stop.threadId}`)
 		}
@@ -865,7 +1041,16 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			throw new BaseError<DomainErrors>('RESOLUTION_NOT_APPLICABLE', `${resolution} does not apply to a ${stop.kind} stop`)
 		}
 
-		this.pendingStopResolutions.push({ stopId: stop.stopId, resolution, resolvedAt: new Date() })
+		const now = given.now ?? new Date()
+		const answer = ANSWER_RECORDED_BY[resolution](stop, given, now)
+		this.pendingStopResolutions.push({
+			stopId: stop.stopId,
+			resolution,
+			resolvedAt: now,
+			answer,
+			// Who answered is recorded only beside an answer that is a person's — never on a default.
+			answeredBy: answer?.kind === AskAnswerKind.DEFAULT ? undefined : answer && given.answeredBy,
+		})
 		this.addDomainEvent(
 			new ThreadStopResolvedEvent({
 				entityId: this.id.value,
@@ -895,11 +1080,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			stops: this.pendingStops,
 			stopResolutions: this.pendingStopResolutions,
 			entryLinks: this.pendingEntryLinks,
+			digestPatches: this.pendingDigestPatches,
 		}
 		this.pendingEntries = []
 		this.pendingStops = []
 		this.pendingStopResolutions = []
 		this.pendingEntryLinks = []
+		this.pendingDigestPatches = []
 		return writes
 	}
 

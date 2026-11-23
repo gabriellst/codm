@@ -29,6 +29,8 @@ import { THREAD_MESSAGES } from '../i18n/messages'
 import { OFFERED_ON_PANEL } from '../utils/StopResolutions'
 import type { ApplicationErrors, DomainErrors } from '../errors'
 import { ResolveStop } from './ResolveStop'
+import { AnswerStop } from './AnswerStop'
+import { askCode } from '../utils/askAnswer'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
 
 export const ExecutePanelActionInputSchema = z.object({
@@ -65,10 +67,17 @@ const ANSWER_ECHO: Readonly<Record<StopResolution, PanelActionEcho>> = {
 	[StopResolution.RETRY]: PanelActionEcho.ANSWERED,
 	[StopResolution.REVIEW_AND_SEND]: PanelActionEcho.ANSWERED,
 	[StopResolution.TAKE_OVER]: PanelActionEcho.ANSWERED,
+	[StopResolution.ANSWER]: PanelActionEcho.ANSWERED,
+	[StopResolution.DEFAULT_APPLIED]: PanelActionEcho.ANSWERED,
 }
 
 type ActionOf<K extends PanelActionKind> = Extract<PanelActionBody, { kind: K }>
 type Member = NonNullable<ExecutePanelAction['input']['member']>
+/** What the group's echo line says: the verb, and — for an answered ask — its number, so the line names the code. */
+interface Echo {
+	verb: PanelActionEcho
+	seq?: number
+}
 interface Act {
 	thread: Thread
 	member: Member
@@ -88,6 +97,9 @@ interface Act {
  *    shows it with its sent/delivered/read instants.
  *  - ANSWER_STOP → `ResolveStop` under the member's posture — only for a member who may release NOW
  *    (`Thread.postureOf` is BYPASS), only an open stop of THIS issue, only an answer the panel offers.
+ *  - ANSWER_ASK (fase 3) → `AnswerStop` as the member — an issue's decision or question answered with an
+ *    option or free text, under the same ruler of who may answer as the group and the console; the echo
+ *    names the ask's code ("Ana respondeu APP-12 · D1 pelo painel").
  *
  * PAUSE / RESUME / STEER also need the member to be someone who may act (`Thread.mayAct`): a muted
  * participant stays muted on the panel too.
@@ -119,21 +131,24 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 		private readonly resumeIssue: ResumeIssue,
 		private readonly reopenIssue: ReopenIssue,
 		private readonly resolveStop: ResolveStop,
+		private readonly answerStop: AnswerStop,
 	) {
 		super()
 	}
 
 	/** The effect of one action — a switch on the discriminant, so each case sees its own member; returns the echo verb. */
-	private async effect(act: Act, action: PanelActionBody, tx: Transaction): Promise<PanelActionEcho> {
+	private async effect(act: Act, action: PanelActionBody, tx: Transaction): Promise<Echo> {
 		switch (action.kind) {
 			case PanelActionKind.PAUSE:
-				return this.control(act, action.issueId, this.pauseIssue, PanelActionEcho.PAUSED, tx)
+				return { verb: await this.control(act, action.issueId, this.pauseIssue, PanelActionEcho.PAUSED, tx) }
 			case PanelActionKind.RESUME:
-				return this.control(act, action.issueId, this.resumeIssue, PanelActionEcho.RESUMED, tx)
+				return { verb: await this.control(act, action.issueId, this.resumeIssue, PanelActionEcho.RESUMED, tx) }
 			case PanelActionKind.STEER:
-				return this.steer(act, action, tx)
+				return { verb: await this.steer(act, action, tx) }
 			case PanelActionKind.ANSWER_STOP:
-				return this.answer(act, action, tx)
+				return { verb: await this.answer(act, action, tx) }
+			case PanelActionKind.ANSWER_ASK:
+				return this.answerAsk(act, action, tx)
 			default: {
 				const unhandled: never = action
 				return unhandled
@@ -272,6 +287,31 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 		return ANSWER_ECHO[action.resolution]
 	}
 
+	/**
+	 * ANSWER_ASK (fase 3) — the panel's door into `AnswerStop`, the one door that carries an answer: the same
+	 * ruler of who may answer (an ask with an effect only by someone who may release — PARTICIPANT_CANNOT_RELEASE;
+	 * any other by anyone who may act — PARTICIPANT_CANNOT_ACT), the same "first answer wins", the same resume.
+	 * Run as the member's roster id, confined to this conversation and — checked here, since `AnswerStop` only
+	 * confines the thread — to THIS issue's open ask. The echo names the ask's code ("APP-12 · D1").
+	 */
+	private async answerAsk(act: Act, action: ActionOf<PanelActionKind.ANSWER_ASK>, tx: Transaction): Promise<Echo> {
+		const stop = await this.threads.findStop(action.stopId, tx)
+		if (!stop || stop.threadId !== act.thread.id.value || stop.issueId !== action.issueId) {
+			throw new BaseError<ApplicationErrors>('STOP_NOT_FOUND', `no stop ${action.stopId} on this issue`)
+		}
+		await this.answerStop.execute(
+			{
+				ownerId: act.thread.ownerId,
+				stopId: action.stopId,
+				answer: action.answer,
+				answeredBy: act.member.participantId,
+				threadId: act.thread.id.value,
+			},
+			tx,
+		)
+		return { verb: PanelActionEcho.ANSWERED, seq: stop.seq }
+	}
+
 	private mustAct(act: Act): void {
 		if (!act.thread.mayAct(act.member.participantId)) {
 			throw new BaseError<ApplicationErrors>('PARTICIPANT_CANNOT_ACT', 'a muted participant may not act on the work')
@@ -279,13 +319,18 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 	}
 
 	/** The one line the group gets — recorded linked to the issue and delivered like every SYSTEM line. */
-	private async echo(act: Act, issueId: string, echo: PanelActionEcho, tx: Transaction): Promise<void> {
+	private async echo(act: Act, issueId: string, echo: Echo, tx: Transaction): Promise<void> {
 		const issue = await this.issues.findById(issueId, tx)
 		// Re-read inside the transaction: the effect above may have saved this same thread.
 		const thread = (await this.threads.findById(act.thread.id.value, tx)) ?? act.thread
 		const entry = thread.recordEntry({
 			kind: TranscriptKind.SYSTEM,
-			text: THREAD_MESSAGES.panelActionEcho(act.language, { name: act.member.name, key: issue?.key ?? '', echo }),
+			// The subject is the issue's key — or, for an answered ask, its code ("Ana respondeu APP-12 · D1 pelo painel").
+			text: THREAD_MESSAGES.panelActionEcho(act.language, {
+				name: act.member.name,
+				key: askCode(issue?.key ?? '', echo.seq),
+				echo: echo.verb,
+			}),
 			issueId,
 		})
 		await this.threads.save(thread, tx)

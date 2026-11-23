@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { askOptionSchema } from "./askOptionSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
 import { z } from "zod/v4";
@@ -27,7 +28,35 @@ get "kind"(){
 "raisedAt": z.string(),
 get "availableResolutions"(){
                 return z.array(stopResolutionSchema)
+              },
+"ask": z.optional(z.union([z.object({
+    "kind": z.enum(["DECISION_REQUESTED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
               }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"releaseRequired": z.boolean()
+    }), z.object({
+    "kind": z.enum(["QUESTION_ASKED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
+              }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"defaultLabel": z.string(),
+"dueAt": z.optional(z.string())
+    })]))
     }))
     })
 

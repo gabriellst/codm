@@ -1,14 +1,13 @@
 import { injectable } from 'tsyringe-neo'
-import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { Handler, z, BaseError, CommandQueue, MimeTypeExtractor } from '@codm/core-typescript'
 import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
-import { ChannelSender, type SendableArtifactKind } from '@thread/services/ChannelSender'
 import { enqueueArtifactLinkDelivery, enqueueArtifactAttachmentDelivery } from '@thread/services/ArtifactDelivery'
 import { IssueHold } from '@issue/services/IssueHold'
 import { ArtifactRepository } from '../repositories/ArtifactRepository'
-import { MediaStore } from '../services/MediaStore'
+import { MediaStore } from '@shared/services/MediaStore'
+import { ArtifactSendability } from '../services/ArtifactSendability'
 import type { ApplicationErrors } from '../errors'
 
 export const SendArtifactInputSchema = z.object({
@@ -19,18 +18,6 @@ export const SendArtifactInputSchema = z.object({
 })
 
 export const SendArtifactOutputSchema = z.void()
-
-/**
- * Per-kind ceiling ("envio de artefatos pelo canal" design, decision 6) — IMAGE/VIDEO/AUDIO share
- * WhatsApp's own inline media ceiling; FILE gets the larger document ceiling, the SAME 64 MiB the
- * gateway's own inbound path already caps at (`maxInboundMediaBytes`, `whatsmeow_channel.go`).
- */
-const SIZE_LIMIT_BYTES: Record<Exclude<ArtifactKind, ArtifactKind.LINK>, number> = {
-	[ArtifactKind.IMAGE]: 16 << 20,
-	[ArtifactKind.VIDEO]: 16 << 20,
-	[ArtifactKind.AUDIO]: 16 << 20,
-	[ArtifactKind.FILE]: 64 << 20,
-}
 
 /**
  * The tool an agent's run calls to hand an already-recorded artifact to the contact on the channel
@@ -66,7 +53,7 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 	constructor(
 		private readonly artifacts: ArtifactRepository,
 		private readonly threads: ThreadRepository,
-		private readonly sender: ChannelSender,
+		private readonly sendability: ArtifactSendability,
 		private readonly mediaStore: MediaStore,
 		private readonly commands: CommandQueue,
 		private readonly hold: IssueHold,
@@ -90,8 +77,10 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 		const thread = await this.threads.findById(threadId)
 		if (!thread || thread.ownerId !== ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${threadId}`)
 
-		if (artifact.kind === ArtifactKind.LINK) {
-			const text = caption ? `${caption}\n${artifact.ref}` : artifact.ref
+		// Every refusal BEFORE anything is enqueued (decision 6) — the same checks `RequestFeedback` makes.
+		const sendable = await this.sendability.check({ id: artifactId, kind: artifact.kind, ref: artifact.ref })
+		if (sendable.kind === ArtifactKind.LINK) {
+			const text = caption ? `${caption}\n${sendable.url}` : sendable.url
 			await enqueueArtifactLinkDelivery(this.commands, {
 				ownerId,
 				channelId: thread.channelId,
@@ -104,20 +93,7 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 			})
 			return
 		}
-
-		if (!this.sender.capabilities.media)
-			throw new BaseError<ApplicationErrors>('CHANNEL_MEDIA_UNSUPPORTED', 'this channel cannot deliver media messages')
-
-		const stats = await stat(artifact.ref).catch(() => undefined)
-		if (!stats?.isFile())
-			throw new BaseError<ApplicationErrors>('ARTIFACT_FILE_MISSING', `artifact ${artifactId} no longer has a file at its ref`)
-
-		const kind = artifact.kind as SendableArtifactKind
-		if (stats.size > SIZE_LIMIT_BYTES[kind])
-			throw new BaseError<ApplicationErrors>(
-				'ARTIFACT_TOO_LARGE',
-				`artifact ${artifactId} is ${stats.size} bytes, over the ${kind} ceiling`,
-			)
+		const kind = sendable.kind
 
 		const staged = await this.mediaStore.stage(artifact.ref)
 

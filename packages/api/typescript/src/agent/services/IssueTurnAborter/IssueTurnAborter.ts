@@ -11,6 +11,8 @@ interface RunningTurn {
 	controller: AbortController
 	/** The transcript entry the running turn's item carries (a routed steer), when it carries one. */
 	carrying: string | undefined
+	/** The completion declared during this turn answers `carrying` — the closing is that person's reply. */
+	answeredByClosing: boolean
 }
 
 /**
@@ -31,7 +33,9 @@ export const abortReasonOf = (signal: AbortSignal): TurnAbortReason =>
  *    between that check and the spawn is not lost — the signal is already aborted when the turn starts;
  *  - `RunIssueTurn` reads the signal (`signalFor`) and hands it to the runner;
  *  - `AbortIssueTurnOnPause`, reacting to `issue.paused`, calls `abort` (reason `PAUSE`);
- *  - `InterruptIssueTurnOnSteer`, reacting to an "agora" steer, calls `interrupt` (reason `INTERRUPT`).
+ *  - `InterruptIssueTurnOnSteer`, reacting to an "agora" steer, calls `interrupt` (reason `INTERRUPT`);
+ *  - `DeclareIssueComplete` asks which person's message the running turn answers (`answerWithClosing`), and
+ *    `RunIssueTurn` reads at its end whether the closing already answered it (`answeredByClosing`).
  *
  * IN MEMORY, one instance per process, and that is enough: the turn it kills lives in this process too.
  * It is an ACCELERATOR, never the hold itself — the `paused` flag is what the dispatcher and the tool
@@ -47,7 +51,7 @@ export class IssueTurnAborter {
 	/** @param carrying the transcript entry the turn's item came from, so an "agora" never kills its own turn. */
 	begin(issueId: string, carrying?: string): IssueTurnHandle {
 		const controller = new AbortController()
-		this.running.set(issueId, { controller, carrying })
+		this.running.set(issueId, { controller, carrying, answeredByClosing: false })
 		return {
 			signal: controller.signal,
 			end: () => {
@@ -67,6 +71,29 @@ export class IssueTurnAborter {
 		if (!turn) return false
 		turn.controller.abort(TurnAbortReason.PAUSE)
 		return true
+	}
+
+	/**
+	 * ONE MESSAGE FOR A TURN THAT ANSWERS A PERSON AND FINISHES THE TASK (fase 3) — the completion declared
+	 * during a running turn that carries a routed steer takes that person's message as the one its closing
+	 * answers. Returns the entry (the closing quotes it), or `undefined` when the issue's running turn carries
+	 * none — then the closing quotes the request, as always. The turn reads it back at its end
+	 * (`answeredByClosing`) and does not send its own reply as well: one message, not two.
+	 *
+	 * In memory like the rest of this class, and that is enough: a turn and the tool call it makes live in this
+	 * process. Lost on a restart, the worst case is the old one — the closing AND the reply.
+	 */
+	answerWithClosing(issueId: string): string | undefined {
+		const turn = this.running.get(issueId)
+		if (!turn?.carrying) return undefined
+		turn.answeredByClosing = true
+		return turn.carrying
+	}
+
+	/** Whether the closing already answered `entryId` for the issue's running turn (see `answerWithClosing`). */
+	answeredByClosing(issueId: string, entryId: string): boolean {
+		const turn = this.running.get(issueId)
+		return turn?.carrying === entryId && turn.answeredByClosing
 	}
 
 	/**

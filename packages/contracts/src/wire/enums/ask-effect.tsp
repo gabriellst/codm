@@ -1,0 +1,8 @@
+namespace TemplateContracts;
+
+@doc("What the answer to an issue's ask authorizes (fase 3, item 1) — DECLARED by the issue on the tool, never inferred. Any effect escalates the ask to a decision (StopKind.DECISION_REQUESTED, no deadline) answerable only by someone who may release. PUBLISH: putting something live / sending it out. IRREVERSIBLE: an action that cannot be undone. CLIENT_DATA: touching a client's data.")
+enum AskEffect {
+  PUBLISH: "PUBLISH",
+  IRREVERSIBLE: "IRREVERSIBLE",
+  CLIENT_DATA: "CLIENT_DATA",
+}

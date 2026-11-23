@@ -4,8 +4,76 @@ import { MailboxItemKind, MailboxTargetKind, StopResolution } from '@codm/contra
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
-import type { Stop } from '../entities/Thread'
+import type { Stop, Thread } from '../entities/Thread'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
+import { askCode, labelOfAnswer } from '../utils/askAnswer'
+
+/**
+ * Whether a resolution's resume is queued EVEN WHEN the issue already has work pending (fase 3). Total over
+ * `StopResolution`. An answer to an ask (a person's, or the default the deadline applied) carries the one
+ * thing the session is waiting for: swallowed because another message was in the queue, the issue would go on
+ * without it — the worst outcome here. The dedup key is the stop, so it is still queued once. The older
+ * resolutions keep riding a turn already coming (`hasPending`), unchanged.
+ */
+const RESUMES_EVEN_WITH_PENDING: Readonly<Record<StopResolution, boolean>> = {
+	[StopResolution.RETRY]: false,
+	[StopResolution.REVIEW_AND_SEND]: false,
+	[StopResolution.APPROVE]: false,
+	[StopResolution.DENY]: false,
+	[StopResolution.TAKE_OVER]: false,
+	[StopResolution.ANSWER]: true,
+	[StopResolution.DEFAULT_APPLIED]: true,
+}
+
+/** What the resumed turn is told — by resolution, total over `StopResolution`. */
+interface ResumeContext {
+	stop: Stop
+	resolution: StopResolution
+	/** The ask's code (`APP-12 · D1`). */
+	code: string
+	/** WHO answered, as the roster names them — never a raw address. */
+	answeredBy?: string
+}
+
+/** The question the stop put, as the agent wrote it. */
+function questionOf(stop: Stop): string {
+	return stop.ask?.question.trim() || stop.detail.trim() || stop.title.trim()
+}
+
+/**
+ * The resolutions that existed before fase 3: which question was answered, and which of the applicable
+ * answers was chosen — the operator's own words reach the issue by the orchestrator's steer, not here.
+ */
+const resolvedText = ({ stop, resolution }: ResumeContext): string => {
+	const question = stop.detail.trim() || stop.title.trim()
+	return [
+		`The operator resolved the stop that halted you — they answered ${resolution}.`,
+		...(question ? [`What you had asked: ${question}`] : []),
+		'Continue this issue from where you stopped.',
+	].join('\n')
+}
+
+const RESUME_TEXT: Readonly<Record<StopResolution, (context: ResumeContext) => string>> = {
+	[StopResolution.RETRY]: resolvedText,
+	[StopResolution.REVIEW_AND_SEND]: resolvedText,
+	[StopResolution.APPROVE]: resolvedText,
+	[StopResolution.DENY]: resolvedText,
+	[StopResolution.TAKE_OVER]: resolvedText,
+	// A person answered the ask: the question, its code and the answer itself.
+	[StopResolution.ANSWER]: ({ stop, code, answeredBy }) =>
+		[
+			`${answeredBy ?? 'Someone in the group'} answered your ${code}: "${questionOf(stop)}"`,
+			`Answer: ${stop.answer ? labelOfAnswer(stop.ask, stop.answer) : '(none recorded)'}`,
+			'Continue this issue with that answer.',
+		].join('\n'),
+	// Nobody answered by the deadline: the issue goes on with the default it declared.
+	[StopResolution.DEFAULT_APPLIED]: ({ stop, code }) =>
+		[
+			`Nobody answered your ${code} within 15 minutes: "${questionOf(stop)}"`,
+			`Go on with the default you declared: ${stop.answer ? labelOfAnswer(stop.ask, stop.answer) : '(none recorded)'}`,
+			'Continue this issue from where you stopped.',
+		].join('\n'),
+}
 
 /**
  * "Resolvi" has to mean "the agent went back to work" (spec 2026-07-31, decision 2).
@@ -63,8 +131,17 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 		// ONE TURN PER ISSUE, whichever path got here first. The mailbox already answers "is a turn
 		// coming for this target" and the dispatcher already serializes per target — so when the
 		// orchestrator has already steered this issue (decision 1's path, carrying the operator's own
-		// words) the console's resolution rides that turn instead of scheduling a second one.
-		if (await this.mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)) return
+		// words) the console's resolution rides that turn instead of scheduling a second one. An ANSWER
+		// to an ask is the exception (`RESUMES_EVEN_WITH_PENDING`): it carries what the session waits for.
+		if (!RESUMES_EVEN_WITH_PENDING[resolution] && (await this.mailbox.hasPending(MailboxTargetKind.ISSUE, issueId))) return
+
+		const thread = stop.answeredBy ? await this.threads.findById(threadId) : undefined
+		const text = RESUME_TEXT[resolution]({
+			stop,
+			resolution,
+			code: askCode(issue.key, stop.seq),
+			answeredBy: answererName(thread, stop.answeredBy),
+		})
 
 		await this.mailbox.enqueue({
 			ownerId: stop.ownerId,
@@ -74,7 +151,7 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			// The posture the FACT carries (Decision 7): the resolver's, reduced by the resolution — an APPROVE
 			// from someone who may elevate resumes in BYPASS, a DENY always in AUTO.
 			posture,
-			payload: { issueId, threadId, key: issue.key, title: issue.title, text: this.resumeText(stop, resolution) },
+			payload: { issueId, threadId, key: issue.key, title: issue.title, text },
 			// THE KEY IS THE STOP, and the choice is the same one `IngestChannelMessage` makes when it
 			// keys on the ENTRY: the dedup key is the unique CAUSE of the work, never the target of it.
 			// A stop is resolved once, so the at-least-once outbox redelivering this fact re-inserts,
@@ -84,24 +161,9 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			dedupKey: `resume:${stopId}`,
 		})
 	}
+}
 
-	/**
-	 * The prompt the resumed turn is handed.
-	 *
-	 * ### The operator's own words are not available on this path, and pretending otherwise would lie
-	 * `ResolveStop` takes `{ ownerId, stopId, resolution }` — the resolution is a closed enum
-	 * (`StopResolution`) and carries no prose; the only free text on a Stop is `title`/`detail`, which
-	 * is what the AGENT wrote when it stopped. So what this can honestly say is: which question was
-	 * answered, and which of the applicable answers was chosen. The operator's actual sentence reaches
-	 * the issue by the OTHER path — the orchestrator steering with the conversation's own text
-	 * (decision 1) — which is why that path exists rather than being folded into this one.
-	 */
-	private resumeText(stop: Stop, resolution: StopResolution): string {
-		const question = stop.detail.trim() || stop.title.trim()
-		return [
-			`The operator resolved the stop that halted you — they answered ${resolution}.`,
-			...(question ? [`What you had asked: ${question}`] : []),
-			'Continue this issue from where you stopped.',
-		].join('\n')
-	}
+/** The roster name of who answered — the operator as such, someone without a roster name as nobody in particular. */
+function answererName(thread: Thread | undefined, participantId: string | undefined): string | undefined {
+	return participantId ? thread?.rosterNameOf(participantId) : undefined
 }

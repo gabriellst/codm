@@ -38,3 +38,4 @@ export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent | AgentUsageE
 export { IssueForkedEvent, IssueForkedEventSchema } from './IssueForkedEvent'
 export { OrchestratorRepliedEvent, OrchestratorRepliedEventSchema } from './OrchestratorRepliedEvent'
 export { RegretWindowClosedEvent, RegretWindowClosedEventSchema } from './RegretWindowClosedEvent'
+export { IssueSpokeEvent, IssueSpokeEventSchema, SPOKEN_LEVELS, type SpokenLevel } from './IssueSpokeEvent'

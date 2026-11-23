@@ -98,10 +98,10 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 
 		await testBed.resolve(SteerThread).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: t.id.value, text: 'prefira o resumo curto' })
 
-		// TWO turns, and the second one is B1 and B2 composing: the STEER runs the subagent, that turn's
-		// outcome queues an ISSUE_RESULT for the thread, and the same drain picks it up and composes the
-		// answer. One `drain()` carries the redirection all the way back to the conversation.
-		expect(await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()).toBe(2)
+		// ONE turn: the STEER runs the subagent. Until fase 3 its outcome also queued an ISSUE_RESULT and the
+		// drain ran a second (orchestrator) turn; a console whisper is not a person in the group waiting for an
+		// answer, so its words are now the issue's PROGRESS (fase 3, item 5) — no orchestrator turn.
+		expect(await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()).toBe(1)
 
 		// The steer turn ran: a durable session row exists for the ISSUE, which only `RunIssueTurn` writes.
 		const session = await testBed.resolve(AgentSessionRepository).findByIssueId(issue.id.value)

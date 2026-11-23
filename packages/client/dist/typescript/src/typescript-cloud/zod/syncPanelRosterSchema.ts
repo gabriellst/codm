@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import { askAnswerSchema } from "./askAnswerSchema.ts";
+import { askOptionSchema } from "./askOptionSchema.ts";
 import { panelActionOutcomeSchema } from "./panelActionOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
@@ -39,6 +41,13 @@ export const syncPanelRoster200Schema = z.object({
 get "resolution"(){
                 return stopResolutionSchema
               }
+    }), z.object({
+    "kind": z.enum(["ANSWER_ASK"]),
+"issueId": z.uuid(),
+"stopId": z.uuid(),
+get "answer"(){
+                return askAnswerSchema
+              }
     })])
     }))
     })
@@ -59,7 +68,35 @@ get "kind"(){
               },
 get "resolutions"(){
                 return z.array(stopResolutionSchema).max(8)
+              },
+"ask": z.optional(z.union([z.object({
+    "kind": z.enum(["DECISION_REQUESTED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
               }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"releaseRequired": z.boolean()
+    }), z.object({
+    "kind": z.enum(["QUESTION_ASKED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
+              }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"defaultLabel": z.string(),
+"dueAt": z.optional(z.string())
+    })]))
     })).max(200))
     })).max(200),
 "outcomes": z.optional(z.array(z.object({

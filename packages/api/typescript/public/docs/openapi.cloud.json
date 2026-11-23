@@ -969,6 +969,12 @@
                                   },
                                   "classification": {
                                     "$ref": "#/components/schemas/ClassificationMethod"
+                                  },
+                                  "level": {
+                                    "$ref": "#/components/schemas/IssueSignalLevel"
+                                  },
+                                  "routing": {
+                                    "$ref": "#/components/schemas/OutputRouting"
                                   }
                                 },
                                 "required": [
@@ -1071,6 +1077,31 @@
                                   },
                                   "title": {
                                     "type": "string"
+                                  },
+                                  "ask": {
+                                    "type": "object",
+                                    "properties": {
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "question": {
+                                        "type": "string"
+                                      },
+                                      "options": {
+                                        "type": "array",
+                                        "items": {
+                                          "$ref": "#/components/schemas/AskOption"
+                                        }
+                                      },
+                                      "dueAt": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "code",
+                                      "question",
+                                      "options"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -1102,6 +1133,21 @@
                                   },
                                   "resolution": {
                                     "$ref": "#/components/schemas/StopResolution"
+                                  },
+                                  "answer": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "$ref": "#/components/schemas/AskAnswerKind"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "label"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -1404,6 +1450,137 @@
                                 "items": {
                                   "$ref": "#/components/schemas/StopResolution"
                                 }
+                              },
+                              "ask": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "DECISION_REQUESTED"
+                                      },
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "question": {
+                                        "type": "string"
+                                      },
+                                      "reply": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "OPTION"
+                                              },
+                                              "options": {
+                                                "minItems": 1,
+                                                "maxItems": 6,
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/AskOption"
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "options"
+                                            ]
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "TEXT"
+                                              }
+                                            },
+                                            "required": [
+                                              "kind"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "releaseRequired": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "code",
+                                      "question",
+                                      "reply",
+                                      "releaseRequired"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "QUESTION_ASKED"
+                                      },
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "question": {
+                                        "type": "string"
+                                      },
+                                      "reply": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "OPTION"
+                                              },
+                                              "options": {
+                                                "minItems": 1,
+                                                "maxItems": 6,
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/AskOption"
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "options"
+                                            ]
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "TEXT"
+                                              }
+                                            },
+                                            "required": [
+                                              "kind"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "defaultLabel": {
+                                        "type": "string"
+                                      },
+                                      "dueAt": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "code",
+                                      "question",
+                                      "reply",
+                                      "defaultLabel"
+                                    ]
+                                  }
+                                ]
                               }
                             },
                             "required": [
@@ -1623,6 +1800,35 @@
                                   "issueId",
                                   "stopId",
                                   "resolution"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "ANSWER_ASK"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "stopId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "answer": {
+                                    "$ref": "#/components/schemas/AskAnswer"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId",
+                                  "stopId",
+                                  "answer"
                                 ],
                                 "additionalProperties": false
                               }
@@ -1934,6 +2140,12 @@
                               },
                               "classification": {
                                 "$ref": "#/components/schemas/ClassificationMethod"
+                              },
+                              "level": {
+                                "$ref": "#/components/schemas/IssueSignalLevel"
+                              },
+                              "routing": {
+                                "$ref": "#/components/schemas/OutputRouting"
                               }
                             },
                             "required": [
@@ -2039,6 +2251,32 @@
                               },
                               "title": {
                                 "type": "string"
+                              },
+                              "ask": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "options": {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/AskOption"
+                                    }
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "question",
+                                  "options"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -2071,6 +2309,22 @@
                               },
                               "resolution": {
                                 "$ref": "#/components/schemas/StopResolution"
+                              },
+                              "answer": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "$ref": "#/components/schemas/AskAnswerKind"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "label"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -2218,36 +2472,177 @@
                         ]
                       }
                     },
-                    "openStop": {
-                      "type": "object",
-                      "properties": {
-                        "stopId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "kind": {
-                          "$ref": "#/components/schemas/StopKind"
-                        },
-                        "resolutions": {
-                          "maxItems": 8,
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/StopResolution"
+                    "openStops": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "stopId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "kind": {
+                            "$ref": "#/components/schemas/StopKind"
+                          },
+                          "resolutions": {
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/StopResolution"
+                            }
+                          },
+                          "ask": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "DECISION_REQUESTED"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "reply": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "OPTION"
+                                          },
+                                          "options": {
+                                            "minItems": 1,
+                                            "maxItems": 6,
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/components/schemas/AskOption"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "options"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "TEXT"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "releaseRequired": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "code",
+                                  "question",
+                                  "reply",
+                                  "releaseRequired"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "QUESTION_ASKED"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "reply": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "OPTION"
+                                          },
+                                          "options": {
+                                            "minItems": 1,
+                                            "maxItems": 6,
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/components/schemas/AskOption"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "options"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "TEXT"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "defaultLabel": {
+                                    "type": "string"
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "code",
+                                  "question",
+                                  "reply",
+                                  "defaultLabel"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           }
-                        }
-                      },
-                      "required": [
-                        "stopId",
-                        "kind",
-                        "resolutions"
-                      ],
-                      "additionalProperties": false
+                        },
+                        "required": [
+                          "stopId",
+                          "kind",
+                          "resolutions"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "issue",
-                    "timeline"
+                    "timeline",
+                    "openStops"
                   ],
                   "additionalProperties": false
                 }
@@ -2661,6 +3056,34 @@
                       "stopId",
                       "resolution"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "ANSWER_ASK"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "stopId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "answer": {
+                        "$ref": "#/components/schemas/AskAnswer"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId",
+                      "stopId",
+                      "answer"
+                    ]
                   }
                 ]
               },
@@ -2829,12 +3252,18 @@
           "AGENT_ENTRY_FORBIDS_SENDER",
           "AGENT_RUN_SCOPE_MISMATCH",
           "AGENT_RUN_TOKEN_INVALID",
+          "AGENT_STOP_KIND_NOT_DECLARABLE",
           "AGENT_TOOLS_UNSUPPORTED",
           "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
           "ARTIFACT_FILE_MISSING",
           "ARTIFACT_NOT_FOUND",
           "ARTIFACT_NOT_PREVIEWABLE",
           "ARTIFACT_TOO_LARGE",
+          "ASK_ANSWER_REQUIRED",
+          "ASK_DEFAULT_REQUIRED",
+          "ASK_NOT_DUE",
+          "ASK_OPTIONS_DUPLICATED",
+          "ASK_OPTION_UNKNOWN",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_MEDIA_UNSUPPORTED",
           "CHANNEL_NOT_CONNECTED",
@@ -2925,6 +3354,7 @@
           "RATE_LIMITED",
           "RESOLUTION_NOT_APPLICABLE",
           "SESSION_ALREADY_STREAMING",
+          "SIGNAL_ALREADY_FLUSHED",
           "SOCIAL_SIGN_IN_FAILED",
           "STOP_ALREADY_RESOLVED",
           "STOP_CRITERION_DISABLED",
@@ -2984,6 +3414,25 @@
           "INDIVIDUAL"
         ]
       },
+      "AskOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      },
       "IssueStatus": {
         "type": "string",
         "enum": [
@@ -3041,6 +3490,25 @@
           "CLARIFIED"
         ]
       },
+      "IssueSignalLevel": {
+        "type": "string",
+        "enum": [
+          "DECISION",
+          "QUESTION",
+          "FEEDBACK",
+          "CLOSING",
+          "BLOCK_NOTICE",
+          "PROGRESS"
+        ]
+      },
+      "OutputRouting": {
+        "type": "string",
+        "enum": [
+          "GROUP",
+          "DIGEST",
+          "PANEL"
+        ]
+      },
       "ArtifactKind": {
         "type": "string",
         "enum": [
@@ -3059,7 +3527,10 @@
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
           "AUTH_REQUIRED",
-          "PERMISSION_DENIED"
+          "PERMISSION_DENIED",
+          "DECISION_REQUESTED",
+          "QUESTION_ASKED",
+          "STALLED"
         ]
       },
       "StopResolution": {
@@ -3069,7 +3540,17 @@
           "REVIEW_AND_SEND",
           "TAKE_OVER",
           "APPROVE",
-          "DENY"
+          "DENY",
+          "ANSWER",
+          "DEFAULT_APPLIED"
+        ]
+      },
+      "AskAnswerKind": {
+        "type": "string",
+        "enum": [
+          "OPTION",
+          "TEXT",
+          "DEFAULT"
         ]
       },
       "IssueControlSource": {
@@ -3106,9 +3587,52 @@
           "REFUSED"
         ]
       },
+      "AskAnswer": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "OPTION"
+              },
+              "optionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "kind",
+              "optionId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "TEXT"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "kind",
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "PanelActionKind": {
         "type": "string",
         "enum": [
+          "ANSWER_ASK",
           "ANSWER_STOP",
           "PAUSE",
           "RESUME",
@@ -3130,12 +3654,18 @@
     "AGENT_ENTRY_FORBIDS_SENDER",
     "AGENT_RUN_SCOPE_MISMATCH",
     "AGENT_RUN_TOKEN_INVALID",
+    "AGENT_STOP_KIND_NOT_DECLARABLE",
     "AGENT_TOOLS_UNSUPPORTED",
     "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
     "ARTIFACT_FILE_MISSING",
     "ARTIFACT_NOT_FOUND",
     "ARTIFACT_NOT_PREVIEWABLE",
     "ARTIFACT_TOO_LARGE",
+    "ASK_ANSWER_REQUIRED",
+    "ASK_DEFAULT_REQUIRED",
+    "ASK_NOT_DUE",
+    "ASK_OPTIONS_DUPLICATED",
+    "ASK_OPTION_UNKNOWN",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_MEDIA_UNSUPPORTED",
     "CHANNEL_NOT_CONNECTED",
@@ -3226,6 +3756,7 @@
     "RATE_LIMITED",
     "RESOLUTION_NOT_APPLICABLE",
     "SESSION_ALREADY_STREAMING",
+    "SIGNAL_ALREADY_FLUSHED",
     "SOCIAL_SIGN_IN_FAILED",
     "STOP_ALREADY_RESOLVED",
     "STOP_CRITERION_DISABLED",

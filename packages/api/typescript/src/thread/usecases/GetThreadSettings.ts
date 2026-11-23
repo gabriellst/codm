@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
-import { BufferSize, ProviderKind, AgentModelId, ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind, GroupOutputMode, Language } from '@codm/contracts-typescript/wire/enums'
 import { effectiveModel, modelsFor } from '@catalog'
 // The LEAF, not the barrel — see `AttachThread` and that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
@@ -26,6 +26,11 @@ export const GetThreadSettingsOutputSchema = z.object({
 	reactions: z.object({ enabled: z.boolean() }),
 	/** Per-thread on/off for intermediate content cuts (reactions/streaming spec). Default ON. */
 	streaming: z.object({ enabled: z.boolean() }),
+	/**
+	 * How much of what its issues say reaches this group (fase 3, item 2) — the selector's value. Always
+	 * present: the column is NOT NULL with the owner's default (`DECISIONS_AND_LIVE`).
+	 */
+	outputMode: z.enum(GroupOutputMode),
 	/**
 	 * WHICH LANGUAGE this conversation speaks (i18n-das-pistas spec) — the cues the room sees and the
 	 * language the agent answers in.
@@ -245,6 +250,7 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 			thinkingIndicator: { enabled: thread.thinkingIndicatorEnabled },
 			reactions: { enabled: thread.reactionsEnabled },
 			streaming: { enabled: thread.streamingEnabled },
+			outputMode: thread.outputMode,
 			language: {
 				declared: (thread.language ?? undefined) as Language | undefined,
 				effective: resolveThreadLanguage(thread.language, ownerLanguage),

@@ -48,6 +48,7 @@ import {
 	PgCommandQueue,
 } from '@codm/core-typescript'
 import { CloudSession, FileCloudSession, MockCloudSession } from './services/CloudSession'
+import { MediaStore, DiskMediaStore, MockMediaStore } from './services/MediaStore'
 import { ChannelStatusHealthCheck } from './services/ChannelStatusHealthCheck'
 import { OutboxDeadLetterHealthCheck } from './services/OutboxDeadLetterHealthCheck'
 import { FileLibsqlDriver } from './db/FileLibsqlDriver'
@@ -327,6 +328,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// MockCloudSession e removeria em silêncio o portão que o e2e existe para exercitar.
 	{ token: CloudSession, mock: MockCloudSession, integration: MockCloudSession, real: FileCloudSession, e2e: FileCloudSession },
 	{ token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
+	// O DIRETÓRIO DE MÍDIA do gateway (`CODM_DATA_DIR/media`) — onde um artefato é copiado antes de ir ao
+	// canal, porque o gateway só aceita caminhos sob o próprio diretório. MUDOU DE CONTEXTO na fase 3
+	// (S5b): vivia em `artifact`, e o `thread` passou a precisar dele para mandar o print de um FEEDBACK
+	// (a política de saída decide no `thread` quando o print sai) — `thread → artifact` fecharia um ciclo
+	// com `artifact → thread`. É infraestrutura do diretório que TS e Go dividem, não regra do catálogo.
+	// Disco de verdade só em `real`: o diretório padrão é a home do operador, e teste nenhum toca nele.
+	{ token: MediaStore, mock: MockMediaStore, integration: MockMediaStore, real: DiskMediaStore },
 	// Repeatable jobs (BoundedContext.registerJobs) resolve this — an UNBOUND abstract silently
 	// constructs a method-less instance and crashes boot (found by the first real e2e run).
 	// In-memory queue in tests; database-backed in production (origin-faithful: the origin fork runs the
