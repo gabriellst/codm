@@ -19,9 +19,28 @@ Números do diagnóstico que abriu o plano; só agregados. Medidos **antes** do 
 | "continue/retome/cadê" escritos por pessoas | ~28/semana |
 | Horas paradas por limite do provedor (fase 4, cópia de 18/11) | ≥ 37 h/semana (73,5 h em 13,9 dias, limite inferior) |
 
-### Medido agora — **PENDENTE (sem espaço em disco)**
+### Medido agora (cópia de 23/11, antes do S2)
 
-O volume de dados está com 3,4 GiB livres (`df -h`, 20/11); a regra desta fase é só copiar o banco com ≥ 5 GiB livres. Nenhuma cópia foi feita. As consultas exatas estão em "Como medi (antes)"; rodar assim que houver espaço, **antes do S2**, e registrar aqui. A versão instalada é a 0.9.0 (fases 0–2): paradas silenciosas aparecem como `HUMAN_REQUESTED` com o texto fixo do reconciliador (o `STALLED` é da fase 3), lembretes só têm `declarationReminder: true` no payload (a coluna `claim_class` é da 0037), e as consultas cobrem as duas formas.
+Cópia `sqlite3 -readonly … .backup` do banco instalado em 23/11, só agregados, scripts fora do repo, cópia apagada no fim. **Janela: 09/11 12:00 → 23/11 12:00 UTC (14 dias).** O ledger da instalação vai até a `0035` (aplicada em 18/11): é a 0.9.0, fases 0–2 — **anterior às fases 3 e 4** (sem `STALLED`, sem coluna `claim_class`, sem `agent.provider.limit_observed`, sem fato `agent.issue_spoke`). Por isso as paradas silenciosas são as `HUMAN_REQUESTED` com o texto fixo do reconciliador e os lembretes só existem pelo payload. **O uso caiu muito na segunda metade da janela** (itens de tarefa por dia: 109–157 de 09 a 12/11, 6–10 de 20 a 22/11; último turno concluído em 20/11) — os números são um piso para a semana de uso normal.
+
+| Métrica | Valor |
+|---|---|
+| Paradas silenciosas | 51 em 14 dias (29 + 22 por semana); eram 150 na medição de 12/11 — a janela atravessa a atualização de 18/11 (0033–0035 aplicadas nesse dia; os lembretes só aparecem depois dela) e a queda de uso, então a comparação não isola o efeito da fase 0 |
+| …resolvidas por alguém assumindo | 38, mediana ~18 h, p90 ~137 h (média ~40 h) |
+| …resolvidas respondendo | 13, mediana ~2,7 h, p90 ~45 h |
+| …abertas cuja tarefa concluiu sozinha | 0 |
+| Lembretes de declaração | 5 (todos consumidos): 4 seguidos de declaração em até 10 min, 1 de parada |
+| Itens de tarefa por tentativas | 797: 734 com 1, 39 com 2, 15 com 3 vivos, **9 envenenados** (3 tentativas) |
+| Itens de conversa por tentativas | 1.868: 5 com 2, nenhum envenenado |
+| Categoria do erro (por texto, só nesta medição) | nenhuma linha casa "sobrecarga"/"login"/"teto"; inconclusivo — reforça classificar pela tabela declarada |
+| `SERVER_ERROR` | 9: 7 resolvidos assumindo (média ~16 h), 2 por "tentar de novo" (média ~1 h); mediana ~1,9 h, p90 ~78 h |
+| Da morte de um item envenenado ao próximo turno concluído (qualquer tarefa) | n = 9: mediana ~15 min, p90 ~130 min, máximo ~130 min |
+| Suspeitas por regra por dia (stop silencioso/`SERVER_ERROR` aberto > 30 min; ≥ 3 lembretes em 24 h) | média 3,9, máximo 10; zero nos 5 últimos dias (pouco uso); ≥ 3 lembretes em 24 h: nenhum dia |
+| Feedback seguido de lembrete (buraco do item 1) | não mensurável: o fato `agent.issue_spoke` não existe na 0.9.0 |
+| Lembretes a tarefas de conversa pausada (problema 3) | 0 |
+| Horas paradas por limite (item 4) | não mensurável aqui: `agent.provider.limit_observed` é da fase 4 |
+
+**Leitura para o desenho.** O calendário da pista ISSUE (1, 4, 15, 60 min — ~1h20 até o stop) cobre a mediana do tempo até o próximo turno concluído (~15 min, n = 9, aproximação da volta do provedor) e fica abaixo da cauda (~130 min); a medição não o contradiz, então fica **mantido** — a cauda é o caso do stop com a causa certa e, depois de 30 min, da suspeita do supervisor. O teto de 5 suspeitas por passada a cada 20 min comporta o máximo diário medido (10). Nenhuma constante muda antes do S2.
 
 ### Lido no código (20/11, `feat/fase-4-vazao` 08b7bbe0)
 
@@ -143,7 +162,7 @@ Leitores: `providerWaitByIssue` conta só `PROVIDER_LIMIT` (sai a junção com `
 | ISSUE | 1, 4, 15, 60 min (5 tentativas, ~1h20) | 1, 4, 15 min | 15 min (2 tentativas) | 0, 0 (como hoje) |
 | THREAD | 10 s, 60 s (3 tentativas) | 10 s, 60 s | 0 (2 tentativas) | 0, 0 (como hoje) |
 
-Na pista ISSUE ninguém espera em tempo real e uma sobrecarga do provedor passa em minutos; na THREAD há uma pessoa esperando, então a espera é curta e o teto não cresce. Login não volta sozinho com o tempo; o abandonado pode ainda estar vivo, e esperar reduz a chance de dois turnos ao mesmo tempo. Ponto de partida — a medição pendente (tempo entre falha de provedor e o próximo turno aceito) confirma ou corrige antes do S2. `MAX_ATTEMPTS` global sai.
+Na pista ISSUE ninguém espera em tempo real e uma sobrecarga do provedor passa em minutos; na THREAD há uma pessoa esperando, então a espera é curta e o teto não cresce. Login não volta sozinho com o tempo; o abandonado pode ainda estar vivo, e esperar reduz a chance de dois turnos ao mesmo tempo. A medição de 23/11 não o contradiz ("Medido agora": do item envenenado ao próximo turno concluído de qualquer tarefa, mediana ~15 min, p90 ~130 min, n = 9 — aproximação da volta do provedor, não medida direta). `MAX_ATTEMPTS` global sai.
 
 **`fail` com espera, atômico com o fato.** `MailboxRepository.fail(head, followers, failure, schedule, tx)`: `attempts` já foi cobrado no claim; se `attempts < schedule.length + 1` ⇒ adiado `RETRY` até `now + schedule[attempts - 1]` (ou `giveBack` se a espera é 0); senão ⇒ morto. O dispatcher abre uma unidade de trabalho (`UnitOfWorkFactory`, como em `holdItem`) e grava `agent.mailbox.retry_scheduled` na mesma transação. Os recados que viajavam junto voltam sem custo (como hoje).
 
@@ -252,14 +271,24 @@ Regeneração: `bun contracts` (antes das migrações — os CHECKs derivam dos 
 
 ## Rollout
 
-- Ordem: **nuvem antes do daemon** — pg 0009 e o `SyncPanel` que aceita `WAITING_RETRY`, `retryingAt`, `escalatedAt`; depois o daemon (SQLite 0038 no boot, testada antes numa cópia do banco real quando houver disco — a reconstrução de `issue_stops` torna esse teste obrigatório).
+- Ordem: **nuvem antes do daemon** — pg 0009 e o `SyncPanel` que aceita `WAITING_RETRY`, `retryingAt`, `escalatedAt`; depois o daemon (SQLite 0038 no boot, testada antes numa cópia do banco real — a reconstrução de `issue_stops` torna esse teste obrigatório; feito em 23/11, ver "Ensaio da 0038 no banco real").
+
+### Ensaio da 0038 no banco real (23/11)
+
+Cópia `.backup` do banco instalado (ledger na `0035`, 36 entradas), `CODM_DATA_DIR=<cópia> bun scripts/migrate.ts` a partir de `packages/api/typescript`, conferência só por agregados, cópia apagada no fim:
+- Ledger: 36 → 39 entradas; aplicou `0036`, `0037`, `0038` no mesmo passo (o caso do boot da 0.9.0).
+- `pragma integrity_check` = `ok`; `pragma foreign_key_check` sem linhas.
+- `issue_stops`: 1.126 linhas antes e depois, mesma contagem por kind; os índices `stops_issue_id_idx`, `stops_thread_id_idx`, `stops_issue_seq_unq`, `stops_due_at_idx` presentes.
+- `AUTO_RETRY` gravado numa transação desfeita: aceito; valor fora do enum recusado pelo CHECK.
+- Lembretes antigos: 5 com `declarationReminder` → 5 `REMINDER` com `nudge.ordinal = 1`; nenhum `declarationReminder` restante.
+- `defer_cause`: nulo em todas as linhas (nenhum item adiado no instante da cópia); `agent_agent_sessions.handoff_requested_at` criada.
 - Itens 1 e 2 entram **ligados**: são as regras que o objetivo aprovou; mudam quantas vezes e quando o sistema tenta antes de pedir alguém, e nada novo vai ao grupo.
 - Supervisor entra em **`ACT`** (decisão do dono, 20/11), com as travas do item 3; os fatos `agent.supervisor.reviewed` são a auditoria de todo veredito. `OBSERVE` e `OFF` ficam como ajuste.
 - Desligar sem build: `CODM_AGENT_SUPERVISOR_MODE=OFF` (ou `OBSERVE` para só registrar). O calendário é constante de código, como o `MAX_ATTEMPTS` de hoje.
 
 ## Como medi (antes)
 
-**PENDENTE — medir com espaço em disco** (≥ 5 GiB livres). Cópia `sqlite3 -readonly "<banco vivo>" ".backup <dir temporário>/codm.db"`, só agregados, scripts fora do repo, apagar a cópia no fim. Janela: últimos 14 dias. Instantes em ms. Lembretes nas duas formas (payload antigo e coluna nova).
+Rodado em 23/11 (resultados em "Medido agora"). Na 0.9.0 instalada a coluna `claim_class` não existe e a tabela de conversas é `thread_threads`: as consultas rodaram só com a forma do payload e o nome real da tabela; a janela é aplicada como `>= max(created_at) - 14 dias`. Cópia `sqlite3 -readonly "<banco vivo>" ".backup <dir temporário>/codm.db"`, só agregados, scripts fora do repo, apagar a cópia no fim. Janela: últimos 14 dias. Instantes em ms. Lembretes nas duas formas (payload antigo e coluna nova).
 
 ```sql
 -- 1. paradas silenciosas por semana, nas duas formas (antes da fase 3: HUMAN_REQUESTED com o texto do reconciliador)
