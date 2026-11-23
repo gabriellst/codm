@@ -179,7 +179,8 @@ get "outcome"(){
 "ordinal": z.int().min(1).max(9007199254740991),
 get "source"(){
                 return nudgeSourceSchema
-              }
+              },
+"outOf": z.int().min(1).max(9007199254740991)
     }), z.object({
     "kind": z.enum(["RETRY_SCHEDULED"]),
 "id": z.string(),

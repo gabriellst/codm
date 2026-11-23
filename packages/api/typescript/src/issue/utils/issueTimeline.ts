@@ -20,6 +20,7 @@ import {
 	SupervisorReviewSchema,
 	type IssueTimelineItem,
 } from '@shared/schemas'
+import { NUDGES_BEFORE_STALL } from '@agent/objects'
 import { IssuePausedEventSchema } from '../events/IssuePausedEvent'
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
@@ -111,7 +112,8 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			if (run.success) items.push({ kind, id: fact.id, at: when, ...run.data })
 		} else if (kind === IssueTimelineItemKind.NUDGED) {
 			const nudge = NudgeMarkSchema.safeParse(fact.payload)
-			if (nudge.success) items.push({ kind, id: fact.id, at: when, ...nudge.data })
+			// "1 de 2": the episode's length is the agent's declared constant, never a literal on a screen.
+			if (nudge.success) items.push({ kind, id: fact.id, at: when, ...nudge.data, outOf: NUDGES_BEFORE_STALL })
 		} else if (kind === IssueTimelineItemKind.RETRY_SCHEDULED) {
 			const retry = RetryScheduledSchema.safeParse(fact.payload)
 			if (retry.success) items.push({ kind, id: fact.id, at: when, ...retry.data })

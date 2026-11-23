@@ -1,11 +1,11 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconChevronRight, IconClockPause } from '@tabler/icons-react'
+import { IconChevronRight, IconClockPause, IconFlag, IconRefresh } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { IssueStatus } from '@codm/client-typescript/typescript'
 import { useLocale } from '@/hooks'
 import { enumLabel } from '@/lib'
-import { formatDayAndTime } from '@/lib/format'
+import { formatDayAndTime, formatTimeOrDayAndTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { row } from '@codm/app-ui/surfaces'
 import { Badge } from '@codm/app-ui/badge'
@@ -27,6 +27,10 @@ export interface IssueRowItem {
 	threadDisplayName?: string
 	/** ISO instant the issue's next turn is deferred to by the provider's usage limit; absent when it is not. */
 	waitingForProviderUntil?: string
+	/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent when nothing is being retried. */
+	retryingAt?: string
+	/** Fase 5 — ISO instant the supervisor escalated the task, until it moves again; absent otherwise. */
+	escalatedAt?: string
 }
 
 /**
@@ -40,6 +44,40 @@ export function ProviderWaitBadge({ until, className, ...props }: { until: strin
 		<span className={cn('inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground', className)} {...props}>
 			<IconClockPause className="size-3.5" />
 			{t('session.waitingForProvider', { when: formatDayAndTime(until, locale) })}
+		</span>
+	)
+}
+
+/**
+ * "Nova tentativa às 14:30" — a failed turn waiting for its next attempt (fase 5, item 2). The time alone when it is
+ * today, with the day once it crosses midnight. Which attempt of how many is on the timeline (`RETRY_SCHEDULED`).
+ */
+export function RetryWaitBadge({ at, className, ...props }: { at: string } & ComponentProps<'span'>) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<span className={cn('inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground', className)} {...props}>
+			<IconRefresh className="size-3.5" />
+			{t('session.retryingAt', { when: formatTimeOrDayAndTime(at, locale) })}
+		</span>
+	)
+}
+
+/**
+ * "Escalada pelo supervisor" — the whole escalation (owner, 20/11): a badge and a timeline moment, nobody messaged.
+ * Shown until the task moves again (a stop resolved, the task declaring something) — the read side decides.
+ */
+export function EscalatedBadge({ at, className, ...props }: { at: string } & ComponentProps<'span'>) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<span
+			className={cn('inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-foreground', className)}
+			title={formatDayAndTime(at, locale)}
+			{...props}
+		>
+			<IconFlag className="size-3.5" />
+			{t('session.escalatedBySupervisor')}
 		</span>
 	)
 }
@@ -117,6 +155,8 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 				</span>
 			</div>
 			{item.waitingForProviderUntil && <ProviderWaitBadge until={item.waitingForProviderUntil} className="hidden md:inline-flex" />}
+			{item.retryingAt && <RetryWaitBadge at={item.retryingAt} className="hidden md:inline-flex" />}
+			{item.escalatedAt && <EscalatedBadge at={item.escalatedAt} className="hidden md:inline-flex" />}
 			<Badge className={cn('shrink-0', issueStatusChipClass[item.status])}>{enumLabel('IssueStatus', item.status)}</Badge>
 		</Link>
 	)

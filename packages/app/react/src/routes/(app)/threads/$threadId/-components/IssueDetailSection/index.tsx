@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils'
 import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
 import { Dot } from '@/components/console/StatusDot'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
-import { ProviderWaitBadge } from '@/components/console/IssueRow'
+import { EscalatedBadge, ProviderWaitBadge, RetryWaitBadge } from '@/components/console/IssueRow'
 import { IssueTimeline } from './IssueTimeline'
 import { TranscriptBubble } from '../TranscriptBubble'
 import { StopAskCard } from '../StopAskCard'
@@ -115,6 +115,8 @@ export function IssueDetailSection({
 						{data.issue.meta ? ` · ${data.issue.meta}` : ''}
 					</p>
 					{data.issue.waitingForProviderUntil && <ProviderWaitBadge until={data.issue.waitingForProviderUntil} />}
+					{data.issue.retryingAt && <RetryWaitBadge at={data.issue.retryingAt} />}
+					{data.issue.escalatedAt && <EscalatedBadge at={data.issue.escalatedAt} />}
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					{/* Dispatch by map (`issueStatusChipClass`, module scope) — never a chain on the discriminant. */}

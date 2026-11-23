@@ -10906,6 +10906,11 @@
                               },
                               "source": {
                                 "$ref": "#/components/schemas/NudgeSource"
+                              },
+                              "outOf": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -10913,7 +10918,8 @@
                               "id",
                               "at",
                               "ordinal",
-                              "source"
+                              "source",
+                              "outOf"
                             ],
                             "additionalProperties": false
                           },

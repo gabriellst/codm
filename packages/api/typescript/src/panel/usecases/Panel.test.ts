@@ -7,8 +7,11 @@ import {
 	IssueLifeState,
 	IssueStatus,
 	IssueTimelineItemKind,
+	NudgeSource,
 	PublishRunOutcome,
 	QuotaState,
+	SupervisorVerdict,
+	SuspicionReason,
 } from '@codm/contracts-typescript/wire/enums'
 import type { Batch, PanelHealth } from '@shared/objects'
 import type { IssueTimelineItem } from '@shared/schemas'
@@ -122,6 +125,48 @@ describe('panel — sync, public reads, rotation', () => {
 		const token = await tokenOf(OWNER, GROUP)
 		expect((await testBed.resolve(GetPanelBoard).execute({ token })).issues[0]?.lifeState).toBe(IssueLifeState.WAITING_BUDGET)
 		const detail = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
+		expect(detail.timeline).toEqual(timeline)
+	})
+
+	it('fase 5 (pg 0009) — a WAITING_RETRY issue with its retry time, the escalation and the three new moments read back', async () => {
+		const timeline: IssueTimelineItem[] = [
+			TURN,
+			{
+				kind: IssueTimelineItemKind.NUDGED,
+				id: 'n-1',
+				at: '2026-11-13T10:01:00.000Z',
+				ordinal: 1,
+				source: NudgeSource.RECONCILER,
+				outOf: 2,
+			},
+			{
+				kind: IssueTimelineItemKind.RETRY_SCHEDULED,
+				id: 'r-1',
+				at: '2026-11-13T10:02:00.000Z',
+				attempt: 2,
+				maxAttempts: 5,
+				retryAt: '2026-11-13T10:06:00.000Z',
+			},
+			{
+				kind: IssueTimelineItemKind.SUPERVISOR_REVIEWED,
+				id: 's-1',
+				at: '2026-11-13T10:40:00.000Z',
+				reason: SuspicionReason.STALLED_OPEN,
+				verdict: SupervisorVerdict.ESCALATE,
+			},
+		]
+		const retryingAt = '2026-11-13T10:06:00.000Z'
+		const escalatedAt = '2026-11-13T10:40:00.000Z'
+		await sync(
+			OWNER,
+			[{ threadId: GROUP, name: 'A' }],
+			[issue({ lifeState: IssueLifeState.WAITING_RETRY, retryingAt, escalatedAt, timeline })],
+		)
+		const token = await tokenOf(OWNER, GROUP)
+		const [card] = (await testBed.resolve(GetPanelBoard).execute({ token })).issues
+		expect(card).toMatchObject({ lifeState: IssueLifeState.WAITING_RETRY, retryingAt, escalatedAt })
+		const detail = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
+		expect(detail.issue).toMatchObject({ retryingAt, escalatedAt })
 		expect(detail.timeline).toEqual(timeline)
 	})
 

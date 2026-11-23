@@ -51,7 +51,9 @@ export const PublishRunSchema = z.object({
  * records it as a fact and `issue` reads that fact back into the timeline. The facts (`agent.issue.nudged`,
  * `agent.mailbox.retry_scheduled`, `agent.supervisor.reviewed`) compose these shapes, keyed on the issue
  * (`entity_id`), so the reader parses exactly what the producer wrote.
- *  - NUDGE: which nudge of the episode (1 declare, 2 finish the step and declare) and who sent it.
+ *  - NUDGE: which nudge of the episode (1 declare, 2 finish the step and declare) and who sent it. The timeline item
+ *    adds `outOf` — how many nudges an episode gets before the stall (`NUDGES_BEFORE_STALL`), declared by the reader so
+ *    no screen hard-codes the "de 2".
  *  - RETRY: attempt n of max, and when the next one runs (ISO instant) — never the error's text.
  *  - SUPERVISOR REVIEW: why the supervisor looked and what it decided. Only an ACTED verdict reaches the timeline.
  */
@@ -154,7 +156,7 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal(IssueTimelineItemKind.PUBLISH_RAN), id, at, ...PublishRunSchema.shape }),
 	// Empurrão (fase 5, item 1): the task ended a turn without declaring anything and got nudge `ordinal` — shown in
 	// place of the reminder's STEER.
-	z.object({ kind: z.literal(IssueTimelineItemKind.NUDGED), id, at, ...NudgeMarkSchema.shape }),
+	z.object({ kind: z.literal(IssueTimelineItemKind.NUDGED), id, at, ...NudgeMarkSchema.shape, outOf: z.number().int().min(1) }),
 	// Nova tentativa (fase 5, item 2): a failed turn will be tried again — attempt `attempt` of `maxAttempts`, at `retryAt`.
 	z.object({ kind: z.literal(IssueTimelineItemKind.RETRY_SCHEDULED), id, at, ...RetryScheduledSchema.shape }),
 	// Supervisor (fase 5, item 3): it ACTED on the task — why it looked and what it decided (a verdict only

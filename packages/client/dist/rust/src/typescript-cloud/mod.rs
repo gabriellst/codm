@@ -3581,6 +3581,7 @@ pub mod types {
     ///              "id",
     ///              "kind",
     ///              "ordinal",
+    ///              "outOf",
     ///              "source"
     ///            ],
     ///            "properties": {
@@ -3597,6 +3598,11 @@ pub mod types {
     ///                ]
     ///              },
     ///              "ordinal": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "outOf": {
     ///                "type": "integer",
     ///                "maximum": 9007199254740991.0,
     ///                "minimum": 1.0
@@ -4750,6 +4756,7 @@ pub mod types {
     ///        "id",
     ///        "kind",
     ///        "ordinal",
+    ///        "outOf",
     ///        "source"
     ///      ],
     ///      "properties": {
@@ -4766,6 +4773,11 @@ pub mod types {
     ///          ]
     ///        },
     ///        "ordinal": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "outOf": {
     ///          "type": "integer",
     ///          "maximum": 9007199254740991.0,
     ///          "minimum": 1.0
@@ -4995,6 +5007,8 @@ pub mod types {
             at: ::std::string::String,
             id: ::std::string::String,
             ordinal: ::std::num::NonZeroU64,
+            #[serde(rename = "outOf")]
+            out_of: ::std::num::NonZeroU64,
             source: ::codm_contracts_rust::wire::enums::NudgeSource,
         },
         #[serde(rename = "RETRY_SCHEDULED")]
@@ -7357,6 +7371,7 @@ pub mod types {
     ///                    "id",
     ///                    "kind",
     ///                    "ordinal",
+    ///                    "outOf",
     ///                    "source"
     ///                  ],
     ///                  "properties": {
@@ -7373,6 +7388,11 @@ pub mod types {
     ///                      ]
     ///                    },
     ///                    "ordinal": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 1.0
+    ///                    },
+    ///                    "outOf": {
     ///                      "type": "integer",
     ///                      "maximum": 9007199254740991.0,
     ///                      "minimum": 1.0
@@ -8188,6 +8208,7 @@ pub mod types {
     ///              "id",
     ///              "kind",
     ///              "ordinal",
+    ///              "outOf",
     ///              "source"
     ///            ],
     ///            "properties": {
@@ -8204,6 +8225,11 @@ pub mod types {
     ///                ]
     ///              },
     ///              "ordinal": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 1.0
+    ///              },
+    ///              "outOf": {
     ///                "type": "integer",
     ///                "maximum": 9007199254740991.0,
     ///                "minimum": 1.0
@@ -8923,6 +8949,7 @@ pub mod types {
     ///        "id",
     ///        "kind",
     ///        "ordinal",
+    ///        "outOf",
     ///        "source"
     ///      ],
     ///      "properties": {
@@ -8939,6 +8966,11 @@ pub mod types {
     ///          ]
     ///        },
     ///        "ordinal": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "outOf": {
     ///          "type": "integer",
     ///          "maximum": 9007199254740991.0,
     ///          "minimum": 1.0
@@ -9165,6 +9197,8 @@ pub mod types {
             at: ::std::string::String,
             id: ::std::string::String,
             ordinal: ::std::num::NonZeroU64,
+            #[serde(rename = "outOf")]
+            out_of: ::std::num::NonZeroU64,
             source: ::codm_contracts_rust::wire::enums::NudgeSource,
         },
         #[serde(rename = "RETRY_SCHEDULED")]

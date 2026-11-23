@@ -929,8 +929,11 @@
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…",
-		"timelineNudged": "empurrão {{ordinal}} · {{source}}",
-		"timelineRetryScheduled": "tentativa {{attempt}} de {{max}} · {{time}}"
+		"timelineNudged": "empurrão {{ordinal}} de {{outOf}} · {{source}}",
+		"timelineRetryScheduled": "tentativa {{attempt}} de {{max}} · {{time}}",
+		"timelineSupervisor": "o supervisor {{verdict}} · motivo: {{reason}}",
+		"retryingAt": "Nova tentativa às {{when}}",
+		"escalatedBySupervisor": "Escalada pelo supervisor"
 	},
 	"settings": {
 		"agentProviders": "Provedores de agentes",

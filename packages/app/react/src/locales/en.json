@@ -929,8 +929,11 @@
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
 		"waitingTerminal": "Waiting for terminal output…",
-		"timelineNudged": "nudge {{ordinal}} · {{source}}",
-		"timelineRetryScheduled": "attempt {{attempt}} of {{max}} · {{time}}"
+		"timelineNudged": "nudge {{ordinal}} of {{outOf}} · {{source}}",
+		"timelineRetryScheduled": "attempt {{attempt}} of {{max}} · {{time}}",
+		"timelineSupervisor": "the supervisor {{verdict}} · reason: {{reason}}",
+		"retryingAt": "Retrying at {{when}}",
+		"escalatedBySupervisor": "Escalated by the supervisor"
 	},
 	"settings": {
 		"agentProviders": "Agent providers",

@@ -582,6 +582,12 @@ export type SyncPanelMutationRequest = {
              * @type string
             */
             source: NudgeSource;
+            /**
+             * @minLength 1
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            outOf: number;
         } | {
             /**
              * @type string

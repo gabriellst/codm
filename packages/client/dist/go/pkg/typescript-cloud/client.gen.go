@@ -1655,6 +1655,7 @@ type GetPanelIssue200JSONResponseBodyTimeline14 struct {
 	Id      string      `json:"id"`
 	Kind    string      `json:"kind"`
 	Ordinal int         `json:"ordinal"`
+	OutOf   int         `json:"outOf"`
 	Source  NudgeSource `json:"source"`
 }
 
@@ -1980,6 +1981,7 @@ type SyncPanelJSONBodyIssuesTimeline14 struct {
 	Id      string      `json:"id"`
 	Kind    string      `json:"kind"`
 	Ordinal int         `json:"ordinal"`
+	OutOf   int         `json:"outOf"`
 	Source  NudgeSource `json:"source"`
 }
 
