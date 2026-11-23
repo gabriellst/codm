@@ -2538,6 +2538,10 @@ export type ListenEvents200 = ({
          * @type string | undefined
         */
         finalArtifactId?: string;
+        /**
+         * @type string | undefined
+        */
+        answersEntryId?: string;
     };
 } | {
     /**

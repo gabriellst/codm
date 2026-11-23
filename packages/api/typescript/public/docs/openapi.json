@@ -8374,6 +8374,9 @@
                             },
                             "finalArtifactId": {
                               "type": "string"
+                            },
+                            "answersEntryId": {
+                              "type": "string"
                             }
                           },
                           "required": [

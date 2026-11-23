@@ -693,7 +693,8 @@ get "reason"(){
 "key": z.string(),
 "completedAt": z.iso.datetime(),
 "summary": z.optional(z.string()),
-"finalArtifactId": z.optional(z.string())
+"finalArtifactId": z.optional(z.string()),
+"answersEntryId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),
