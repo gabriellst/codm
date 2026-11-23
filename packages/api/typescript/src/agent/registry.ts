@@ -27,6 +27,7 @@ import {
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 import { DeclaredWaitReader, LibSqlDeclaredWaitReader, MockDeclaredWaitReader } from './services/DeclaredWaitReader'
 import { LibSqlSuspectIssueReader, MockSuspectIssueReader, SuspectIssueReader } from './services/SuspectIssueReader'
+import { LibSqlOpenStopReader, MockOpenStopReader, OpenStopReader } from './services/OpenStopReader'
 import { IssueSupervisor, MockIssueSupervisor, ModelIssueSupervisor } from './services/IssueSupervisor'
 import { SupervisorAgent, SupervisorPromptBuilder } from './agents/SupervisorAgent'
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
@@ -207,6 +208,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: DeclaredWaitReader, mock: MockDeclaredWaitReader, integration: LibSqlDeclaredWaitReader, real: LibSqlDeclaredWaitReader },
 	// The supervisor's suspects (fase 5, item 3): declared rules over the store wherever there is a database.
 	{ token: SuspectIssueReader, mock: MockSuspectIssueReader, integration: LibSqlSuspectIssueReader, real: LibSqlSuspectIssueReader },
+	// The rails re-checked when the supervisor acts (fase 5, S5): the task's open stops, read again in the action's transaction.
+	{ token: OpenStopReader, mock: MockOpenStopReader, integration: LibSqlOpenStopReader, real: LibSqlOpenStopReader },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

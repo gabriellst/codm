@@ -35,7 +35,8 @@ import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { DeclaredWaitReader, MockDeclaredWaitReader } from '../services/DeclaredWaitReader'
 import { IssueTurnAborter, type IssueTurnHandle } from '../services/IssueTurnAborter'
-import { SuspectIssueReader } from '../services/SuspectIssueReader'
+import { SUSPICION_OF_OPEN_STOP, SuspectIssueReader } from '../services/SuspectIssueReader'
+import { isResolutionApplicable } from '@thread/utils/StopResolutions'
 import { ActOnSupervisorVerdict } from './ActOnSupervisorVerdict'
 import { ReconcileStalledIssues } from './ReconcileStalledIssues'
 
@@ -164,6 +165,32 @@ describe('ActOnSupervisorVerdict', () => {
 			expect(PUBLISH_AUTHORIZED_BY[payload.resolution](resolved)).toBe(false)
 			// Nobody is written to: no delivery to the channel came of it.
 			expect(await deliveries()).toBe(before)
+		})
+
+		it('the resume stays in AUTO after an APPROVE that elevated — it never inherits the last resolver`s posture', async () => {
+			const task = await givenTask({ stop: StopKind.APPROVAL_NEEDED })
+			const threads = testBed.resolve(ThreadRepository)
+			const thread = await threads.findById(task.threadId)
+			const approval = await stopOf(task.stop?.stopId ?? '')
+			if (!thread || !approval) throw new Error('scene not persisted')
+			// Someone who may release approves: the approval's own resume runs elevated (BYPASS).
+			thread.resolveStop(approval, StopResolution.APPROVE, PermissionPosture.BYPASS)
+			await threads.save(thread)
+			await testBed.resolve(DomainEventRepository).saveMany(thread.pullDomainEvents())
+			await settle()
+			const [approved, ...others] = await drain(task.issueId)
+			expect(others).toHaveLength(0)
+			expect(approved?.posture).toBe(PermissionPosture.BYPASS)
+
+			// Later the task goes quiet and the supervisor retries the stall: AUTO, whatever came before.
+			const stall = await givenStop(testBed, { threadId: task.threadId, issueId: task.issueId, kind: StopKind.STALLED })
+			expect((await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.NUDGE)).acted).toBe(true)
+			expect((await stopOf(stall.stopId))?.resolution).toBe(StopResolution.AUTO_RETRY)
+			await settle()
+			const [resume, ...rest] = await drain(task.issueId)
+			expect(rest).toHaveLength(0)
+			expect(resume?.claimClass).toBe(MailboxClaimClass.REMINDER)
+			expect(resume?.posture).toBe(PermissionPosture.AUTO)
 		})
 
 		it("the resume never jumps ahead of a person's answer on another task, though it was queued first", async () => {
@@ -313,6 +340,40 @@ describe('ActOnSupervisorVerdict', () => {
 			await givenStop(testBed, { threadId: task.threadId, issueId: task.issueId, kind: StopKind.APPROVAL_NEEDED })
 			expect(await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.NUDGE)).toEqual(refused(SupervisorFallback.PERSON_STOP))
 			expect((await stopOf(task.stop?.stopId ?? ''))?.resolvedAt).toBeUndefined()
+		})
+
+		it("a person's stop open beside the stall is never escalated either — no badge, no timeline moment", async () => {
+			const task = await givenTask({ stop: StopKind.STALLED })
+			await givenStop(testBed, { threadId: task.threadId, issueId: task.issueId, kind: StopKind.APPROVAL_NEEDED })
+			expect(await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.ESCALATE)).toEqual(refused(SupervisorFallback.PERSON_STOP))
+			const timeline = await assembleIssueTimeline(testBed.resolve(LibSqlDatabaseDriver), task.issueId, 'Test issue')
+			expect(timeline.filter(item => item.kind === IssueTimelineItemKind.SUPERVISOR_REVIEWED)).toHaveLength(0)
+			const overview = await testBed.resolve(GetIssuesOverview).execute({ ownerId: MOCK_CLOUD_OWNER_ID, includeArchived: false })
+			const card = overview.groups.flatMap(group => group.items).find(item => item.issueId === task.issueId)
+			expect(card?.escalatedAt).toBeUndefined()
+		})
+
+		it("a silent live turn whose task now waits on a person is not escalated (the person's stop wins)", async () => {
+			const task = await givenTask()
+			await givenStop(testBed, { threadId: task.threadId, issueId: task.issueId, kind: StopKind.HUMAN_REQUESTED })
+			handles.push(testBed.resolve(IssueTurnAborter).begin(task.issueId))
+			expect(await act(task, SuspicionReason.SILENT_TURN, SupervisorVerdict.ESCALATE)).toEqual(refused(SupervisorFallback.PERSON_STOP))
+		})
+
+		it('a stall someone resolved first is not escalated: the suspicion was about that stop', async () => {
+			const task = await givenTask({ stop: StopKind.STALLED })
+			const threads = testBed.resolve(ThreadRepository)
+			const thread = await threads.findById(task.threadId)
+			const stop = await stopOf(task.stop?.stopId ?? '')
+			if (!thread || !stop) throw new Error('scene not persisted')
+			thread.resolveStop(stop, StopResolution.RETRY, PermissionPosture.AUTO)
+			await threads.save(thread)
+			expect(await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.ESCALATE)).toEqual(refused(SupervisorFallback.NO_STOP))
+		})
+
+		it("one rule for a person's stop: what the supervisor never suspects is exactly what the thread never retries", () => {
+			for (const kind of Object.values(StopKind))
+				expect(SUSPICION_OF_OPEN_STOP[kind] === null).toBe(!isResolutionApplicable(kind, StopResolution.AUTO_RETRY))
 		})
 
 		it('a live turn, or work already queued, gets no turn beside it', async () => {

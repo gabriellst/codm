@@ -51,6 +51,10 @@ const SUPERVISOR_ALLOWED_PORTS: readonly { module: string; why: string; names?: 
 	{ module: '@issue/services/IssueHold', why: 'READ: a paused issue or conversation is never touched' },
 	{ module: '../services/DeclaredWaitReader', why: 'READ: a task waiting for feedback is never touched' },
 	{
+		module: '../services/OpenStopReader',
+		why: 'READ: the task`s open stops, re-checked before any verdict — a person`s stop is never touched',
+	},
+	{
 		module: '../services/LiveTurnReader',
 		why: 'READ: a live turn is never stopped nor run beside — the read-only face of the turn registry, no abort in reach',
 	},

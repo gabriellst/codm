@@ -16,10 +16,12 @@
  *  - `CLOSED` — the task was completed or archived since the rule saw it.
  *  - `HELD` — the issue or its conversation is paused (`IssueHold`).
  *  - `WAITING` — the last turn asked for feedback (`DeclaredWaitReader`): a wait without a deadline.
- *  - `PERSON_STOP` — a stop waiting on a person is open (`SupervisorRetryOutcome.PERSON_STOP`).
+ *  - `PERSON_STOP` — a stop waiting on a person is open (`OpenStopReader`, for every verdict — an escalation included;
+ *    `SupervisorRetryOutcome.PERSON_STOP` is the retry's backstop).
  *  - `LIVE_TURN` — a turn of the task is running, or work for it is queued / deferred: the supervisor never starts a
  *    turn beside one, and never stops one (only `ESCALATE` flags a live turn).
- *  - `NO_STOP` — the retry found no open stall or provider-error stop (someone resolved it first).
+ *  - `NO_STOP` — the stall / provider error the suspicion was about is no longer open (someone resolved it first),
+ *    for every verdict; or the retry found none to resolve.
  */
 export enum SupervisorFallback {
 	NOT_ENTITLED = 'NOT_ENTITLED',

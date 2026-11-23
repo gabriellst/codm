@@ -11,6 +11,7 @@ import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { DeclaredWaitReader } from '../services/DeclaredWaitReader'
 import { LiveTurnReader } from '../services/LiveTurnReader'
 import { NudgeQueue } from '../services/NudgeQueue'
+import { OpenStopReader } from '../services/OpenStopReader'
 import { SUSPICION_OF_OPEN_STOP } from '../services/SuspectIssueReader'
 import { AgentSupervisorReviewedEvent } from '../events/AgentSupervisorReviewedEvent'
 import { NUDGES_BEFORE_STALL } from '../objects/NudgePayload'
@@ -89,10 +90,14 @@ type Carried = { acted: true; sessionRestarted?: boolean } | { acted: false; fal
  * Never a merge, a publish, a priority, an answer for a person, a message to anyone; no model text reaches a session.
  *
  * ### The rails, re-checked HERE (the model call sat between the rule and now)
- * Never on a task completed or archived since (`CLOSED`), a paused issue or conversation (`HELD`), a task that asked for feedback (`WAITING`), a person's stop
- * (`PERSON_STOP`); a verdict that starts a turn never runs beside a live turn or queued / deferred work (`LIVE_TURN`)
- * — a silent live turn is only ever flagged, the inactivity watchdog stays the one that kills. A refusal leaves the
- * task alone and is recorded as `LEAVE` with the rail's name, `acted: false`.
+ * Never on a task completed or archived since (`CLOSED`), a paused issue or conversation (`HELD`), a task that asked for
+ * feedback (`WAITING`), a person's stop open (`PERSON_STOP`), nor on a stop-based suspicion whose stop someone resolved
+ * meanwhile (`NO_STOP`) — for EVERY verdict, an escalation included: a badge on a task that waits on a person, or that
+ * was already unblocked, is a false alarm. A verdict that starts a turn never runs beside a live turn or queued /
+ * deferred work (`LIVE_TURN`) — a silent live turn is only ever flagged, the inactivity watchdog stays the one that
+ * kills. A refusal leaves the task alone and is recorded as `LEAVE` with the rail's name, `acted: false`. The open stops
+ * are read here (`OpenStopReader`) with the suspicion reader's own table; `ApplySupervisorRetry` keeps its own check as
+ * the backstop of the retry.
  */
 @injectable()
 export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdictInputSchema, typeof ActOnSupervisorVerdictOutputSchema> {
@@ -111,6 +116,7 @@ export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdic
 	constructor(
 		private readonly hold: IssueHold,
 		private readonly declared: DeclaredWaitReader,
+		private readonly openStops: OpenStopReader,
 		private readonly turns: LiveTurnReader,
 		private readonly nudges: NudgeQueue,
 		private readonly sessions: AgentSessionRepository,
@@ -158,6 +164,11 @@ export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdic
 		if (!open.some(issue => issue.issueId === issueId)) return { acted: false, fallback: SupervisorFallback.CLOSED }
 		if (await this.hold.isHeld(issueId)) return { acted: false, fallback: SupervisorFallback.HELD }
 		if ((await this.declared.waiting([issueId], tx)).has(issueId)) return { acted: false, fallback: SupervisorFallback.WAITING }
+		// What each open stop says, by the suspicion reader's own table: `null` is a person's stop.
+		const suspicions = (await this.openStops.openStopKinds(issueId, tx)).map(kind => SUSPICION_OF_OPEN_STOP[kind])
+		if (suspicions.includes(null)) return { acted: false, fallback: SupervisorFallback.PERSON_STOP }
+		if (reasonHasStop(input.suspect.reason) && !suspicions.includes(input.suspect.reason))
+			return { acted: false, fallback: SupervisorFallback.NO_STOP }
 		if (VERDICT_STARTS_A_TURN[input.decision.verdict]) {
 			const busy = this.turns.liveTurn(issueId) !== undefined || (await this.nudges.hasWork(issueId, tx))
 			if (busy) return { acted: false, fallback: SupervisorFallback.LIVE_TURN }
