@@ -13,6 +13,7 @@
  *
  * The safety rails re-checked when the verdict is carried out (fase 5, S5 — the model call sits between the rule and
  * the action, so what held then may not hold now). Each leaves the task alone, recorded `acted: false`:
+ *  - `CLOSED` — the task was completed or archived since the rule saw it.
  *  - `HELD` — the issue or its conversation is paused (`IssueHold`).
  *  - `WAITING` — the last turn asked for feedback (`DeclaredWaitReader`): a wait without a deadline.
  *  - `PERSON_STOP` — a stop waiting on a person is open (`SupervisorRetryOutcome.PERSON_STOP`).
@@ -29,6 +30,7 @@ export enum SupervisorFallback {
 	NOT_ADMITTED = 'NOT_ADMITTED',
 	LOW_CONFIDENCE = 'LOW_CONFIDENCE',
 	CAPPED = 'CAPPED',
+	CLOSED = 'CLOSED',
 	HELD = 'HELD',
 	WAITING = 'WAITING',
 	PERSON_STOP = 'PERSON_STOP',

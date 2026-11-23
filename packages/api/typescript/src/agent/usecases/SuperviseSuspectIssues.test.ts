@@ -199,6 +199,39 @@ describe('SuperviseSuspectIssues', () => {
 		expect(byIssue.get(escalatedToo.issueId)).toMatchObject({ verdict: SupervisorVerdict.LEAVE, fallback: SupervisorFallback.CAPPED })
 	})
 
+	/**
+	 * THE CEILING IN ACT (S5): past it the verdict the model gave is NOT carried out — the task is escalated once (badge
+	 * and timeline, acted) and then left (not acted). Falsifier: cap only in the record and act on the model's verdict,
+	 * and the stall below is retried a third time in a day.
+	 */
+	it('ACT: past a ceiling the stall is not retried — escalated once (acted), then left (not acted)', async () => {
+		const nudgedTwice = await givenSuspect({ actedLastDay: [SupervisorVerdict.NUDGE, SupervisorVerdict.NUDGE] })
+		const first = await givenStop(testBed, { threadId: nudgedTwice.threadId, issueId: nudgedTwice.issueId, kind: StopKind.STALLED })
+		supervisor.script(nudgedTwice.issueId, { verdict: SupervisorVerdict.NUDGE, confidence: 0.9 })
+		const escalatedToo = await givenSuspect({
+			actedLastDay: [SupervisorVerdict.NUDGE, SupervisorVerdict.NUDGE, SupervisorVerdict.ESCALATE],
+		})
+		const second = await givenStop(testBed, { threadId: escalatedToo.threadId, issueId: escalatedToo.issueId, kind: StopKind.STALLED })
+		supervisor.script(escalatedToo.issueId, { verdict: SupervisorVerdict.NUDGE, confidence: 0.9 })
+
+		await testBed.resolve(ActingSupervisor).execute({})
+
+		const threads = testBed.resolve(ThreadRepository)
+		expect((await threads.findStop(first.stopId))?.resolvedAt).toBeUndefined()
+		expect((await threads.findStop(second.stopId))?.resolvedAt).toBeUndefined()
+		const byIssue = new Map((await facts()).map(fact => [fact.entityId, fact.payload]))
+		expect(byIssue.get(nudgedTwice.issueId)).toMatchObject({
+			verdict: SupervisorVerdict.ESCALATE,
+			fallback: SupervisorFallback.CAPPED,
+			acted: true,
+		})
+		expect(byIssue.get(escalatedToo.issueId)).toMatchObject({
+			verdict: SupervisorVerdict.LEAVE,
+			fallback: SupervisorFallback.CAPPED,
+			acted: false,
+		})
+	})
+
 	it('no more than SUPERVISOR_MAX_PER_PASS tasks per pass', async () => {
 		for (let index = 0; index < 7; index++) await givenSuspect()
 		expect((await testBed.resolve(ObservingSupervisor).execute({})).reviewed).toHaveLength(5)

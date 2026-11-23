@@ -132,6 +132,18 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'  degrau 3 (integration event) — NOT NEEDED. The action and its audit fact share one transaction so the ' +
 			'per-task ceilings never miss an action; a fact for someone else to turn into the resolution would split them.',
 	},
+	{
+		file: 'agent/usecases/ActOnSupervisorVerdict.ts',
+		imports: 'issue/usecases',
+		why:
+			'A task the supervisor retried goes back to WORK through `ReopenIssue` — the issue`s own transition, the one ' +
+			'`SteerIssueTurn` already composes (`NEEDS_INPUT → WORKING`, guarded by `ISSUE_NOT_REOPENABLE`). Left at ' +
+			'`NEEDS_INPUT` with no open stop, a quiet resumed turn would never reach the reconciler, and the owner`s "one ' +
+			'automatic turn, then blocked" (20/11) would not hold. Same ladder as `SteerIssueTurn`: degrau 1 would scatter ' +
+			'`Issue`s lifecycle invariant into `agent`; degrau 2 TAKEN — the declared `agent → issue` edge, one more file, ' +
+			'its whole reach gated by `tests/architecture/supervisor-reach.test.ts`; degrau 3 not needed — the reopen rides ' +
+			'the transaction of the retry and its audit fact.',
+	},
 	...(
 		[
 			{ file: 'ui/usecases/CompleteOnboarding.ts', imports: 'workspace/usecases' },

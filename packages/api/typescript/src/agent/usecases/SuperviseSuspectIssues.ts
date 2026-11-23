@@ -12,7 +12,7 @@ import { SupervisorFallback } from '../enums/SupervisorFallback'
 import { SupervisorMode } from '../enums/SupervisorMode'
 import { SupervisorPassSkip } from '../enums/SupervisorPassSkip'
 import { capVerdict } from '../utils/SupervisorCaps'
-import { ActOnSupervisorVerdict, MODE_ACTS } from './ActOnSupervisorVerdict'
+import { ActOnSupervisorVerdict } from './ActOnSupervisorVerdict'
 
 /** One pass every 20 minutes (the objective asks 15–30) — the supervisor looks at what stayed stuck, not at every tick. */
 export const SUPERVISOR_INTERVAL_MS = 20 * 60_000
@@ -24,8 +24,6 @@ export const SUPERVISOR_MAX_PER_PASS = 5
  * from the installation on, within its safety rails; `OBSERVE` and `OFF` stay as settings).
  */
 export const SUPERVISOR_MODE_DEFAULT = SupervisorMode.ACT
-
-export { MODE_ACTS }
 
 export const SuperviseSuspectIssuesInputSchema = z.object({})
 export const SuperviseSuspectIssuesOutputSchema = z.object({

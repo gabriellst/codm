@@ -63,6 +63,11 @@ const SUPERVISOR_ALLOWED_PORTS: readonly { module: string; why: string; names?: 
 		why: 'RESTART: the task`s own session row gets the restart request (`requestHandoff`) — the agent`s own aggregate',
 	},
 	{ module: '../objects/NudgePayload', why: 'the nudge count (`NUDGES_BEFORE_STALL`)' },
+	{
+		module: '@issue/usecases/ReopenIssue',
+		why: 'a RETRIED task goes back to WORKING, as a steer reopens it — only after the retry applied, never on a completed one',
+	},
+	{ module: '@thread/services/OpenIssuesReader', why: 'READ: is the task still open, and does the retry need a reopen' },
 ]
 
 /** One import of a source text: the module, and the names it brings in (absent for a namespace / default / dynamic). */

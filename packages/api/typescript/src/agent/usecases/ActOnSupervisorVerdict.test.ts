@@ -193,12 +193,8 @@ describe('ActOnSupervisorVerdict', () => {
 			await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.NUDGE)
 			await settle()
 			expect(await drain(task.issueId)).toHaveLength(1)
-			// The resumed turn ran and said nothing: the issue is back at WORKING with nothing in flight.
-			const issue = await testBed.resolve(IssueRepository).findById(task.issueId)
-			if (issue && issue.status !== IssueStatus.WORKING) {
-				issue.status = IssueStatus.WORKING
-				await testBed.resolve(IssueRepository).save(issue)
-			}
+			// The retry put the task back to WORK (as a steer does); the resumed turn ran and said nothing.
+			expect((await testBed.resolve(IssueRepository).findById(task.issueId))?.status).toBe(IssueStatus.WORKING)
 
 			const out = await testBed.resolve(ReconcileStalledIssues).execute({})
 			expect(out).toEqual({ stalledIssueIds: [task.issueId], nudgedIssueIds: [] })
@@ -289,6 +285,14 @@ describe('ActOnSupervisorVerdict', () => {
 
 	describe('the safety rails, re-checked when acting', () => {
 		const refused = (fallback: SupervisorFallback) => ({ verdict: SupervisorVerdict.LEAVE, acted: false, fallback })
+
+		it('a task completed since the rule saw it is never touched (and never reopened)', async () => {
+			const task = await givenTask({ stop: StopKind.STALLED })
+			task.issue.complete()
+			await testBed.resolve(IssueRepository).save(task.issue)
+			expect(await act(task, SuspicionReason.STALLED_OPEN, SupervisorVerdict.NUDGE)).toEqual(refused(SupervisorFallback.CLOSED))
+			expect((await testBed.resolve(IssueRepository).findById(task.issueId))?.status).toBe(IssueStatus.COMPLETED)
+		})
 
 		it('a paused issue is never touched', async () => {
 			const task = await givenTask({ stop: StopKind.STALLED })

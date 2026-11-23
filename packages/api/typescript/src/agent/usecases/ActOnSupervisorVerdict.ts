@@ -3,6 +3,8 @@ import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { NudgeSource, ProviderKind, SupervisorVerdict, SuspicionReason } from '@codm/contracts-typescript/wire/enums'
 import { IssueHold } from '@issue/services/IssueHold'
+import { ReopenIssue } from '@issue/usecases/ReopenIssue'
+import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { ApplySupervisorRetry } from '@thread/usecases/ApplySupervisorRetry'
 import { SupervisorRetryOutcome } from '@thread/enums/SupervisorRetryOutcome'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
@@ -74,7 +76,8 @@ type Carried = { acted: true; sessionRestarted?: boolean } | { acted: false; fal
  * the facts) can never miss an action nor count one that rolled back.
  *
  * ### The three doors — and nothing else (`tests/architecture/supervisor-reach.test.ts`)
- *  - `NUDGE` ⇒ `thread/usecases/ApplySupervisorRetry` resolves the open stall / provider-error stop with `AUTO_RETRY`;
+ *  - `NUDGE` ⇒ `thread/usecases/ApplySupervisorRetry` resolves the open stall / provider-error stop with `AUTO_RETRY`
+ *    and the task goes back to WORKING (`ReopenIssue`, as a steer does);
  *    the resume is the LAST nudge of the episode (`REMINDER`, AUTO, `ordinal = NUDGES_BEFORE_STALL`) — one automatic
  *    turn, and if it goes nowhere the reconciler raises `STALLED` straight away (owner, 20/11).
  *  - `RESTART_WITH_NOTES` ⇒ the task's session is asked to restart (`AgentSession.requestHandoff`: the next turn opens a
@@ -86,7 +89,7 @@ type Carried = { acted: true; sessionRestarted?: boolean } | { acted: false; fal
  * Never a merge, a publish, a priority, an answer for a person, a message to anyone; no model text reaches a session.
  *
  * ### The rails, re-checked HERE (the model call sat between the rule and now)
- * Never on a paused issue or conversation (`HELD`), a task that asked for feedback (`WAITING`), a person's stop
+ * Never on a task completed or archived since (`CLOSED`), a paused issue or conversation (`HELD`), a task that asked for feedback (`WAITING`), a person's stop
  * (`PERSON_STOP`); a verdict that starts a turn never runs beside a live turn or queued / deferred work (`LIVE_TURN`)
  * — a silent live turn is only ever flagged, the inactivity watchdog stays the one that kills. A refusal leaves the
  * task alone and is recorded as `LEAVE` with the rail's name, `acted: false`.
@@ -112,6 +115,8 @@ export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdic
 		private readonly nudges: NudgeQueue,
 		private readonly sessions: AgentSessionRepository,
 		private readonly applyRetry: ApplySupervisorRetry,
+		private readonly openIssues: OpenIssuesReader,
+		private readonly reopenIssue: ReopenIssue,
 	) {
 		super()
 	}
@@ -147,7 +152,10 @@ export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdic
 
 	/** The rails first, then the verdict's door. */
 	private async carryOut(input: Input, tx: Transaction): Promise<Carried> {
-		const { issueId } = input.suspect
+		const { issueId, threadId } = input.suspect
+		// Completed or archived since the rule saw it: nothing to supervise any more.
+		const open = await this.openIssues.openIssues(threadId)
+		if (!open.some(issue => issue.issueId === issueId)) return { acted: false, fallback: SupervisorFallback.CLOSED }
 		if (await this.hold.isHeld(issueId)) return { acted: false, fallback: SupervisorFallback.HELD }
 		if ((await this.declared.waiting([issueId], tx)).has(issueId)) return { acted: false, fallback: SupervisorFallback.WAITING }
 		if (VERDICT_STARTS_A_TURN[input.decision.verdict]) {
@@ -157,10 +165,20 @@ export class ActOnSupervisorVerdict extends Handler<typeof ActOnSupervisorVerdic
 		return this.doors[input.decision.verdict](input, tx)
 	}
 
-	/** `NUDGE`: the thread's retry of the open stall / provider error — the rule and the resume are the thread's. */
+	/**
+	 * `NUDGE`: the thread's retry of the open stall / provider error — the rule and the resume are the thread's. A retried
+	 * task goes back to WORK, the way a steer reopens it (`ReopenIssue`, the issue's own transition): the stop had made
+	 * it `NEEDS_INPUT`, and left there a quiet resumed turn would never reach the reconciler — the "one automatic turn,
+	 * then blocked" of the owner's decision (20/11) needs the sweep to see it and raise `STALLED` straight away.
+	 */
 	private async retry(input: Input, tx: Transaction): Promise<Carried> {
-		const { outcome } = await this.applyRetry.execute({ issueId: input.suspect.issueId, now: input.now }, tx)
-		return RETRY_CARRIED[outcome]
+		const { issueId, threadId, ownerId } = input.suspect
+		const { outcome } = await this.applyRetry.execute({ issueId, now: input.now }, tx)
+		const carried = RETRY_CARRIED[outcome]
+		if (carried.acted && (await this.openIssues.steerableIssue(threadId, issueId, tx))?.needsReopen) {
+			await this.reopenIssue.execute({ ownerId, issueId }, tx)
+		}
+		return carried
 	}
 
 	/**
