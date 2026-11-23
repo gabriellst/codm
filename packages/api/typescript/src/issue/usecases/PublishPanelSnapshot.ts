@@ -8,6 +8,7 @@ import { BatchItemDestinationSchema, type PanelHealth } from '@shared/objects'
 import { PanelPublisher, type PanelBatchSnapshot, type PanelIssueSnapshot } from '../services/PanelPublisher'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { panelHealthOf, QuotaStatusReader } from '@agent/services/QuotaStatusReader'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
 import { assembleIssueTimeline } from '../utils/issueTimeline'
 
@@ -55,6 +56,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 		private readonly publisher: PanelPublisher,
 		private readonly logging: LoggingService,
 		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
 	) {
 		super()
 	}
@@ -79,7 +81,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 			lifeStateByIssue(
 				this.driver,
 				rows.map(row => ({ issueId: row.issueId, status: row.status as IssueStatus })),
-				this.quota.holdsIssueLane(),
+				{ budgetHeld: this.quota.holdsIssueLane(), declaredWait: this.declaredWait },
 			),
 			providerWaitByIssue(this.driver),
 			retryWaitByIssue(this.driver),

@@ -23,6 +23,7 @@ import {
 	MockIssueAttributesRepository,
 } from './repositories/IssueAttributesRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { DeclaredWaitReader, LibSqlDeclaredWaitReader, MockDeclaredWaitReader } from './services/DeclaredWaitReader'
 import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
 import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
 import { ProcessPublishCommandRunner, PublishCommandRunner, ScriptedPublishCommandRunner } from './services/PublishCommandRunner'
@@ -186,6 +187,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: LibSqlQuotaLedgerReader,
 		real: LibSqlQuotaLedgerReader,
 	},
+	// The declared wait (fase 5, item 1): a feedback asked in the last turn, read from the agent's own facts wherever there
+	// is a database — the reconciler and the issue's life state ask the same port, so they never disagree.
+	{ token: DeclaredWaitReader, mock: MockDeclaredWaitReader, integration: LibSqlDeclaredWaitReader, real: LibSqlDeclaredWaitReader },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

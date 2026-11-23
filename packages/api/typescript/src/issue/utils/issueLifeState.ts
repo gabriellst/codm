@@ -1,7 +1,8 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { z, type LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox, issues as issueTable, stops, threads } from '@codm/contracts/db'
-import { IssueLifeState, IssueStatus, MailboxDeferCause, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus, MailboxClaimClass, MailboxDeferCause, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import type { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 
 /** One unconsumed, unpoisoned queue item of the issue, reduced to what the rule reads. */
 export interface PendingItem {
@@ -12,7 +13,7 @@ export interface PendingItem {
 	 * is not deferred.
 	 */
 	deferCause?: MailboxDeferCause
-	/** The one declaration reminder (`ReconcileStalledIssues`). */
+	/** An automatic nudge (`ReconcileStalledIssues`) — its claim class is `REMINDER` (fase 5: the column, not the payload). */
 	reminder: boolean
 }
 
@@ -53,7 +54,8 @@ const isQueued = (item: PendingItem): boolean => item.deferCause === undefined |
  *     (`QuotaStatusReader.holdsIssueLane`, fase 4) → WAITING_BUDGET. In observation the budget holds nothing, so
  *     the issue stays QUEUED: the board never shows a hold that is not happening.
  *  4. Work is queued for a slot → QUEUED (or REMINDED for a queued reminder).
- *  5. An open stop asks someone → WAITING_PERSON.
+ *  5. An open stop asks someone, or the last turn DECLARED a wait on people (a feedback asked — `DeclaredWaitReader`,
+ *     fase 5: it waits without a deadline) → WAITING_PERSON.
  *  6. Nothing at all → STALLED.
  *
  * Work beats a stop on purpose: a resolved stop queues a steer, and an issue about to run again is not
@@ -66,6 +68,8 @@ export function lifeStateOf(input: {
 	openStops: number
 	/** The quota budget holds the ISSUE lane for real (enforced) — fase 4. */
 	budgetHeld: boolean
+	/** The last turn declared a wait on people (fase 5) — the same answer the reconciler excludes the issue by. */
+	declaredWait: boolean
 }): IssueLifeState {
 	if (input.status === IssueStatus.COMPLETED) return IssueLifeState.DONE
 	if (input.held) return IssueLifeState.PAUSED
@@ -77,20 +81,21 @@ export function lifeStateOf(input: {
 	const queued = input.pending.filter(isQueued)
 	if (queued.length > 0 && input.budgetHeld) return IssueLifeState.WAITING_BUDGET
 	if (queued.length > 0) return queued.every(item => item.reminder) ? IssueLifeState.REMINDED : IssueLifeState.QUEUED
-	if (input.openStops > 0) return IssueLifeState.WAITING_PERSON
+	if (input.openStops > 0 || input.declaredWait) return IssueLifeState.WAITING_PERSON
 	return IssueLifeState.STALLED
 }
 
 /**
  * The inputs of `lifeStateOf` for many issues at once: their pending queue items and open stop counts.
  * Three reads, whatever the number of issues — the board asks for every open issue on each refresh. The
- * third is the hold (issue ⋈ thread `paused`), read here rather than asked of every caller. `budgetHeld` is the
- * agent's answer (`QuotaStatusReader.holdsIssueLane()`) — the same for every issue: the budget is the account's.
+ * third is the hold (issue ⋈ thread `paused`), read here rather than asked of every caller. The agent answers the
+ * rest: `budgetHeld` (`QuotaStatusReader.holdsIssueLane()`) — the same for every issue: the budget is the account's —
+ * and which issues declared a wait (`DeclaredWaitReader`, one read for all of them).
  */
 export async function lifeStateByIssue(
 	driver: LibSqlDatabaseDriver,
 	issues: readonly { issueId: string; status: IssueStatus }[],
-	budgetHeld: boolean,
+	agent: { budgetHeld: boolean; declaredWait: DeclaredWaitReader },
 ): Promise<Map<string, IssueLifeState>> {
 	const ids = issues.map(issue => issue.issueId)
 	const states = new Map<string, IssueLifeState>()
@@ -103,7 +108,7 @@ export async function lifeStateByIssue(
 			claimedBy: agentMailbox.claimedBy,
 			leaseUntil: agentMailbox.leaseUntil,
 			deferCause: agentMailbox.deferCause,
-			payload: agentMailbox.payload,
+			claimClass: agentMailbox.claimClass,
 		})
 		.from(agentMailbox)
 		.where(
@@ -128,7 +133,7 @@ export async function lifeStateByIssue(
 			running: live && item.claimedBy !== null,
 			// No CHECK on the column (fase 5, S0a) — the enum closes it here. A cause only counts on a deferred row.
 			deferCause: deferred && item.deferCause !== null ? z.enum(MailboxDeferCause).parse(item.deferCause) : undefined,
-			reminder: isReminder(item.payload),
+			reminder: item.claimClass === MailboxClaimClass.REMINDER,
 		})
 		pending.set(item.issueId, list)
 	}
@@ -138,6 +143,8 @@ export async function lifeStateByIssue(
 		.leftJoin(threads, eq(threads.id, issueTable.threadId))
 		.where(inArray(issueTable.id, ids))
 	const held = new Set(heldRows.filter(row => row.issuePaused || row.threadPaused === true).map(row => row.issueId))
+
+	const declared = await agent.declaredWait.waiting(ids)
 
 	const openStops = new Map<string, number>()
 	for (const row of openStopRows) if (row.issueId) openStops.set(row.issueId, (openStops.get(row.issueId) ?? 0) + 1)
@@ -150,16 +157,10 @@ export async function lifeStateByIssue(
 				held: held.has(issue.issueId),
 				pending: pending.get(issue.issueId) ?? [],
 				openStops: openStops.get(issue.issueId) ?? 0,
-				budgetHeld,
+				budgetHeld: agent.budgetHeld,
+				declaredWait: declared.has(issue.issueId),
 			}),
 		)
 	}
 	return states
-}
-
-/** The payload mark of the declaration reminder (`ReconcileStalledIssues`). */
-const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
-
-function isReminder(payload: unknown): boolean {
-	return ReminderPayloadSchema.safeParse(payload).success
 }

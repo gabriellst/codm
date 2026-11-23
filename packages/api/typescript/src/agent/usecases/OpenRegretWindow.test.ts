@@ -7,6 +7,7 @@ import {
 	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
+	NudgeSource,
 	PermissionPosture,
 	RegretWindowOutcome,
 } from '@codm/contracts-typescript/wire/enums'
@@ -135,16 +136,17 @@ describe('OpenRegretWindow', () => {
 		expect(closed?.outcome).toBe(RegretWindowOutcome.PROCEEDED)
 	})
 
-	it('the automatic declaration reminder is not a message from anyone — it does not cancel', async () => {
+	// Fase 5: "is a nudge" is the COLUMN. Falsifier: read the payload again (or nothing) and this nudge cancels the push.
+	it('the automatic nudge is not a message from anyone — it does not cancel', async () => {
 		const ids = await givenWorkingIssue()
 		await testBed.resolve(MailboxRepository).enqueue({
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: ids.issueId,
 			kind: MailboxItemKind.STEER,
-			claimClass: MailboxClaimClass.STEER,
+			claimClass: MailboxClaimClass.REMINDER,
 			posture: PermissionPosture.AUTO,
-			payload: { text: 'declare o desfecho', declarationReminder: true },
+			payload: { text: 'declare o desfecho', nudge: { ordinal: 1, rootItemId: ids.issueId, source: NudgeSource.RECONCILER } },
 			dedupKey: `regret-test:reminder:${ids.issueId}`,
 		})
 		expect((await open(ids, 'git push'))?.outcome).toBe(RegretWindowOutcome.PROCEEDED)

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import { MailboxDeferCause, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxDeferCause, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
 	type ClaimedMailboxBundle,
@@ -284,7 +284,7 @@ export class MockMailboxRepository extends MailboxRepository {
 				r.targetKind === MailboxTargetKind.ISSUE &&
 				r.targetId === issueId &&
 				r.kind === MailboxItemKind.STEER &&
-				!(typeof r.payload === 'object' && r.payload !== null && 'declarationReminder' in r.payload),
+				r.claimClass !== MailboxClaimClass.REMINDER,
 		)
 	}
 }

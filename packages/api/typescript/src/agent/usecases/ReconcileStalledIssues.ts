@@ -2,18 +2,58 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxItemKind,
+	MailboxTargetKind,
+	NudgeSource,
+	PermissionPosture,
+	StopKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { StalledIssueReader, type StalledIssueRef } from '../services/StalledIssueReader'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { AgentIssueNudgedEvent } from '../events/AgentIssueNudgedEvent'
+import type { NudgePayload } from '../objects/NudgePayload'
 import { FactSource } from '../enums'
+
+/**
+ * HOW MANY NUDGES A QUIET TURN GETS before the sweep raises the visible block (fase 5, item 1): nudge 1 asks it to
+ * declare, nudge 2 to finish the step it stopped in and then declare. The supervisor's resume counts as the last one
+ * (`ordinal = NUDGES_BEFORE_STALL`), so a quiet turn after it is a `STALLED` straight away — never a new pair.
+ */
+export const NUDGES_BEFORE_STALL = 2
+type NudgeOrdinal = 1 | 2
+
+/**
+ * What each nudge says to the issue's session. The tools are named by purpose: the turn's own prompt
+ * (`IssueWorkAgent.declarationInstruction`) names them, and this is a follow-up in that session. Nudge 2 may WORK —
+ * always in AUTO, so the permission filter and the regret window hold — and says outright it authorizes nothing
+ * irreversible.
+ */
+export const NUDGE_TEXT: Readonly<Record<NudgeOrdinal, string>> = {
+	1:
+		'Your last turn ended without declaring where this issue stands, so nobody can tell whether it is done, ' +
+		'waiting on someone, or stuck. Declare it now with the reporting tools, and do not redo any work: ' +
+		'finished → mark the issue COMPLETED with a short summary; waiting for a decision or an approval (for ' +
+		'example "can I publish?") → ask for the decision; a question you can go on without → ask it with the ' +
+		'default you will follow; a preview for people to look at → request feedback on it. ' +
+		'Do not write anything for the group — this reminder is not shown to anyone.',
+	2:
+		'Your last turn ended without declaring where this issue stands, again. If you stopped in the middle of a ' +
+		'step, finish that step now; then declare with the reporting tools: finished → mark the issue COMPLETED with ' +
+		'a short summary; a decision you need → ask for it; what is missing and from whom → ask the question. ' +
+		'This nudge authorizes nothing new: do not publish, deploy, merge or do anything irreversible — if the next ' +
+		'step is one of those, ask for the decision instead. Do not write anything for the group — this nudge is not ' +
+		'shown to anyone.',
+}
 
 export const ReconcileStalledIssuesInputSchema = z.object({})
 export const ReconcileStalledIssuesOutputSchema = z.object({
 	/** Issues the sweep parked with a stop this pass. */
 	stalledIssueIds: z.array(z.uuid()),
-	/** Issues the sweep sent the one declaration reminder this pass, instead of a stop. */
-	remindedIssueIds: z.array(z.uuid()),
+	/** Issues the sweep nudged this pass (nudge 1 or 2), instead of a stop. */
+	nudgedIssueIds: z.array(z.uuid()),
 })
 
 /**
@@ -37,7 +77,18 @@ export const ReconcileStalledIssuesOutputSchema = z.object({
  * issue pedindo que ela declare em que pé está (concluí / preciso de decisão / preciso de uma
  * resposta). O turno do lembrete é silencioso — não vira `ISSUE_RESULT` (`RunIssueTurn`) — e a sessão
  * ainda tem o contexto quente. Se o lembrete também terminar calado, a passada seguinte estaciona a
- * issue com `DETAIL_AFTER_REMINDER`: aí sim é "parada sem motivo", e o texto diz isso.
+ * issue: aí sim é "parada sem motivo", e o texto diz isso.
+ *
+ * ### ATÉ DOIS EMPURRÕES (fase 5, item 1)
+ * O objetivo pede dois: o empurrão 1 é o lembrete acima; o 2 pede que a tarefa termine o passo em que parou e
+ * declare (`NUDGE_TEXT`). Só depois do 2 calado vem o `STALLED`, com `DETAIL_AFTER_NUDGES`. A contagem é declarada
+ * (`NUDGES_BEFORE_STALL`, `nextNudge`) sobre o último item consumido: "é empurrão" é a coluna `claim_class =
+ * REMINDER`, "qual empurrão" o payload declarado (`NudgePayloadSchema`) — nunca o `dedupKey`. Cada empurrão grava
+ * `agent.issue.nudged` na transação do enqueue (linha do tempo, contagem do supervisor).
+ *
+ * **Quem não é empurrado** (lista fechada): stop aberto de qualquer kind (a issue sai de `WORKING`); feedback
+ * pedido no último turno (`DeclaredWaitReader` — espera sem prazo, decisão do dono de 20/11); issue OU conversa
+ * pausada (`IssueHold`); item em voo de qualquer causa; fato no outbox ainda não despachado; arquivada; concluída.
  *
  * Uma issue que NUNCA teve turno (aberta sem trabalho na fila) não recebe lembrete — não há sessão para
  * lembrar — e é estacionada como sempre foi.
@@ -50,8 +101,8 @@ export const ReconcileStalledIssuesOutputSchema = z.object({
  * só no painel. As paradas antigas gravadas como `HUMAN_REQUESTED` ficam como estão (histórico).
  *
  * ### Idempotência sem registro de "já avisei"
- * Ela vem do PREDICADO. O lembrete é um item em voo, e uma issue com item em voo não aparece na
- * varredura; o `dedupKey` dele é o item que se calou, então uma passada repetida não manda outro. A
+ * Ela vem do PREDICADO. O empurrão é um item em voo, e uma issue com item em voo não aparece na
+ * varredura; o `dedupKey` dele é o episódio e o ordinal, então uma passada repetida não manda outro. A
  * parada leva a issue a `NEEDS_INPUT`, que também sai da varredura.
  *
  * A CADÊNCIA mora aqui, ao lado do que ela agenda. Um minuto: o predicado é um `SELECT` sobre um SQLite
@@ -66,20 +117,8 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 	static readonly repeat = { every: 60 * 1000 }
 
 	static readonly DETAIL = 'a execução terminou sem conclusão — nada estava em andamento quando a varredura passou'
-	static readonly DETAIL_AFTER_REMINDER =
-		'a tarefa terminou o turno sem dizer em que pé está, nem depois do lembrete — pode ter parado no meio'
-
-	/**
-	 * What the reminder says to the issue's session. The tools are named by purpose: the turn's own
-	 * prompt (`IssueWorkAgent.declarationInstruction`) names them, and this is a follow-up in that session.
-	 */
-	static readonly REMINDER =
-		'Your last turn ended without declaring where this issue stands, so nobody can tell whether it is done, ' +
-		'waiting on someone, or stuck. Declare it now with the reporting tools, and do not redo any work: ' +
-		'finished → mark the issue COMPLETED with a short summary; waiting for a decision or an approval (for ' +
-		'example "can I publish?") → ask for the decision; a question you can go on without → ask it with the ' +
-		'default you will follow; a preview for people to look at → request feedback on it. ' +
-		'Do not write anything for the group — this reminder is not shown to anyone.'
+	static readonly DETAIL_AFTER_NUDGES =
+		'a tarefa terminou o turno sem dizer em que pé está, nem depois de dois empurrões — pode ter parado no meio'
 
 	constructor(
 		private readonly stalled: StalledIssueReader,
@@ -90,13 +129,14 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 
 	protected async handle(_input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const orphans = await this.stalled.stalledIssues()
-		if (orphans.length === 0) return { stalledIssueIds: [], remindedIssueIds: [] }
+		if (orphans.length === 0) return { stalledIssueIds: [], nudgedIssueIds: [] }
 
-		const toRemind = orphans.filter(orphan => orphan.lastConsumedItemId !== null && !orphan.lastTurnWasReminder)
-		const toPark = orphans.filter(orphan => !toRemind.includes(orphan))
+		const plans = orphans.map(orphan => ({ orphan, next: ReconcileStalledIssues.nextNudge(orphan) }))
+		const toNudge = plans.flatMap(({ orphan, next }) => (next ? [{ orphan, ...next }] : []))
+		const toPark = plans.flatMap(({ orphan, next }) => (next ? [] : [orphan]))
 
 		await this.withTransaction(tx, async tx => {
-			for (const orphan of toRemind) await this.remind(orphan, tx)
+			for (const nudge of toNudge) await this.nudge(nudge.orphan, nudge.ordinal, nudge.rootItemId, tx)
 			for (const orphan of toPark) {
 				await this.domainEventRepository.save(
 					new AgentRunStopRaisedEvent({
@@ -107,7 +147,7 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 							issueId: orphan.issueId,
 							threadId: orphan.threadId,
 							kind: StopKind.STALLED,
-							detail: orphan.lastTurnWasReminder ? ReconcileStalledIssues.DETAIL_AFTER_REMINDER : ReconcileStalledIssues.DETAIL,
+							detail: orphan.lastNudge ? ReconcileStalledIssues.DETAIL_AFTER_NUDGES : ReconcileStalledIssues.DETAIL,
 							source: FactSource.INFERRED,
 						},
 					}),
@@ -116,21 +156,40 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 			}
 		})
 
-		return { stalledIssueIds: toPark.map(orphan => orphan.issueId), remindedIssueIds: toRemind.map(orphan => orphan.issueId) }
+		return { stalledIssueIds: toPark.map(orphan => orphan.issueId), nudgedIssueIds: toNudge.map(nudge => nudge.orphan.issueId) }
 	}
 
 	/**
-	 * AUTO posture, always: the reminder only asks the session to report — nobody triggered it, so nobody's
-	 * grant applies. Keyed on the turn that went quiet, so it is sent once per quiet turn.
+	 * THE COUNT, declared (fase 5, item 1), over the turn that went quiet:
+	 *  - no turn ever ran → nothing to nudge (no session), the stop;
+	 *  - it was anybody's work → nudge 1, rooted on that item;
+	 *  - it was nudge n < `NUDGES_BEFORE_STALL` → nudge n + 1 of the same episode;
+	 *  - it was the last nudge → the stop, with `DETAIL_AFTER_NUDGES`.
 	 */
-	private async remind(orphan: StalledIssueRef, tx: Transaction): Promise<void> {
+	static nextNudge(orphan: StalledIssueRef): { ordinal: NudgeOrdinal; rootItemId: string } | undefined {
+		if (orphan.lastConsumedItemId === null) return undefined
+		if (!orphan.lastNudge) return { ordinal: 1, rootItemId: orphan.lastConsumedItemId }
+		if (orphan.lastNudge.ordinal < NUDGES_BEFORE_STALL) {
+			return { ordinal: (orphan.lastNudge.ordinal + 1) as NudgeOrdinal, rootItemId: orphan.lastNudge.rootItemId }
+		}
+		return undefined
+	}
+
+	/**
+	 * AUTO posture, always: the nudge only asks the session to report (or finish its step) — nobody triggered it, so
+	 * nobody's grant applies. `REMINDER` is WHAT it is (the column every reader asks); which nudge it is rides the
+	 * declared payload, never the dedup key. Keyed on the episode and the ordinal, so a repeated sweep sends nothing
+	 * twice; the fact is written in the same transaction.
+	 */
+	private async nudge(orphan: StalledIssueRef, ordinal: NudgeOrdinal, rootItemId: string, tx: Transaction): Promise<void> {
+		const nudge: NudgePayload['nudge'] = { ordinal, rootItemId, source: NudgeSource.RECONCILER }
 		await this.mailbox.enqueue(
 			{
 				ownerId: orphan.ownerId,
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: orphan.issueId,
 				kind: MailboxItemKind.STEER,
-				// A reminder to declare, not somebody's message: never coalesced with steers, never ahead of them.
+				// A nudge, not somebody's message: never coalesced with steers, never ahead of them.
 				claimClass: MailboxClaimClass.REMINDER,
 				posture: PermissionPosture.AUTO,
 				payload: {
@@ -139,11 +198,19 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 					key: orphan.key,
 					title: orphan.title,
 					provider: orphan.provider,
-					text: ReconcileStalledIssues.REMINDER,
-					declarationReminder: true,
+					text: NUDGE_TEXT[ordinal],
+					nudge,
 				},
-				dedupKey: `declare-reminder:${orphan.issueId}:${orphan.lastConsumedItemId}`,
+				dedupKey: `nudge:${orphan.issueId}:${rootItemId}:${ordinal}`,
 			},
+			tx,
+		)
+		await this.domainEventRepository.save(
+			new AgentIssueNudgedEvent({
+				entityId: orphan.issueId,
+				ownerId: orphan.ownerId,
+				payload: { issueId: orphan.issueId, threadId: orphan.threadId, rootItemId, ordinal, source: NudgeSource.RECONCILER },
+			}),
 			tx,
 		)
 	}

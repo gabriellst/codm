@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, ne } from 'drizzle-orm'
 import { z, type LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { agentMailbox, artifacts, batchItems, batches, events, issues, stops, transcriptEntries } from '@codm/contracts/db'
 import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
@@ -6,6 +6,7 @@ import { askCode, labelOfAnswer } from '@shared/utils/askCode'
 import {
 	type ClassificationMethod,
 	IssueTimelineItemKind,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	type StopKind,
@@ -40,7 +41,7 @@ const EVENT_KINDS = {
 type EventName = keyof typeof EVENT_KINDS
 const EVENT_NAMES = Object.keys(EVENT_KINDS) as EventName[]
 
-const SteerPayloadSchema = z.object({ text: z.string(), declarationReminder: z.literal(true).optional() })
+const SteerPayloadSchema = z.object({ text: z.string() })
 /**
  * Who held / released the work and from where — read off the recorded fact. `issue.resumed` carries the
  * same attribution fields as `issue.paused` (`IssueResumedEvent`), so one pick parses both.
@@ -72,6 +73,9 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 					eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
 					eq(agentMailbox.targetId, issueId),
 					eq(agentMailbox.kind, MailboxItemKind.STEER),
+					// A nudge is not a steer anybody sent (fase 5): it shows as its own `NUDGED` moment, from the
+					// `agent.issue.nudged` fact, in the reminder's place.
+					ne(agentMailbox.claimClass, MailboxClaimClass.REMINDER),
 				),
 			),
 		db.select().from(artifacts).where(eq(artifacts.issueId, issueId)),
@@ -139,7 +143,8 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			text: payload.success ? payload.data.text : '',
 			deliveredAt: steer.firstClaimedAt?.toISOString(),
 			readAt: steer.consumedAt?.toISOString(),
-			reminder: payload.success && payload.data.declarationReminder === true,
+			// Nudges are `NUDGED` items now (filtered above); the flag stays on the wire for the frozen shape.
+			reminder: false,
 		})
 	}
 	for (const file of files) {

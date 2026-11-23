@@ -138,14 +138,28 @@ export const RunIssueTurnInputSchema = z.object({
 	 */
 	answersEntryId: z.uuid().optional(),
 	/**
-	 * This turn IS the declaration reminder — the one automatic steer a turn that ended without declaring
-	 * anything receives (`remindToDeclare`). Two consequences, both deliberate: its reply is NOT handed to
-	 * the orchestrator (the substance was already reported by the turn it follows, and a second "nada
-	 * novo" in the group is the noise this exists to cut), and it never schedules another reminder (one
-	 * nudge, then the reconcile sweep raises the stop).
+	 * WHAT the item the turn drains is — its `claim_class`, read off the column by the dispatcher (fase 5: never off a
+	 * payload flag). Absent for a turn no queue item scheduled (the e2e door). It decides one thing here, by table
+	 * (`ANSWERS_A_PERSON`): a nudge's turn (`REMINDER`) never answers anybody in the group.
 	 */
-	declarationReminder: z.boolean().optional(),
+	claimClass: z.enum(MailboxClaimClass).optional(),
 })
+
+/**
+ * WHETHER A TURN OF THIS CLAIM CLASS MAY ANSWER A PERSON (fase 5, item 1) — hand its words to the orchestrator as an
+ * `ISSUE_RESULT` quoting somebody's message. A nudge's turn (`REMINDER`) never does: nobody asked it anything, the
+ * substance was already reported by the turn it follows, and a second "nada novo" in the group is the noise the nudge
+ * exists to cut — its words stay the issue's PROGRESS. Total over the enum.
+ */
+const ANSWERS_A_PERSON: Readonly<Record<MailboxClaimClass, boolean>> = {
+	[MailboxClaimClass.DECISION_ANSWER]: true,
+	[MailboxClaimClass.INTERRUPT]: true,
+	[MailboxClaimClass.STEER]: true,
+	[MailboxClaimClass.WORK]: true,
+	[MailboxClaimClass.REMINDER]: false,
+	[MailboxClaimClass.RESULT]: true,
+	[MailboxClaimClass.OPERATOR]: true,
+}
 
 export const RunIssueTurnOutputSchema = z.object({
 	issueId: z.uuid(),
@@ -588,9 +602,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				// sem nada rodando. Esta linha é o que aponta a causa em segundos.
 				this.logging.warn({
 					content: {
-						message: input.declarationReminder
-							? 'turn ended without a declared outcome even after the reminder — the reconcile sweep will raise the stop'
-							: 'turn ended without a declared outcome — the reconcile sweep will remind it once',
+						message:
+							input.claimClass === MailboxClaimClass.REMINDER
+								? 'turn ended without a declared outcome even after a nudge — the reconcile sweep nudges again or raises the stop'
+								: 'turn ended without a declared outcome — the reconcile sweep will nudge it',
 						issueId: input.issueId,
 						threadId: input.threadId,
 						turnKind: input.turnKind,
@@ -799,8 +814,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// A turn that answers a person AND finished the task: the closing already is that person's answer (it
 		// quotes their message — `IssueTurnAborter.answerWithClosing`), so the reply would be a second message
 		// saying the same thing. Its words stay on the timeline as PROGRESS.
-		if (input.answersEntryId && !this.aborter.answeredByClosing(input.issueId, input.answersEntryId)) {
-			await this.enqueueResult(input, input.answersEntryId, text, tx)
+		const answersEntryId = input.claimClass && !ANSWERS_A_PERSON[input.claimClass] ? undefined : input.answersEntryId
+		if (answersEntryId && !this.aborter.answeredByClosing(input.issueId, answersEntryId)) {
+			await this.enqueueResult(input, answersEntryId, text, tx)
 			return
 		}
 		await this.domainEventRepository.save(

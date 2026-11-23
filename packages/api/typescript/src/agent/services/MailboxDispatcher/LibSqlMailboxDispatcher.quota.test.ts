@@ -198,6 +198,7 @@ describe('LibSqlMailboxDispatcher — the quota budget holds tasks, never the or
 				pending: [{ running: false, reminder: false }],
 				openStops: 0,
 				budgetHeld: status.holdsIssueLane(),
+				declaredWait: false,
 			}),
 		).toBe(IssueLifeState.WAITING_BUDGET)
 		// one notice for the conversation, and a second drain while still held does not repeat it

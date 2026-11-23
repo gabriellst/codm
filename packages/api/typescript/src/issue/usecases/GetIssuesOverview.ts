@@ -6,6 +6,7 @@ import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enu
 import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 
 const IssueItemSchema = z.object({
 	issueId: z.uuid(),
@@ -58,6 +59,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 	constructor(
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
 	) {
 		super()
 	}
@@ -88,7 +90,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 		const life = await lifeStateByIssue(
 			this.driver,
 			rows.filter(r => !r.archived).map(r => ({ issueId: r.issueId, status: r.status as IssueStatus })),
-			this.quota.holdsIssueLane(),
+			{ budgetHeld: this.quota.holdsIssueLane(), declaredWait: this.declaredWait },
 		)
 
 		const items = rows.map(r => ({

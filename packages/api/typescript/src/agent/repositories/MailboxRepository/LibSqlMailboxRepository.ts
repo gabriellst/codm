@@ -542,9 +542,9 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					runnable(),
 					// Held by no turn: the live turn's own item (a STEER it is reading right now) is not "unread".
 					isNull(agentMailbox.claimedBy),
-					// A PERSON's message: the automatic "declare your outcome" reminder (`ReconcileStalledIssues`)
-					// rides the same kind, and must never cancel a push as if the operator had written.
-					sql`json_extract(${agentMailbox.payload}, '$.declarationReminder') IS NULL`,
+					// A PERSON's message: the automatic nudge (`ReconcileStalledIssues`, claim class REMINDER) rides the
+					// same kind, and must never cancel a push as if the operator had written. Read off the column (fase 5).
+					ne(agentMailbox.claimClass, MailboxClaimClass.REMINDER),
 				),
 			)
 			.limit(1)

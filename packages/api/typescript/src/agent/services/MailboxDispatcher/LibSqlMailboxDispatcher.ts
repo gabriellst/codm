@@ -122,10 +122,6 @@ const steerEntryOf = (payload: unknown): string | undefined => {
 	const parsed = SteerEntryPayloadSchema.safeParse(payload)
 	return parsed.success ? parsed.data.entryId : undefined
 }
-/** Whether a STEER is the automatic declaration reminder (`declarationReminder: true` on its payload). */
-const ReminderPayloadSchema = z.object({ declarationReminder: z.literal(true) })
-const reminderOf = (payload: unknown): boolean => ReminderPayloadSchema.safeParse(payload).success
-
 /** A STEER's text (`text` on its payload) — empty when absent, as the single-steer turn always read it. */
 /**
  * `sessionOnly` (fase 4, item 6c): what the turn's PROMPT carries and the timeline never renders — a failed publish's
@@ -1354,9 +1350,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// item 5). Every other steer, and the brief, carry none, and their words are the issue's progress.
 			// With several routed steers in the turn, it answers the LAST one — the latest word in the group.
 			answersEntryId: item.kind === MailboxItemKind.STEER ? steerEntriesOf(members).at(-1) : undefined,
-			// The automatic nudge (`ReconcileStalledIssues`) — read off its payload, where it always was and
-			// never reached the turn.
-			declarationReminder: item.kind === MailboxItemKind.STEER && reminderOf(item.payload) ? true : undefined,
+			// WHAT the head item is — its declared class (fase 5): a nudge's turn (`REMINDER`) answers nobody.
+			claimClass: item.claimClass,
 		})
 		// A pause killed it (or kept it from starting): nothing was persisted, the item goes back held.
 		if (result.held) return { held: true, spoke: false }

@@ -17,12 +17,16 @@ export interface StalledIssueRef {
 	provider: ProviderKind
 	/**
 	 * The last item a turn of this issue CONSUMED — the turn that ended without declaring anything — or
-	 * `null` when no turn ever ran (an issue declared open with no work queued). Keys the reminder: one
-	 * reminder per turn that went quiet.
+	 * `null` when no turn ever ran (an issue declared open with no work queued). Roots the nudge episode
+	 * when that turn was not itself a nudge.
 	 */
 	lastConsumedItemId: string | null
-	/** Whether that last turn was ALREADY the declaration reminder — then the sweep raises the stop. */
-	lastTurnWasReminder: boolean
+	/**
+	 * When that last turn WAS a nudge (`claim_class = REMINDER`, fase 5): which one, and the episode it belongs to —
+	 * read off the item's `NudgePayloadSchema`. A reminder migrated by 0038 carries no `rootItemId`: its own id stands
+	 * in. Absent when the last turn was anybody's work — then the sweep starts an episode with nudge 1.
+	 */
+	lastNudge?: { ordinal: number; rootItemId: string }
 }
 
 /**
