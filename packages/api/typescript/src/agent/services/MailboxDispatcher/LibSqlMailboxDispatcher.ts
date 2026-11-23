@@ -534,6 +534,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				inFlight: running.get(MailboxTargetKind.ISSUE) ?? 0,
 				max: this.lanes[MailboxTargetKind.ISSUE].slots,
 				providerRefusing: paused,
+				...(paused && { providerPausedUntil: this.pausedUntil }),
 			})
 			await this.noticeBudgetHeld(issueLane.announce)
 			const capacity: Record<MailboxTargetKind, number> = {

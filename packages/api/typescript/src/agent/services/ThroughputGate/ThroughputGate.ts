@@ -102,11 +102,14 @@ export class ThroughputGate {
 		inFlight,
 		max,
 		providerRefusing,
+		providerPausedUntil,
 		now = Date.now(),
 	}: {
 		inFlight: number
 		max: number
 		providerRefusing: boolean
+		/** Until when the dispatcher's usage-limit pause holds (epoch ms), while it does — published for the readers. */
+		providerPausedUntil?: number
 		now?: number
 	}): Promise<IssueLane> {
 		this.sweepWhenDue(now)
@@ -131,6 +134,7 @@ export class ThroughputGate {
 			slots: { inUse: inFlight, max, effective: slots, limitedBy },
 			diskFreeBytes: machine.diskFreeBytes,
 			providerRefusing,
+			...(providerPausedUntil !== undefined && { providerPausedUntil }),
 		})
 		if (admission.admitted || !ANNOUNCES_HOLD[this.mode] || admission.heldBy === undefined) return { slots, limitedBy }
 		const reopensAt = this.budget.reopensAt(admission.heldBy, { inFlight, now, ledger })

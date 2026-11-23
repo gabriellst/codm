@@ -69,6 +69,12 @@ export const ProductEnvSchema = z.object({
 	// último leria a string "false" como verdadeiro e ligaria o orçamento em silêncio.
 	CODM_AGENT_QUOTA_ENFORCE: z.stringbool().default(false),
 
+	// O QUE O SUPERVISOR FAZ COM OS VEREDITOS (fase 5, item 3). Todo veredito fica registrado em
+	// `agent.supervisor.reviewed` (auditoria). Cru aqui de propósito: o conjunto fechado é o enum `SupervisorMode`
+	// do `agent` (`shared` não consome contexto nenhum), que o lê com `z.enum(SupervisorMode)` e o padrão
+	// (`SUPERVISOR_MODE_DEFAULT`) — um valor fora do enum falha ALTO no primeiro uso, nunca vira outro modo.
+	CODM_AGENT_SUPERVISOR_MODE: z.string().trim().optional(),
+
 	// O MÁXIMO DE TURNOS DE TAREFA SIMULTÂNEOS (fase 4, item 1). A vaga efetiva é o mínimo deste, do portão de
 	// disco da máquina e da admissão do orçamento. Voltar a 4 é configuração, não build.
 	CODM_AGENT_ISSUE_SLOTS_MAX: z.coerce.number().int().min(1).max(6).default(6),

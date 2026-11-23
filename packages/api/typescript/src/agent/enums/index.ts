@@ -26,3 +26,5 @@ export * from './QuotaMode'
 // Fase 5 ("autonomia") — why a queue item's turn failed, and what the supervisor does with its verdicts.
 export * from './MailboxFailureClass'
 export * from './SupervisorMode'
+export * from './SupervisorFallback'
+export * from './SupervisorPassSkip'

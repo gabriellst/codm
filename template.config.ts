@@ -670,6 +670,16 @@ export const REPO = {
 			doc: 'Quota budget holds new task turns (true) or only observes and records what it would hold (false)',
 			advanced: true,
 		},
+		// Fase 5 (item 3): what the supervisor does with its verdicts. Every verdict is recorded either way
+		// (`agent.supervisor.reviewed`, the audit trail). Provisional default OBSERVE until slice S5 turns acting on
+		// (the owner's decision of 20/11 is ACT); OFF skips every pass.
+		CODM_AGENT_SUPERVISOR_MODE: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: 'OBSERVE',
+			doc: 'Supervisor of suspect tasks: OFF (no pass), OBSERVE (record verdicts only) or ACT (carry them out, within its safety rails)',
+			advanced: true,
+		},
 		// Fase 4 (item 1): the most task turns in flight at once; the effective number is the minimum of this, the
 		// machine's disk gate and the quota budget. Reverting to 4 is configuration, not a build.
 		CODM_AGENT_ISSUE_SLOTS_MAX: {

@@ -27,4 +27,10 @@ export enum AgentName {
 	 * the classifier agent and the routing policy.
 	 */
 	ORCHESTRATOR = 'ORCHESTRATOR',
+	/**
+	 * The supervisor (fase 5, item 3): one stateless, tool-less run per SUSPECT task — picked by declared rules, never by
+	 * a model — on the provider's small model, answering which of the few verdicts the suspicion admits applies
+	 * (nudge, restart with the handoff notes, escalate by badge, leave it). It never acts and never writes to anyone.
+	 */
+	SUPERVISOR = 'SUPERVISOR',
 }

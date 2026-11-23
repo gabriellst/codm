@@ -95,4 +95,32 @@ describe('LibSqlDeclaredWaitReader', () => {
 		await turn(mine.issueId, mine.threadId, () => spoke(other.issueId, other.threadId, IssueSignalLevel.FEEDBACK))
 		expect(await testBed.resolve(DeclaredWaitReader).waiting([mine.issueId, other.issueId])).toEqual(new Set())
 	})
+
+	/**
+	 * Several steers that ride ONE turn (fase 4, 6b): the last consumed item is the last follower, and the claim stamps
+	 * `first_claimed_at` on every member — so a feedback asked in that turn is still a declared wait. Falsifier: stamp
+	 * only the head and the follower's NULL makes the comparison NULL — the task would be nudged.
+	 */
+	it('a feedback asked in a turn that carried several steers is a declared wait', async () => {
+		const { issueId, threadId } = await givenWorkingIssue()
+		const mailbox = testBed.resolve(MailboxRepository)
+		for (const text of ['primeiro', 'segundo']) {
+			await mailbox.enqueue({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issueId,
+				kind: MailboxItemKind.STEER,
+				claimClass: MailboxClaimClass.STEER,
+				posture: PermissionPosture.AUTO,
+				payload: { issueId, threadId, text },
+				dedupKey: uuidv7(),
+			})
+		}
+		const bundle = await mailbox.claimBundle('declared-wait-test', 60_000, [MailboxTargetKind.ISSUE])
+		if (!bundle) throw new Error('no turn claimed')
+		expect(bundle.followers).toHaveLength(1)
+		await spoke(issueId, threadId, IssueSignalLevel.FEEDBACK)
+		await mailbox.complete([bundle.head.id, ...bundle.followers.map(follower => follower.id)])
+		expect(await testBed.resolve(DeclaredWaitReader).waiting([issueId])).toEqual(new Set([issueId]))
+	})
 })

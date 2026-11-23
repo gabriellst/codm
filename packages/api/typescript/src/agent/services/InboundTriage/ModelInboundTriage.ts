@@ -1,13 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { LoggingService } from '@codm/core-typescript'
-import { PermissionPosture, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { PermissionPosture, ProviderStatus, UsageRole } from '@codm/contracts-typescript/wire/enums'
 import { smallModelFor } from '@catalog'
 import { CloudSession } from '@shared/services/CloudSession'
 import { TriageAgent, TriageOutputSchema } from '../../agents/TriageAgent'
 import { TriageDecision } from '../../enums'
 import { AgentRunnerFactory } from '../AgentRunnerFactory'
 import { ProviderDetector } from '../ProviderDetector'
-import { TriageUsageRecorder } from '../TriageUsageRecorder'
+import { SmallModelUsageRecorder } from '../SmallModelUsageRecorder'
 import type { AgentRunResult } from '../../types/AgentRuntimeEvent'
 import {
 	InboundTriage,
@@ -47,7 +47,7 @@ export class ModelInboundTriage extends InboundTriage {
 		private readonly detector: ProviderDetector,
 		private readonly cloudSession: CloudSession,
 		private readonly logging: LoggingService,
-		private readonly usage: TriageUsageRecorder,
+		private readonly usage: SmallModelUsageRecorder,
 	) {
 		super()
 	}
@@ -67,7 +67,7 @@ export class ModelInboundTriage extends InboundTriage {
 		let recording: Promise<void> | undefined
 		const account = (provider: InboundTriageRequest['provider'], model: ReturnType<typeof smallModelFor>) => (result: AgentRunResult) => {
 			recording = this.usage
-				.record({ ownerId: request.ownerId, threadId: request.threadId, provider, model, result })
+				.record({ ownerId: request.ownerId, entityId: request.threadId, role: UsageRole.TRIAGE, provider, model, result })
 				.catch((error: unknown) => {
 					this.logging.warn({
 						content: {
