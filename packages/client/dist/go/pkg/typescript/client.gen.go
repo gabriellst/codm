@@ -9265,7 +9265,7 @@ func NewGetSystemHealthRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/ui/system/health")
+	operationPath := fmt.Sprintf("/ui/system-health")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
