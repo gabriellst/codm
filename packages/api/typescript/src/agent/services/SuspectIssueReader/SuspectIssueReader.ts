@@ -7,7 +7,11 @@ export const NUDGE_LOOP_EPISODES = 3
 export const NUDGE_LOOP_WINDOW_MS = 24 * 60 * 60_000
 /** A live turn held this long… */
 export const SILENT_TURN_MIN_MS = 30 * 60_000
-/** …with no terminal line for this long, is silent. Only ever flagged: the inactivity watchdog is the one that kills. */
+/**
+ * …with no stream frame for this long (`LiveTurnReader.lastFrameAt`), is silent. Only ever flagged: the inactivity
+ * watchdog is the one that kills — and with its default budget (`CODM_AGENT_INACTIVITY_MS`, 3 min) it kills long before
+ * this, so the rule is a backstop for a raised budget or a stream that keeps the watchdog fed without frames.
+ */
 export const SILENT_TURN_QUIET_MS = 20 * 60_000
 /** The same `(issue, reason)` is not looked at again before this, read off its last `agent.supervisor.reviewed`. */
 export const SUPERVISOR_COOLDOWN_MS = 60 * 60_000
@@ -66,7 +70,7 @@ export interface SuspectIssue {
 /**
  * WHICH TASKS LOOK STUCK, by declared rule and persisted data only — no model (fase 5, item 3). Disjoint from what the
  * reconciler sees: it looks at issues with NOTHING in flight that never declared; this one at what stayed stuck after
- * that (an open stall or provider error nobody answered, episode after episode of nudges, a live turn gone quiet).
+ * that (an open stall or provider error nobody answered, episode after episode of nudges, a live turn gone quiet — no stream frame).
  *
  * Never suspect (each excluded by the reader, each with a test): the issue or its conversation paused (`IssueHold`), a
  * person's stop open (`SUSPICION_OF_OPEN_STOP`), a declared wait (`DeclaredWaitReader` — a feedback asked waits

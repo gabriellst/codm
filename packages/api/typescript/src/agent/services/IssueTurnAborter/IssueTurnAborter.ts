@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { TurnAbortReason } from '../../enums/TurnAbortReason'
+import { LiveTurnReader, type LiveTurn } from '../LiveTurnReader'
 
 /** The handle of one running issue turn: its cancellation signal, and the call that unregisters it. */
 export interface IssueTurnHandle {
@@ -18,6 +19,9 @@ interface RunningTurn {
 	carries: ReadonlySet<string>
 	/** The completion declared during this turn answers `carrying` — the closing is that person's reply. */
 	answeredByClosing: boolean
+	/** When the turn was registered, and its last stream frame (fase 5) — what `liveTurn` reads. */
+	startedAt: Date
+	lastFrameAt?: Date
 }
 
 /**
@@ -50,7 +54,7 @@ export const abortReasonOf = (signal: AbortSignal): TurnAbortReason =>
  * the registration it created, so a late `end` from an abandoned turn cannot unregister its successor.
  */
 @injectable()
-export class IssueTurnAborter {
+export class IssueTurnAborter extends LiveTurnReader {
 	private readonly running = new Map<string, RunningTurn>()
 
 	/**
@@ -58,17 +62,32 @@ export class IssueTurnAborter {
 	 * @param carries every routed steer's entry the turn carries (fase 4, item 6b), so an "agora" never kills its own
 	 *   turn; `carrying` is always one of them.
 	 */
-	begin(issueId: string, carrying?: string, carries: readonly string[] = []): IssueTurnHandle {
+	begin(issueId: string, carrying?: string, carries: readonly string[] = [], at: Date = new Date()): IssueTurnHandle {
 		const controller = new AbortController()
 		const all = new Set(carries)
 		if (carrying) all.add(carrying)
-		this.running.set(issueId, { controller, carrying, carries: all, answeredByClosing: false })
+		this.running.set(issueId, { controller, carrying, carries: all, answeredByClosing: false, startedAt: at })
 		return {
 			signal: controller.signal,
 			end: () => {
 				if (this.running.get(issueId)?.controller === controller) this.running.delete(issueId)
 			},
 		}
+	}
+
+	/**
+	 * A STREAM FRAME of the issue's running turn arrived (fase 5) — the silence signal of the supervisor's `SILENT_TURN`.
+	 * `RunIssueTurn` stamps every frame it reads; a `Map` write, so no throttle. A frame for an issue with no registered
+	 * turn changes nothing.
+	 */
+	sawFrame(issueId: string, at: Date = new Date()): void {
+		const turn = this.running.get(issueId)
+		if (turn) turn.lastFrameAt = at
+	}
+
+	liveTurn(issueId: string): LiveTurn | undefined {
+		const turn = this.running.get(issueId)
+		return turn && { startedAt: turn.startedAt, ...(turn.lastFrameAt && { lastFrameAt: turn.lastFrameAt }) }
 	}
 
 	/** The cancellation signal of the issue's running turn, when the dispatcher registered one. */

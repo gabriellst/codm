@@ -7,6 +7,7 @@ import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, 
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { IssueTurnAborter } from './services/IssueTurnAborter'
+import { LiveTurnReader } from './services/LiveTurnReader'
 import { ImmediateRegretWindowClock, RegretWindowClock, TimerRegretWindowClock } from './services/RegretWindowClock'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
@@ -90,6 +91,14 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The kill switch of a running issue turn (fase 2, item 2 — "pare" vale na hora): one in-memory
 	// AbortController per issue in flight, shared by the dispatcher, RunIssueTurn and the pause handler.
 	{ token: IssueTurnAborter, mock: IssueTurnAborter, integration: IssueTurnAborter, real: IssueTurnAborter },
+	// Its read-only face (fase 5): whether an issue's turn runs and when it last streamed a frame — the supervisor's
+	// silence signal, resolved to the SAME instance, with no kill switch in reach.
+	{
+		token: LiveTurnReader,
+		mock: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+		integration: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+		real: { useFactory: (c: DependencyContainer) => c.resolve(IssueTurnAborter) },
+	},
 	// The wait of the regret window (fase 2, item 3): wall clock wherever a session can call the hook,
 	// instant in `mock`. A test that needs a steer to land mid-window overrides it.
 	{

@@ -513,6 +513,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			},
 			{ signal },
 		)) {
+			// Every stream frame is a sign of life (fase 5): the supervisor's SILENT_TURN reads the last one, in memory.
+			if (event.type === 'frame') this.aborter.sawFrame(input.issueId)
 			const frame = accumulator.feed(event)
 			if (frame) await this.registry.send(input.issueId, frame)
 		}

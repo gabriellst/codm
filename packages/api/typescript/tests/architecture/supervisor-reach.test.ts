@@ -122,6 +122,8 @@ describe('supervisor reach — only the ports its safety rails allow', () => {
 			'./RunPublishCommand',
 		])
 		expect(outOfReach("import { SuspectIssueReader } from '../services/SuspectIssueReader'")).toEqual([])
+		// The running-turn registry holds the abort and the interrupt: a live turn is only ever read (`LiveTurnReader`).
+		expect(outOfReach("import { IssueTurnAborter } from '../services/IssueTurnAborter'")).toEqual(['../services/IssueTurnAborter'])
 		// The core barrel is narrowed: the command queue a channel delivery rides is out of reach, the Handler base is not.
 		expect(outOfReach("import { CommandQueue, Handler } from '@codm/core-typescript'")).toEqual(['@codm/core-typescript → CommandQueue'])
 		expect(outOfReach("import * as core from '@codm/core-typescript'")).toEqual(['@codm/core-typescript (whole module)'])

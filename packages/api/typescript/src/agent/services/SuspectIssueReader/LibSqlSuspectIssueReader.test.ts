@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenDomainEvent, givenIssue, givenThread } from '@test/support'
@@ -24,6 +24,7 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { MailboxRepository } from '../../repositories/MailboxRepository'
 import { AgentIssueNudgedEvent } from '../../events/AgentIssueNudgedEvent'
 import { AgentRunStartedEvent } from '../../events/AgentRunStartedEvent'
+import { IssueTurnAborter, type IssueTurnHandle } from '../IssueTurnAborter'
 import { AgentSupervisorReviewedEvent } from '../../events/AgentSupervisorReviewedEvent'
 import { IssueSpokeEvent } from '../../events/IssueSpokeEvent'
 import { SupervisorMode } from '../../enums/SupervisorMode'
@@ -47,6 +48,10 @@ describe('LibSqlSuspectIssueReader', () => {
 	})
 	beforeEach(async () => {
 		await testBed.reset()
+	})
+	afterEach(() => {
+		// The running-turn registry is in memory: a turn begun by one test must not run into the next.
+		for (const handle of handles.splice(0)) handle.end()
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -89,9 +94,14 @@ describe('LibSqlSuspectIssueReader', () => {
 			}),
 		)
 
-	/** The current run of the task was spawned — what `RunIssueTurn` records before streaming. */
-	const spawned = (issueId: string, threadId: string) =>
-		givenDomainEvent(
+	const handles: IssueTurnHandle[] = []
+	/**
+	 * The task's turn started: the dispatcher registers it, and `RunIssueTurn` records `agent.run.started` at the spawn
+	 * (kept here so the store looks like a real turn's — the rule no longer reads it).
+	 */
+	const spawned = async (issueId: string, threadId: string) => {
+		handles.push(testBed.resolve(IssueTurnAborter).begin(issueId))
+		await givenDomainEvent(
 			testBed,
 			new AgentRunStartedEvent({
 				entityId: issueId,
@@ -99,6 +109,9 @@ describe('LibSqlSuspectIssueReader', () => {
 				payload: { issueId, threadId, key: 'k', title: 't', provider: ProviderKind.CLAUDE_CODE },
 			}),
 		)
+	}
+	/** The running turn streamed a frame at `minutes` from now — what `RunIssueTurn` stamps on every frame. */
+	const framed = (issueId: string, minutes: number) => testBed.resolve(IssueTurnAborter).sawFrame(issueId, later(minutes))
 
 	async function enqueueAndClaim(issueId: string, threadId: string, leaseMs: number) {
 		const mailbox = testBed.resolve(MailboxRepository)
@@ -143,11 +156,11 @@ describe('LibSqlSuspectIssueReader', () => {
 	})
 
 	/**
-	 * SILENT_TURN is measured from the spawn of the CURRENT run, never from the item's first claim (a deferred item
-	 * re-claimed would look old the instant it restarts). Falsifier: anchor on `first_claimed_at` and the unspawned
+	 * SILENT_TURN is measured from the CURRENT turn's start, never from the item's first claim (a deferred item
+	 * re-claimed would look old the instant it restarts). Falsifier: anchor on `first_claimed_at` and the unregistered
 	 * claim below is suspect.
 	 */
-	it('a live claim whose run was not spawned is not a silent turn; a spawned one under 30 min is not either', async () => {
+	it('a live claim with no registered turn is not a silent turn; a registered one under 30 min is not either', async () => {
 		const unspawned = await givenTask('APP-6')
 		await enqueueAndClaim(unspawned.issueId, unspawned.threadId, 3 * 60 * MIN)
 		expect(await ids(35)).toEqual([])
@@ -157,6 +170,30 @@ describe('LibSqlSuspectIssueReader', () => {
 		await spawned(young.issueId, young.threadId)
 		expect(await ids(25)).toEqual([])
 		expect(await ids(35)).toEqual([['APP-7', SuspicionReason.SILENT_TURN]])
+	})
+
+	/**
+	 * THE SILENCE SIGNAL is the turn's last stream frame (fase 5): nothing is persisted while a turn streams, so the old
+	 * rule (no terminal line for 20 min) could never see a frame and flagged every turn past 30 min. Falsifier: read the
+	 * terminal lines (or ignore the frame) and the healthy long turn below is suspect.
+	 */
+	it('a long turn that keeps streaming is not silent; one whose last frame is 20 min old is', async () => {
+		const healthy = await givenTask('APP-8')
+		await enqueueAndClaim(healthy.issueId, healthy.threadId, 3 * 60 * MIN)
+		await spawned(healthy.issueId, healthy.threadId)
+		framed(healthy.issueId, 39)
+		expect(await ids(40)).toEqual([])
+
+		const quiet = await givenTask('APP-9')
+		await enqueueAndClaim(quiet.issueId, quiet.threadId, 3 * 60 * MIN)
+		await spawned(quiet.issueId, quiet.threadId)
+		framed(quiet.issueId, 15)
+		expect(await ids(34)).toEqual([])
+		const found = await reader.suspects(later(36), 5)
+		expect(found.map(s => [s.key, s.reason])).toEqual([['APP-9', SuspicionReason.SILENT_TURN]])
+		// The ended turn is gone from the registry: an ended turn is never called silent, whatever its lease says.
+		for (const handle of handles.splice(0)) handle.end()
+		expect(await ids(40)).toEqual([])
 	})
 
 	it('two nudges in a day are not a loop', async () => {
