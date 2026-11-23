@@ -50,6 +50,11 @@ export const AgentSessionSchema = z.object({
 	handoffNotes: z.string().trim().min(1).optional(),
 	/** When `handoffNotes` were last written — absent with them. */
 	handoffAt: z.date().optional(),
+	/**
+	 * Fase 5 (item 3) — the supervisor asked (`RESTART_WITH_NOTES`) that the NEXT turn open a fresh session seeded with
+	 * the handoff notes. Checked by `resumeDecision` before every other guard, and cleared when the handoff completes.
+	 */
+	handoffRequestedAt: z.date().optional(),
 })
 
 export type AgentSessionProps = Z.infer<typeof AgentSessionSchema>
@@ -162,6 +167,16 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	}
 
 	/**
+	 * The supervisor asked for a restart with notes (fase 5, item 3): the next turn of this session's issue opens a fresh
+	 * session seeded with the notes (`resumeDecision` → `HANDOFF_REQUESTED`), whatever the context size. A second
+	 * request before that turn keeps the first instant.
+	 */
+	requestHandoff(at: Date = new Date()): void {
+		this.handoffRequestedAt ??= at
+		this.validate()
+	}
+
+	/**
 	 * The handoff the notes were written for COMPLETED — a fresh CLI session started from them and was recorded on
 	 * this row. Cleared explicitly, never inferred from `agentSessionId` changing in `recordTurn`: a CLI may report a
 	 * different id on a plain resume, and that must not wipe notes the very same turn wrote.
@@ -170,6 +185,8 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	 * and are kept — only the ones the handoff consumed are cleared.
 	 */
 	completeHandoff(decidedAt: Date): void {
+		// The request is answered by any completed handoff — the fresh session it asked for is the one just recorded.
+		if (this.handoffRequestedAt && this.handoffRequestedAt <= decidedAt) this.handoffRequestedAt = undefined
 		if (this.handoffAt && this.handoffAt > decidedAt) return
 		this.handoffNotes = undefined
 		this.handoffAt = undefined
@@ -190,6 +207,11 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	 * makes "no silent session reset" (AC-4.4) checkable rather than aspirational.
 	 */
 	resumeDecision(ctx: ResumeContext): ResumeDecision {
+		// FIRST (fase 5): an explicit request to restart with notes is the reason this turn runs fresh, whatever else
+		// moved — reported as such, and answered by the handoff path (notes seed the fresh session) rather than by a bare
+		// reset that would leave the request standing for a second fresh session later. Before the context budget, as
+		// the spec asks, and before the premises too: a fresh session is what both would give, and only this one seeds it.
+		if (this.handoffRequestedAt) return { resume: false, reason: ResumeInvalidationReason.HANDOFF_REQUESTED }
 		if (ctx.model !== this.model) return { resume: false, reason: ResumeInvalidationReason.MODEL_CHANGED }
 		if (ctx.cwd !== this.cwd) return { resume: false, reason: ResumeInvalidationReason.CWD_CHANGED }
 		// O CURSOR SÓ EXISTE PARA UMA SESSÃO DE ISSUE — e a ausência de `issueId` é o que identifica a

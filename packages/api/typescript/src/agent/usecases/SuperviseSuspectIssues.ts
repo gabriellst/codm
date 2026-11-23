@@ -8,11 +8,11 @@ import { IssueTimelineReader } from '@issue/services/IssueTimelineReader'
 import { SuspectIssueReader, type SuspectIssue } from '../services/SuspectIssueReader'
 import { IssueSupervisor, type SupervisorDecision } from '../services/IssueSupervisor'
 import { QuotaStatusReader } from '../services/QuotaStatusReader'
-import { AgentSupervisorReviewedEvent } from '../events/AgentSupervisorReviewedEvent'
 import { SupervisorFallback } from '../enums/SupervisorFallback'
 import { SupervisorMode } from '../enums/SupervisorMode'
 import { SupervisorPassSkip } from '../enums/SupervisorPassSkip'
 import { capVerdict } from '../utils/SupervisorCaps'
+import { ActOnSupervisorVerdict, MODE_ACTS } from './ActOnSupervisorVerdict'
 
 /** One pass every 20 minutes (the objective asks 15–30) — the supervisor looks at what stayed stuck, not at every tick. */
 export const SUPERVISOR_INTERVAL_MS = 20 * 60_000
@@ -20,21 +20,12 @@ export const SUPERVISOR_INTERVAL_MS = 20 * 60_000
 export const SUPERVISOR_MAX_PER_PASS = 5
 
 /**
- * The mode when `CODM_AGENT_SUPERVISOR_MODE` is not set. PROVISIONAL: `OBSERVE` while this slice (S4) only records;
- * slice S5 carries verdicts out and turns this to `ACT` — the owner's decision of 20/11.
+ * The mode when `CODM_AGENT_SUPERVISOR_MODE` is not set: `ACT` — the owner's decision of 20/11 (the supervisor acts
+ * from the installation on, within its safety rails; `OBSERVE` and `OFF` stay as settings).
  */
-export const SUPERVISOR_MODE_DEFAULT = SupervisorMode.OBSERVE
+export const SUPERVISOR_MODE_DEFAULT = SupervisorMode.ACT
 
-/**
- * WHETHER A MODE CARRIES THE VERDICT OUT — total over `SupervisorMode`. Nothing acts in this slice: `ACT` records like
- * `OBSERVE` until S5 wires the three doors (retry by `AUTO_RETRY`, restart with notes, escalate by badge) behind its
- * safety rails, and flips this row.
- */
-export const MODE_ACTS: Readonly<Record<SupervisorMode, boolean>> = {
-	[SupervisorMode.OFF]: false,
-	[SupervisorMode.OBSERVE]: false,
-	[SupervisorMode.ACT]: false,
-}
+export { MODE_ACTS }
 
 export const SuperviseSuspectIssuesInputSchema = z.object({})
 export const SuperviseSuspectIssuesOutputSchema = z.object({
@@ -48,12 +39,12 @@ export const SuperviseSuspectIssuesOutputSchema = z.object({
  * THE SUPERVISOR (fase 5, item 3) — a job of the `agent` context that looks again at the tasks that stayed stuck after
  * everything automatic was tried: an open stall or provider error nobody answered, a loop of nudges, a live turn gone
  * quiet. Which tasks is a RULE (`SuspectIssueReader`); what to do is the provider's small model with NO tools
- * (`IssueSupervisor`, failing closed to `LEAVE`); every verdict — acted or not — is RECORDED as
- * `agent.supervisor.reviewed`, the audit trail.
+ * (`IssueSupervisor`, failing closed to `LEAVE`); carrying it out — and recording every verdict, acted or not, as
+ * `agent.supervisor.reviewed`, the audit trail — is `ActOnSupervisorVerdict`, one task per transaction.
  *
  * ### What it may touch (`tests/architecture/supervisor-reach.test.ts`)
  * Only the ports listed in `SUPERVISOR_ALLOWED_PORTS`: readers (suspects, the board, the timeline, the quota), the
- * reviewer, and its own fact. Never a publish, a send, a merge, a priority, an answer for a person, a message to
+ * reviewer, and the verdict's executor (whose own reach is governed by the same rail). Never a publish, a send, a merge, a priority, an answer for a person, a message to
  * anyone. A live turn that went silent is only ever FLAGGED — the inactivity watchdog stays the one that kills.
  *
  * ### When a pass is skipped
@@ -64,7 +55,8 @@ export const SuperviseSuspectIssuesOutputSchema = z.object({
  *
  * ### The pass, and the queue's lease
  * Reviews run side by side, each bounded by `SUPERVISOR_TIMEOUT_MS` (below the job queue's 60 s lease), so one pass
- * ends inside one lease. The model runs OUTSIDE any transaction; the facts are written in one short transaction after.
+ * ends inside one lease. The model runs OUTSIDE any transaction; each verdict is then carried out and recorded in its
+ * own short transaction, so one task that fails never holds the others.
  */
 @injectable()
 export class SuperviseSuspectIssues extends Handler<typeof SuperviseSuspectIssuesInputSchema, typeof SuperviseSuspectIssuesOutputSchema> {
@@ -86,6 +78,7 @@ export class SuperviseSuspectIssues extends Handler<typeof SuperviseSuspectIssue
 		private readonly board: IssueBoardReader,
 		private readonly timelines: IssueTimelineReader,
 		private readonly quota: QuotaStatusReader,
+		private readonly act: ActOnSupervisorVerdict,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -101,37 +94,23 @@ export class SuperviseSuspectIssues extends Handler<typeof SuperviseSuspectIssue
 		if (suspects.length === 0) return { reviewed: [] }
 
 		const decisions = await Promise.all(suspects.map(suspect => this.review(suspect, now)))
-		const acted = MODE_ACTS[this.mode]
-
-		await this.withTransaction(tx, async tx => {
-			for (const [index, suspect] of suspects.entries()) {
-				const decision = decisions[index] as SupervisorDecision
-				await this.domainEventRepository.save(
-					new AgentSupervisorReviewedEvent({
-						entityId: suspect.issueId,
-						ownerId: suspect.ownerId,
-						payload: {
-							issueId: suspect.issueId,
-							reason: suspect.reason,
-							verdict: decision.verdict,
-							...(decision.confidence !== undefined && { confidence: decision.confidence }),
-							mode: this.mode,
-							acted,
-							...(decision.fallback !== undefined && { fallback: decision.fallback }),
-						},
-					}),
-					tx,
-				)
+		const reviewed: this['output']['reviewed'] = []
+		for (const [index, suspect] of suspects.entries()) {
+			const decision = decisions[index] as SupervisorDecision
+			try {
+				const out = await this.act.execute({ suspect, decision, mode: this.mode, now }, tx)
+				reviewed.push({ issueId: suspect.issueId, reason: suspect.reason, verdict: out.verdict })
+			} catch (error) {
+				this.logging.warn({
+					content: {
+						message: 'supervisor verdict not carried out — the task is left as it was',
+						issueId: suspect.issueId,
+						reason: error instanceof Error ? error.message : String(error),
+					},
+				})
 			}
-		})
-
-		return {
-			reviewed: suspects.map((suspect, index) => ({
-				issueId: suspect.issueId,
-				reason: suspect.reason,
-				verdict: (decisions[index] as SupervisorDecision).verdict,
-			})),
 		}
+		return { reviewed }
 	}
 
 	/**

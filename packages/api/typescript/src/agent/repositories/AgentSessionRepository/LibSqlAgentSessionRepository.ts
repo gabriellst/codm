@@ -82,6 +82,9 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 						// both through `save`, so both columns follow the entity.
 						handoffNotes: data.handoffNotes,
 						handoffAt: data.handoffAt,
+						// The supervisor's restart request (fase 5): set by `requestHandoff`, cleared by `completeHandoff` — both
+						// through `save`, so the column follows the entity (out of this set, the request would never clear).
+						handoffRequestedAt: data.handoffRequestedAt,
 						lastTurnAt: data.lastTurnAt,
 						updatedAt: new Date(),
 						version: data.version,
@@ -116,6 +119,7 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 			lastMessageId: row.lastMessageId ?? undefined,
 			handoffNotes: row.handoffNotes ?? undefined,
 			handoffAt: row.handoffAt ?? undefined,
+			handoffRequestedAt: row.handoffRequestedAt ?? undefined,
 			lastTurnAt: row.lastTurnAt,
 		})
 		return new AgentSession({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
@@ -135,6 +139,7 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 			lastMessageId: entity.lastMessageId ?? null,
 			handoffNotes: entity.handoffNotes ?? null,
 			handoffAt: entity.handoffAt ?? null,
+			handoffRequestedAt: entity.handoffRequestedAt ?? null,
 			lastTurnAt: entity.lastTurnAt,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

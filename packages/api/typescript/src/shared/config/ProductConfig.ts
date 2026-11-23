@@ -72,7 +72,8 @@ export const ProductEnvSchema = z.object({
 	// O QUE O SUPERVISOR FAZ COM OS VEREDITOS (fase 5, item 3). Todo veredito fica registrado em
 	// `agent.supervisor.reviewed` (auditoria). Cru aqui de propósito: o conjunto fechado é o enum `SupervisorMode`
 	// do `agent` (`shared` não consome contexto nenhum), que o lê com `z.enum(SupervisorMode)` e o padrão
-	// (`SUPERVISOR_MODE_DEFAULT`) — um valor fora do enum falha ALTO no primeiro uso, nunca vira outro modo.
+	// (`SUPERVISOR_MODE_DEFAULT` = `ACT`, decisão do dono de 20/11) — um valor fora do enum falha ALTO no primeiro uso,
+	// nunca vira outro modo.
 	CODM_AGENT_SUPERVISOR_MODE: z.string().trim().optional(),
 
 	// O MÁXIMO DE TURNOS DE TAREFA SIMULTÂNEOS (fase 4, item 1). A vaga efetiva é o mínimo deste, do portão de

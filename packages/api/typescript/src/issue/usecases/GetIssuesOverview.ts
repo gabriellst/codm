@@ -5,6 +5,7 @@ import { issues, threads } from '@codm/contracts/db'
 import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 
@@ -30,7 +31,7 @@ const IssueItemSchema = z.object({
 	waitingForProviderUntil: z.string().optional(),
 	/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent otherwise (filled from S2). */
 	retryingAt: z.string().optional(),
-	/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
+	/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise. */
 	escalatedAt: z.string().optional(),
 	/** Where the work stands right now, by rule (`lifeStateOf`) — what the board columns are. */
 	lifeState: z.enum(IssueLifeState),
@@ -87,6 +88,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 
 		const waiting = await providerWaitByIssue(this.driver)
 		const retrying = await retryWaitByIssue(this.driver)
+		const escalated = await escalatedAtByIssue(this.driver)
 		const life = await lifeStateByIssue(
 			this.driver,
 			rows.filter(r => !r.archived).map(r => ({ issueId: r.issueId, status: r.status as IssueStatus })),
@@ -105,6 +107,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			threadDisplayName: r.threadDisplayName,
 			waitingForProviderUntil: waiting.get(r.issueId)?.toISOString(),
 			retryingAt: retrying.get(r.issueId)?.toISOString(),
+			escalatedAt: escalated.get(r.issueId)?.toISOString(),
 			// Archived issues are off the board; they read as DONE rather than paying the queue read.
 			lifeState: life.get(r.issueId) ?? IssueLifeState.DONE,
 		}))

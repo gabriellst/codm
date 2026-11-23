@@ -114,6 +114,24 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'and the frozen `stop_raised` integration event is issue-scoped; minting a fact for someone else to turn into ' +
 			'a card would add a hop on the path whose whole point is telling the operator NOW.',
 	},
+	{
+		file: 'agent/usecases/ActOnSupervisorVerdict.ts',
+		imports: 'thread/usecases',
+		why:
+			'The supervisor`s retry (fase 5, item 3 — `NUDGE` / `RESTART_WITH_NOTES` on a stall or a provider error nobody ' +
+			'answered) resolves the task`s stop with `AUTO_RETRY` through `ApplySupervisorRetry`, the sibling of ' +
+			'`ApplyDueQuestionDefaults`. Same reasoning as `NotifyBudgetHeld`: the rule (which stop may be retried, who ' +
+			'resolves it, that a person`s stop is never answered, the resume that follows) is the thread`s; the agent only ' +
+			'knows WHEN. The ladder, descended in order:\n' +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN. Resolving a stop is the `Thread` aggregate`s ' +
+			'`resolveStop` (applicability by kind, first resolution wins, the `thread.stop_resolved` fact that resumes the ' +
+			'task); driving the aggregate from `agent` would fork the thread`s rule into the supervisor.\n' +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. The same `agent → thread` edge and surface the ' +
+			'dispatcher and the orchestrator turn already use, one more file; its whole reach is gated by ' +
+			'`tests/architecture/supervisor-reach.test.ts`. Per-file and liveness-gated.\n' +
+			'  degrau 3 (integration event) — NOT NEEDED. The action and its audit fact share one transaction so the ' +
+			'per-task ceilings never miss an action; a fact for someone else to turn into the resolution would split them.',
+	},
 	...(
 		[
 			{ file: 'ui/usecases/CompleteOnboarding.ts', imports: 'workspace/usecases' },

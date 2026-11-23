@@ -14,6 +14,7 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
 import { lifeStateByIssue } from '../utils/issueLifeState'
 import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
@@ -116,6 +117,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
 		const retrying = await retryWaitByIssue(this.driver, [input.issueId])
+		const escalated = await escalatedAtByIssue(this.driver, [input.issueId])
 		const life = await lifeStateByIssue(this.driver, [{ issueId: issue.id, status: issue.status as IssueStatus }], {
 			budgetHeld: this.quota.holdsIssueLane(),
 			declaredWait: this.declaredWait,
@@ -143,6 +145,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				paused: issue.paused,
 				waitingForProviderUntil: waiting.get(issue.id)?.toISOString(),
 				retryingAt: retrying.get(issue.id)?.toISOString(),
+				escalatedAt: escalated.get(issue.id)?.toISOString(),
 				lifeState: life.get(issue.id) ?? IssueLifeState.STALLED,
 			},
 			provider: issue.provider as ProviderKind,

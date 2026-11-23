@@ -671,12 +671,12 @@ export const REPO = {
 			advanced: true,
 		},
 		// Fase 5 (item 3): what the supervisor does with its verdicts. Every verdict is recorded either way
-		// (`agent.supervisor.reviewed`, the audit trail). Provisional default OBSERVE until slice S5 turns acting on
-		// (the owner's decision of 20/11 is ACT); OFF skips every pass.
+		// (`agent.supervisor.reviewed`, the audit trail). Default ACT (the owner's decision of 20/11: it acts from
+		// the installation on, within its safety rails); OBSERVE only records; OFF skips every pass.
 		CODM_AGENT_SUPERVISOR_MODE: {
 			consumers: ['apiTs'],
 			schema: 'product',
-			example: 'OBSERVE',
+			example: 'ACT',
 			doc: 'Supervisor of suspect tasks: OFF (no pass), OBSERVE (record verdicts only) or ACT (carry them out, within its safety rails)',
 			advanced: true,
 		},

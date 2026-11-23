@@ -2,51 +2,17 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import {
-	MailboxClaimClass,
-	MailboxItemKind,
-	MailboxTargetKind,
-	NudgeSource,
-	PermissionPosture,
-	StopKind,
-} from '@codm/contracts-typescript/wire/enums'
+import { NudgeSource, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { StalledIssueReader, type StalledIssueRef } from '../services/StalledIssueReader'
-import { MailboxRepository } from '../repositories/MailboxRepository'
+import { NudgeQueue, type NudgeOrdinal } from '../services/NudgeQueue'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { AgentIssueNudgedEvent } from '../events/AgentIssueNudgedEvent'
-import type { NudgePayload } from '../objects/NudgePayload'
+import { NUDGES_BEFORE_STALL, type NudgePayload } from '../objects/NudgePayload'
 import { FactSource } from '../enums'
 
-/**
- * HOW MANY NUDGES A QUIET TURN GETS before the sweep raises the visible block (fase 5, item 1): nudge 1 asks it to
- * declare, nudge 2 to finish the step it stopped in and then declare. The supervisor's resume counts as the last one
- * (`ordinal = NUDGES_BEFORE_STALL`), so a quiet turn after it is a `STALLED` straight away — never a new pair.
- */
-export const NUDGES_BEFORE_STALL = 2
-type NudgeOrdinal = 1 | 2
-
-/**
- * What each nudge says to the issue's session. The tools are named by purpose: the turn's own prompt
- * (`IssueWorkAgent.declarationInstruction`) names them, and this is a follow-up in that session. Nudge 2 may WORK —
- * always in AUTO, so the permission filter and the regret window hold — and says outright it authorizes nothing
- * irreversible.
- */
-export const NUDGE_TEXT: Readonly<Record<NudgeOrdinal, string>> = {
-	1:
-		'Your last turn ended without declaring where this issue stands, so nobody can tell whether it is done, ' +
-		'waiting on someone, or stuck. Declare it now with the reporting tools, and do not redo any work: ' +
-		'finished → mark the issue COMPLETED with a short summary; waiting for a decision or an approval (for ' +
-		'example "can I publish?") → ask for the decision; a question you can go on without → ask it with the ' +
-		'default you will follow; a preview for people to look at → request feedback on it. ' +
-		'Do not write anything for the group — this reminder is not shown to anyone.',
-	2:
-		'Your last turn ended without declaring where this issue stands, again. If you stopped in the middle of a ' +
-		'step, finish that step now; then declare with the reporting tools: finished → mark the issue COMPLETED with ' +
-		'a short summary; a decision you need → ask for it; what is missing and from whom → ask the question. ' +
-		'This nudge authorizes nothing new: do not publish, deploy, merge or do anything irreversible — if the next ' +
-		'step is one of those, ask for the decision instead. Do not write anything for the group — this nudge is not ' +
-		'shown to anyone.',
-}
+// The count and the texts live with the one door a nudge goes through (`NudgeQueue`), shared with the supervisor.
+export { NUDGES_BEFORE_STALL } from '../objects/NudgePayload'
+export { NUDGE_TEXT } from '../services/NudgeQueue'
 
 export const ReconcileStalledIssuesInputSchema = z.object({})
 export const ReconcileStalledIssuesOutputSchema = z.object({
@@ -122,7 +88,7 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 
 	constructor(
 		private readonly stalled: StalledIssueReader,
-		private readonly mailbox: MailboxRepository,
+		private readonly nudges: NudgeQueue,
 	) {
 		super()
 	}
@@ -182,29 +148,8 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 	 * twice; the fact is written in the same transaction.
 	 */
 	private async nudge(orphan: StalledIssueRef, ordinal: NudgeOrdinal, rootItemId: string, tx: Transaction): Promise<void> {
-		const nudge: NudgePayload['nudge'] = { ordinal, rootItemId, source: NudgeSource.RECONCILER }
-		await this.mailbox.enqueue(
-			{
-				ownerId: orphan.ownerId,
-				targetKind: MailboxTargetKind.ISSUE,
-				targetId: orphan.issueId,
-				kind: MailboxItemKind.STEER,
-				// A nudge, not somebody's message: never coalesced with steers, never ahead of them.
-				claimClass: MailboxClaimClass.REMINDER,
-				posture: PermissionPosture.AUTO,
-				payload: {
-					issueId: orphan.issueId,
-					threadId: orphan.threadId,
-					key: orphan.key,
-					title: orphan.title,
-					provider: orphan.provider,
-					text: NUDGE_TEXT[ordinal],
-					nudge,
-				},
-				dedupKey: `nudge:${orphan.issueId}:${rootItemId}:${ordinal}`,
-			},
-			tx,
-		)
+		const nudge: NudgePayload['nudge'] & { ordinal: NudgeOrdinal } = { ordinal, rootItemId, source: NudgeSource.RECONCILER }
+		await this.nudges.enqueueNudge(orphan, nudge, `nudge:${orphan.issueId}:${rootItemId}:${ordinal}`, tx)
 		await this.domainEventRepository.save(
 			new AgentIssueNudgedEvent({
 				entityId: orphan.issueId,

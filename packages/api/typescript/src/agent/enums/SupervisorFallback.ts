@@ -10,6 +10,15 @@
  *  - `NOT_ADMITTED` — a verdict the suspicion does not admit (`VERDICTS_BY_REASON`).
  *  - `LOW_CONFIDENCE` — below the verdict's floor (`SUPERVISOR_MIN_CONFIDENCE`).
  *  - `CAPPED` — past a per-task daily ceiling: escalated once, then left.
+ *
+ * The safety rails re-checked when the verdict is carried out (fase 5, S5 — the model call sits between the rule and
+ * the action, so what held then may not hold now). Each leaves the task alone, recorded `acted: false`:
+ *  - `HELD` — the issue or its conversation is paused (`IssueHold`).
+ *  - `WAITING` — the last turn asked for feedback (`DeclaredWaitReader`): a wait without a deadline.
+ *  - `PERSON_STOP` — a stop waiting on a person is open (`SupervisorRetryOutcome.PERSON_STOP`).
+ *  - `LIVE_TURN` — a turn of the task is running, or work for it is queued / deferred: the supervisor never starts a
+ *    turn beside one, and never stops one (only `ESCALATE` flags a live turn).
+ *  - `NO_STOP` — the retry found no open stall or provider-error stop (someone resolved it first).
  */
 export enum SupervisorFallback {
 	NOT_ENTITLED = 'NOT_ENTITLED',
@@ -20,4 +29,9 @@ export enum SupervisorFallback {
 	NOT_ADMITTED = 'NOT_ADMITTED',
 	LOW_CONFIDENCE = 'LOW_CONFIDENCE',
 	CAPPED = 'CAPPED',
+	HELD = 'HELD',
+	WAITING = 'WAITING',
+	PERSON_STOP = 'PERSON_STOP',
+	LIVE_TURN = 'LIVE_TURN',
+	NO_STOP = 'NO_STOP',
 }

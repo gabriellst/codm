@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler } from '@codm/core-typescript'
-import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, NudgeSource, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
-import { PUBLISH_AUTHORIZED_BY } from '@agent/objects'
+import { NUDGES_BEFORE_STALL, PUBLISH_AUTHORIZED_BY, type NudgePayload } from '@agent/objects'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
 import type { Stop, Thread } from '../entities/Thread'
@@ -47,6 +47,22 @@ const RESUME_CLAIM_CLASS: Readonly<Record<StopResolution, MailboxClaimClass>> = 
 	[StopResolution.ANSWER]: MailboxClaimClass.DECISION_ANSWER,
 	[StopResolution.DEFAULT_APPLIED]: MailboxClaimClass.DECISION_ANSWER,
 	[StopResolution.AUTO_RETRY]: MailboxClaimClass.REMINDER,
+}
+
+/**
+ * WHICH NUDGE THE RESUME IS (fase 5) — total over `StopResolution`. Only the supervisor's retry is one: the LAST nudge
+ * of the episode (`ordinal = NUDGES_BEFORE_STALL`, decision of 20/11 — one automatic turn per supervisor action), so
+ * if that turn goes quiet too the reconciler raises `STALLED` straight away instead of starting a new pair.
+ */
+const RESUME_NUDGE: Readonly<Record<StopResolution, NudgePayload['nudge'] | undefined>> = {
+	[StopResolution.RETRY]: undefined,
+	[StopResolution.REVIEW_AND_SEND]: undefined,
+	[StopResolution.APPROVE]: undefined,
+	[StopResolution.DENY]: undefined,
+	[StopResolution.TAKE_OVER]: undefined,
+	[StopResolution.ANSWER]: undefined,
+	[StopResolution.DEFAULT_APPLIED]: undefined,
+	[StopResolution.AUTO_RETRY]: { ordinal: NUDGES_BEFORE_STALL, source: NudgeSource.SUPERVISOR },
 }
 
 /** What the resumed turn is told — by resolution, total over `StopResolution`. */
@@ -191,7 +207,16 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			posture,
 			// The stop and the resolution are DECLARED in the payload (revisão 2): the dedup key below is idempotency,
 			// never a field anyone parses back.
-			payload: ResumeIssuePayloadSchema.parse({ issueId, threadId, key: issue.key, title: issue.title, text, stopId, resolution }),
+			payload: ResumeIssuePayloadSchema.parse({
+				issueId,
+				threadId,
+				key: issue.key,
+				title: issue.title,
+				text,
+				stopId,
+				resolution,
+				...(RESUME_NUDGE[resolution] && { nudge: RESUME_NUDGE[resolution] }),
+			}),
 			// THE KEY IS THE STOP, and the choice is the same one `IngestChannelMessage` makes when it
 			// keys on the ENTRY: the dedup key is the unique CAUSE of the work, never the target of it.
 			// A stop is resolved once, so the at-least-once outbox redelivering this fact re-inserts,

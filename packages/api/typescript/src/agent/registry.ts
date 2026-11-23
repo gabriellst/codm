@@ -8,6 +8,7 @@ import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from '
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { IssueTurnAborter } from './services/IssueTurnAborter'
 import { LiveTurnReader } from './services/LiveTurnReader'
+import { NudgeQueue } from './services/NudgeQueue'
 import { ImmediateRegretWindowClock, RegretWindowClock, TimerRegretWindowClock } from './services/RegretWindowClock'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
@@ -91,6 +92,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The kill switch of a running issue turn (fase 2, item 2 — "pare" vale na hora): one in-memory
 	// AbortController per issue in flight, shared by the dispatcher, RunIssueTurn and the pause handler.
 	{ token: IssueTurnAborter, mock: IssueTurnAborter, integration: IssueTurnAborter, real: IssueTurnAborter },
+	// The one door a nudge goes through (fase 5): the reconciler's nudges and the supervisor's resume without a stop.
+	{ token: NudgeQueue, mock: NudgeQueue, integration: NudgeQueue, real: NudgeQueue },
 	// Its read-only face (fase 5): whether an issue's turn runs and when it last streamed a frame — the supervisor's
 	// silence signal, resolved to the SAME instance, with no kill switch in reach.
 	{

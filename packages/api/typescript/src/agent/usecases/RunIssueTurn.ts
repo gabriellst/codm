@@ -245,6 +245,23 @@ interface SessionHandoff {
 	derived: string
 	/** The turn's start: notes written AFTER it (by the new session itself) are not the ones this handoff consumed. */
 	decidedAt: Date
+	/** Why the old session was left — its size, or the supervisor's request (fase 5). */
+	reason: ResumeInvalidationReason
+}
+
+/**
+ * WHETHER A FRESH SESSION STARTS FROM THE HANDOFF NOTES, by the reason the resume was dropped — total over
+ * `ResumeInvalidationReason` (fase 4, item 6a; fase 5, item 3). A session past the context budget and a session the
+ * supervisor asked to restart hand their work over (the session's notes, if any, and the derived ones); every other
+ * reason means a premise broke (model, workspace, cursor) and the turn simply runs fresh, as it always did.
+ */
+const SEEDS_FROM_NOTES: Readonly<Record<ResumeInvalidationReason, boolean>> = {
+	[ResumeInvalidationReason.MODEL_CHANGED]: false,
+	[ResumeInvalidationReason.CWD_CHANGED]: false,
+	[ResumeInvalidationReason.MISSING_CURSOR]: false,
+	[ResumeInvalidationReason.CONVERSATION_ADVANCED]: false,
+	[ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED]: true,
+	[ResumeInvalidationReason.HANDOFF_REQUESTED]: true,
 }
 
 /**
@@ -670,7 +687,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// this line survived Fase 4.5 untouched: the per-CLI data literal and its registry died, their static
 		// fields moved onto the concrete runner, while `ProviderDetector` stayed and kept returning
 		// `caps: ProviderCapabilities` unchanged (AC-5.9).
-		if (!detection.caps?.sessionResume) {
+		// A supervisor's restart request (fase 5) goes on to the handoff below even here: the request is answered by a
+		// fresh session seeded with the notes, and `resumeDecision` reports it before anything else.
+		if (!detection.caps?.sessionResume && !existing.handoffRequestedAt) {
 			this.logging.warn({
 				content: {
 					message: 'provider has no native session resume capability — starting a fresh provider session',
@@ -692,9 +711,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		if (decision.resume) return { resumed: true, id: decision.id, askNotes: existing.contextAbove(ISSUE_HANDOFF_ASK_AT) }
 
 		this.logResumeInvalidated(input, existing.agentSessionId, decision.reason)
-		if (decision.reason !== ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED) return { resumed: false, id: uuidv7() }
-		// THE HANDOFF (fase 4, item 6a): the old session is past the budget — a fresh one starts from its notes and the
-		// task's durable state. Every other reason keeps its old meaning (the premise broke; the turn simply runs fresh).
+		if (!SEEDS_FROM_NOTES[decision.reason]) return { resumed: false, id: uuidv7() }
+		// THE HANDOFF (fase 4, item 6a; fase 5): the old session is past the budget, or the supervisor asked to restart it
+		// — a fresh one starts from its notes and the task's durable state (`SEEDS_FROM_NOTES`).
 		return {
 			resumed: false,
 			id: uuidv7(),
@@ -709,6 +728,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 					cwd: input.workspacePath,
 				}),
 				decidedAt: new Date(),
+				reason: decision.reason,
 			},
 		}
 	}
@@ -771,6 +791,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 							notesSource: handoff.sessionNotes ? HandoffNotesSource.SESSION : HandoffNotesSource.DERIVED,
 							fromAgentSessionId: handoff.fromAgentSessionId,
 							toAgentSessionId: agentSessionId,
+							reason: handoff.reason,
 						},
 					}),
 					tx,

@@ -22,7 +22,7 @@ import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentSession } from '../entities/AgentSession'
 import { AgentSessionHandedOffEvent } from '../events/AgentSessionHandedOffEvent'
-import { AgentRunOutcome, HandoffNotesSource, type TransportStopKind } from '../enums'
+import { AgentRunOutcome, HandoffNotesSource, ResumeInvalidationReason, type TransportStopKind } from '../enums'
 import { operationIdOf, WriteHandoffNotesController } from '../mcp/exposure'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../types/AgentRuntimeEvent'
@@ -242,7 +242,38 @@ describe('RunIssueTurn — session handoff with notes', () => {
 			notesSource: HandoffNotesSource.SESSION,
 			fromAgentSessionId: 'old-session',
 			toAgentSessionId: String(request?.session?.newId),
+			reason: ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED,
 		})
+	})
+
+	/**
+	 * THE SUPERVISOR'S RESTART (fase 5, S5): a session far UNDER the budget whose row carries the request opens a fresh
+	 * session seeded with its notes — `HANDOFF_REQUESTED`, reported before the budget and every premise — the fact says
+	 * why, and the request is cleared with the handoff (the turn after resumes the new session). Falsifiers: check the
+	 * request after the budget (or not at all) and the small session resumes; leave `SEEDS_FROM_NOTES[HANDOFF_REQUESTED]`
+	 * false and it starts bare; drop the column from the repository's update set and the third turn restarts again.
+	 */
+	it('a restart the supervisor requested opens a fresh session from the notes even with a small context, once', async () => {
+		const { threadId, issueId } = await givenTaskSession(30_000, NOTES)
+		await givenTaskRecord(threadId, issueId)
+		const sessions = testBed.resolve(AgentSessionRepository)
+		const row = await sessions.findByIssueId(issueId)
+		row?.requestHandoff(new Date(Date.now() - 60_000))
+		if (row) await sessions.save(row)
+
+		await testBed.resolve(RunIssueTurn).execute(steerInput(threadId, issueId))
+		const request = runner.requests[0]
+		expect(request?.session?.resumeId).toBeUndefined()
+		expect(runner.userMessage(0)).toContain(NOTES)
+		const facts = await testBed.resolve(DomainEventRepository).findByType(AgentSessionHandedOffEvent)
+		expect(facts.map(fact => fact.payload.reason)).toEqual([ResumeInvalidationReason.HANDOFF_REQUESTED])
+		const after = await sessions.findByIssueId(issueId)
+		expect(after?.handoffRequestedAt).toBeUndefined()
+		expect(after?.agentSessionId).toBe(request?.session?.newId)
+
+		// The next turn resumes the NEW session: the request was answered once.
+		await testBed.resolve(RunIssueTurn).execute({ ...steerInput(threadId, issueId, 2), priorMessageId: testId('handoff', 'entry-1') })
+		expect(runner.requests[1]?.session?.resumeId).toBe(String(request?.session?.newId))
 	})
 
 	it('without notes (it jumped past the band, or ignored the ask) the fresh session starts from the derived ones', async () => {

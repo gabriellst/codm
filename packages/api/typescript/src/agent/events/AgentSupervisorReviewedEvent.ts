@@ -15,6 +15,11 @@ export const AgentSupervisorReviewedEventSchema = z.domainEvent({
 	acted: z.boolean(),
 	/** Why the verdict fell back to `LEAVE`, when it did — never the model's words nor an error's text. */
 	fallback: z.enum(SupervisorFallback).optional(),
+	/**
+	 * `RESTART_WITH_NOTES` carried out (fase 5, S5): whether the task's session row got the restart request — `false`
+	 * when the task has no session yet (its next turn is fresh anyway, so the request is ignored and said so here).
+	 */
+	sessionRestarted: z.boolean().optional(),
 })
 
 /**

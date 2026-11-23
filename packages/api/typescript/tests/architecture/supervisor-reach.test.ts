@@ -41,6 +41,28 @@ const SUPERVISOR_ALLOWED_PORTS: readonly { module: string; why: string; names?: 
 	{ module: '../enums/SupervisorPassSkip', why: 'vocabulary' },
 	{ module: '../enums/SupervisorFallback', why: 'vocabulary' },
 	{ module: '../utils/SupervisorCaps', why: 'the per-task daily ceilings (pure)' },
+	// Slice S5 — the verdict is carried out, through these doors only.
+	{ module: './ActOnSupervisorVerdict', why: 'the job hands each verdict to its executor — governed by this same rail' },
+	{
+		module: '@thread/usecases/ApplySupervisorRetry',
+		why: 'RETRY: resolves the open stall / provider error with AUTO_RETRY — refuses a person`s stop, writes to nobody',
+	},
+	{ module: '@thread/enums/SupervisorRetryOutcome', why: 'vocabulary' },
+	{ module: '@issue/services/IssueHold', why: 'READ: a paused issue or conversation is never touched' },
+	{ module: '../services/DeclaredWaitReader', why: 'READ: a task waiting for feedback is never touched' },
+	{
+		module: '../services/LiveTurnReader',
+		why: 'READ: a live turn is never stopped nor run beside — the read-only face of the turn registry, no abort in reach',
+	},
+	{
+		module: '../services/NudgeQueue',
+		why: 'RESTART with no stop: queues the LAST nudge (REMINDER, AUTO) — the narrow door, not the whole mailbox',
+	},
+	{
+		module: '../repositories/AgentSessionRepository',
+		why: 'RESTART: the task`s own session row gets the restart request (`requestHandoff`) — the agent`s own aggregate',
+	},
+	{ module: '../objects/NudgePayload', why: 'the nudge count (`NUDGES_BEFORE_STALL`)' },
 ]
 
 /** One import of a source text: the module, and the names it brings in (absent for a namespace / default / dynamic). */
@@ -124,6 +146,10 @@ describe('supervisor reach — only the ports its safety rails allow', () => {
 		expect(outOfReach("import { SuspectIssueReader } from '../services/SuspectIssueReader'")).toEqual([])
 		// The running-turn registry holds the abort and the interrupt: a live turn is only ever read (`LiveTurnReader`).
 		expect(outOfReach("import { IssueTurnAborter } from '../services/IssueTurnAborter'")).toEqual(['../services/IssueTurnAborter'])
+		// The whole queue is out of reach (an ISSUE_RESULT is a message to the group by another road): only the nudge door.
+		expect(outOfReach("import { MailboxRepository } from '../repositories/MailboxRepository'")).toEqual([
+			'../repositories/MailboxRepository',
+		])
 		// The core barrel is narrowed: the command queue a channel delivery rides is out of reach, the Handler base is not.
 		expect(outOfReach("import { CommandQueue, Handler } from '@codm/core-typescript'")).toEqual(['@codm/core-typescript → CommandQueue'])
 		expect(outOfReach("import * as core from '@codm/core-typescript'")).toEqual(['@codm/core-typescript (whole module)'])

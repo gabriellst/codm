@@ -1,8 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { DomainEventRepository } from '@codm/core-typescript'
-import { ProviderLimitWindow, SlotLimit, SupervisorVerdict, SuspicionReason } from '@codm/contracts-typescript/wire/enums'
-import { TestBed, givenIssue, givenThread } from '@test/support'
+import {
+	ProviderLimitWindow,
+	SlotLimit,
+	StopKind,
+	StopResolution,
+	SupervisorVerdict,
+	SuspicionReason,
+} from '@codm/contracts-typescript/wire/enums'
+import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentSupervisorReviewedEvent } from '../events/AgentSupervisorReviewedEvent'
@@ -12,7 +20,7 @@ import { SupervisorPassSkip } from '../enums/SupervisorPassSkip'
 import { IssueSupervisor, MockIssueSupervisor } from '../services/IssueSupervisor'
 import { InMemoryQuotaStatus, type QuotaStatus } from '../services/QuotaStatusReader'
 import { MockSuspectIssueReader, SuspectIssueReader, type SuspectIssue } from '../services/SuspectIssueReader'
-import { SuperviseSuspectIssues } from './SuperviseSuspectIssues'
+import { SUPERVISOR_MODE_DEFAULT, SuperviseSuspectIssues } from './SuperviseSuspectIssues'
 
 class ObservingSupervisor extends SuperviseSuspectIssues {
 	protected override mode = SupervisorMode.OBSERVE
@@ -53,11 +61,12 @@ const status = (overrides: Partial<QuotaStatus> = {}): QuotaStatus => ({
 })
 
 /**
- * THE SUPERVISOR JOB IN THIS SLICE (fase 5, S4): it looks and RECORDS — every verdict, in every mode that runs, as
- * `agent.supervisor.reviewed { acted: false }` — and changes nothing else. S5 turns acting on.
+ * THE SUPERVISOR JOB (fase 5, S4 + S5): it looks and records every verdict, in every mode that runs, as
+ * `agent.supervisor.reviewed`; in `OBSERVE` (`acted: false`) nothing else changes, in `ACT` — the default, owner's
+ * decision of 20/11 — the verdict is carried out through `ActOnSupervisorVerdict` (its rails tested there).
  *
- * Falsifiers: write `acted: true` (or carry a verdict out) and the "nothing else changes" asserts fail; drop the mode
- * check and OFF records; drop a skip and the paused / held passes call the model.
+ * Falsifiers: carry a verdict out in OBSERVE and the "nothing else changes" asserts fail; leave `MODE_ACTS[ACT]` false
+ * and ACT resolves nothing; drop the mode check and OFF records; drop a skip and the paused / held passes call the model.
  */
 describe('SuperviseSuspectIssues', () => {
 	let testBed: TestBed
@@ -109,13 +118,31 @@ describe('SuperviseSuspectIssues', () => {
 		deliveries: await testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' }),
 	})
 
-	const recording: (typeof SuperviseSuspectIssues)[] = [ObservingSupervisor, ActingSupervisor]
+	it('ACT is the default mode (owner, 20/11)', () => {
+		expect(SUPERVISOR_MODE_DEFAULT).toBe(SupervisorMode.ACT)
+	})
+
+	it('ACT carries the verdict out: the stall is retried, the fact says acted', async () => {
+		const suspect = await givenSuspect()
+		const stop = await givenStop(testBed, { threadId: suspect.threadId, issueId: suspect.issueId, kind: StopKind.STALLED })
+		supervisor.script(suspect.issueId, { verdict: SupervisorVerdict.NUDGE, confidence: 0.9 })
+
+		const out = await testBed.resolve(ActingSupervisor).execute({})
+
+		expect(out.reviewed).toEqual([{ issueId: suspect.issueId, reason: SuspicionReason.STALLED_OPEN, verdict: SupervisorVerdict.NUDGE }])
+		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolution).toBe(StopResolution.AUTO_RETRY)
+		expect((await facts())[0]?.payload).toMatchObject({ verdict: SupervisorVerdict.NUDGE, mode: SupervisorMode.ACT, acted: true })
+	})
+
+	const recording: (typeof SuperviseSuspectIssues)[] = [ObservingSupervisor]
 	for (const Job of recording) {
 		it(`${Job.name}: every verdict is recorded, acted: false — and nothing else happens`, async () => {
 			const suspect = await givenSuspect()
+			const stop = await givenStop(testBed, { threadId: suspect.threadId, issueId: suspect.issueId, kind: StopKind.STALLED })
 			supervisor.script(suspect.issueId, { verdict: SupervisorVerdict.NUDGE, confidence: 0.9 })
 
 			const out = await testBed.resolve(Job).execute({})
+			expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolvedAt).toBeUndefined()
 
 			expect(out.reviewed).toEqual([{ issueId: suspect.issueId, reason: SuspicionReason.STALLED_OPEN, verdict: SupervisorVerdict.NUDGE }])
 			const [fact] = await facts()

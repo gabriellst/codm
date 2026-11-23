@@ -10,6 +10,7 @@ import { lifeStateByIssue } from '../utils/issueLifeState'
 import { panelHealthOf, QuotaStatusReader } from '@agent/services/QuotaStatusReader'
 import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
 import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
 import { assembleIssueTimeline } from '../utils/issueTimeline'
 
 export const PublishPanelSnapshotInputSchema = z.object({})
@@ -77,7 +78,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 			.where(or(eq(issues.archived, false), gt(issues.updatedAt, new Date(Date.now() - ARCHIVED_REPORT_WINDOW_MS))))
 
 		const groups = [...new Map(rows.map(row => [row.threadId, { threadId: row.threadId, name: row.threadName }])).values()]
-		const [life, waiting, retrying] = await Promise.all([
+		const [life, waiting, retrying, escalated] = await Promise.all([
 			lifeStateByIssue(
 				this.driver,
 				rows.map(row => ({ issueId: row.issueId, status: row.status as IssueStatus })),
@@ -85,6 +86,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 			),
 			providerWaitByIssue(this.driver),
 			retryWaitByIssue(this.driver),
+			escalatedAtByIssue(this.driver),
 		])
 
 		const changed: { snapshot: PanelIssueSnapshot; fingerprint: string }[] = []
@@ -102,6 +104,7 @@ export class PublishPanelSnapshot extends Handler<typeof PublishPanelSnapshotInp
 				lifeState,
 				waitingForProviderUntil: waiting.get(row.issueId)?.toISOString(),
 				retryingAt: retrying.get(row.issueId)?.toISOString(),
+				escalatedAt: escalated.get(row.issueId)?.toISOString(),
 				archived: row.archived,
 				timeline,
 			}

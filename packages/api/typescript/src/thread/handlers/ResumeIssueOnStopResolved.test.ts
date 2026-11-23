@@ -8,6 +8,7 @@ import {
 	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
+	NudgeSource,
 	PermissionPosture,
 	StopKind,
 	StopResolution,
@@ -252,5 +253,7 @@ describe('ResumeIssueOnStopResolved — an answer always reaches the session', (
 		expect(item?.claimClass).toBe(MailboxClaimClass.REMINDER)
 		expect(ResumeIssuePayloadSchema.parse(item?.payload).resolution).toBe(StopResolution.AUTO_RETRY)
 		expect(ResumeIssuePayloadSchema.parse(item?.payload).text).toContain('does not authorize publishing')
+		// The LAST nudge of the episode (fase 5, S5): a quiet turn after it is a STALLED straight away, never a new pair.
+		expect(ResumeIssuePayloadSchema.parse(item?.payload).nudge).toEqual({ ordinal: 2, source: NudgeSource.SUPERVISOR })
 	})
 })

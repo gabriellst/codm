@@ -225,4 +225,45 @@ describe('AgentSession entity', () => {
 			expect(AgentSession.create(base).contextAbove(0)).toBe(false)
 		})
 	})
+
+	/**
+	 * Fase 5, S5 — the supervisor's RESTART_WITH_NOTES: a request on the row is the reason the next turn runs fresh, reported
+	 * FIRST (before the budget, and before the premises — only this reason seeds the fresh session from the notes), and it
+	 * is answered by the handoff that completes. Falsifier: check it after the budget and a small session resumes.
+	 */
+	describe('the supervisor restart request', () => {
+		it('a requested handoff runs fresh with HANDOFF_REQUESTED, even under the budget and with every premise holding', () => {
+			const session = AgentSession.create({ ...base, contextTokens: 10_000 })
+			expect(session.resumeDecision({ ...validCtx, contextBudget: 120_000 }).resume).toBe(true)
+			session.requestHandoff(new Date(Date.now() - 1_000))
+			const decision = session.resumeDecision({ ...validCtx, contextBudget: 120_000 })
+			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.HANDOFF_REQUESTED)
+		})
+
+		it('is reported before the budget and before a broken premise', () => {
+			const session = AgentSession.create({ ...base, contextTokens: 900_000 })
+			session.requestHandoff()
+			const past = session.resumeDecision({ ...validCtx, contextBudget: 120_000 })
+			expect(past.resume === false && past.reason).toBe(ResumeInvalidationReason.HANDOFF_REQUESTED)
+			const moved = session.resumeDecision({ ...validCtx, cwd: '/tmp/OTHER' })
+			expect(moved.resume === false && moved.reason).toBe(ResumeInvalidationReason.HANDOFF_REQUESTED)
+		})
+
+		it('a second request keeps the first instant; the completed handoff clears it, a later one survives', () => {
+			const session = AgentSession.create(base)
+			const first = new Date(Date.now() - 60_000)
+			session.requestHandoff(first)
+			session.requestHandoff(new Date())
+			expect(session.handoffRequestedAt).toEqual(first)
+			session.completeHandoff(new Date())
+			expect(session.handoffRequestedAt).toBeUndefined()
+			expect(session.resumeDecision(validCtx).resume).toBe(true)
+
+			// A request made AFTER the handoff was decided (the turn's start) is a new one — it waits for the next turn.
+			const decidedAt = new Date(Date.now() - 30_000)
+			session.requestHandoff(new Date())
+			session.completeHandoff(decidedAt)
+			expect(session.handoffRequestedAt).toBeDefined()
+		})
+	})
 })
