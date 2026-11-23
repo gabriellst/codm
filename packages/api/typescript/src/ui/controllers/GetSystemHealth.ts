@@ -31,7 +31,9 @@ export class GetSystemHealthController extends Controller<
 	typeof GetSystemHealthControllerInputSchema,
 	typeof GetSystemHealthControllerOutputSchema
 > {
-	readonly path = '/ui/system/health'
+	// Último segmento NÃO pode ser `health`: scripts/release/smoke-sidecars.ts (healthPathOf) acha o
+	// health do daemon como o único path do openapi.json que termina em `/health`.
+	readonly path = '/ui/system-health'
 	readonly method = 'get' as const
 	readonly description = 'Quota health: both windows, task slots and their limit, queue, free disk'
 	readonly inputSchema = GetSystemHealthControllerInputSchema

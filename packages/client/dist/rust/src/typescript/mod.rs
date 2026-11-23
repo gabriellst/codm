@@ -19741,13 +19741,13 @@ Sends a `GET` request to `/ui/settings`
     }
     /**Quota health: both windows, task slots and their limit, queue, free disk
 
-Sends a `GET` request to `/ui/system/health`
+Sends a `GET` request to `/ui/system-health`
 
 */
     pub async fn get_system_health<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::QuotaSnapshot>, Error<()>> {
-        let url = format!("{}/ui/system/health", self.baseurl,);
+        let url = format!("{}/ui/system-health", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
