@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getSystemHealth } from "../client/getSystemHealth.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getSystemHealthSuspenseQueryKey = () => [{ url: '/ui/system/health' }] as const
+export const getSystemHealthSuspenseQueryKey = () => [{ url: '/ui/system-health' }] as const
 
 export type GetSystemHealthSuspenseQueryKey = ReturnType<typeof getSystemHealthSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getSystemHealthSuspenseQueryOptions(config: Partial<RequestConfi
 
 /**
  * @description Quota health: both windows, task slots and their limit, queue, free disk
- * {@link /ui/system/health}
+ * {@link /ui/system-health}
  */
 export function useGetSystemHealthSuspense<TData = GetSystemHealthQueryResponse, TQueryKey extends QueryKey = GetSystemHealthSuspenseQueryKey>(options: 
 {

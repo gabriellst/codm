@@ -8,13 +8,13 @@ import type { GetSystemHealthQueryResponse } from "../types/GetSystemHealth.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetSystemHealthUrl() {
-  const res = { method: 'GET', url: `/ui/system/health` as const }
+  const res = { method: 'GET', url: `/ui/system-health` as const }
   return res
 }
 
 /**
  * @description Quota health: both windows, task slots and their limit, queue, free disk
- * {@link /ui/system/health}
+ * {@link /ui/system-health}
  */
 export async function getSystemHealth(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

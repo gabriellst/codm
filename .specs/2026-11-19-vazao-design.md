@@ -220,7 +220,7 @@ Classes fixadas pelo objetivo, numa tabela total `CLAIM_RANK` em `agent/utils/Cl
 
 ### Item 7 — saúde do sistema
 
-- `GET /ui/system/health` (BFF `ui`, query use case `GetSystemHealth`, DTO `QuotaSnapshotSchema`): selo, janela e semana, vagas com `limitedBy`, fila, disco, daemon. O dispatcher expõe o estado pela porta `QuotaStatusReader`.
+- `GET /ui/system-health` (BFF `ui`, query use case `GetSystemHealth`, DTO `QuotaSnapshotSchema`): selo, janela e semana, vagas com `limitedBy`, fila, disco, daemon. O dispatcher expõe o estado pela porta `QuotaStatusReader`.
 - Console: faixa de saúde no topo de "Tarefas" (componente no `-components/` da rota, SDK, SSE existente).
 - Painel na nuvem: o snapshot (`issue/usecases/PublishPanelSnapshot`) leva `PanelHealthSchema` (percentuais e estados, nunca gasto/teto absolutos); "daemon sem contato há N min" já existe.
 

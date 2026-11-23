@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getSystemHealth } from "../client/getSystemHealth.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getSystemHealthQueryKey = () => [{ url: '/ui/system/health' }] as const
+export const getSystemHealthQueryKey = () => [{ url: '/ui/system-health' }] as const
 
 export type GetSystemHealthQueryKey = ReturnType<typeof getSystemHealthQueryKey>
 
@@ -28,7 +28,7 @@ export function getSystemHealthQueryOptions(config: Partial<RequestConfig> & { c
 
 /**
  * @description Quota health: both windows, task slots and their limit, queue, free disk
- * {@link /ui/system/health}
+ * {@link /ui/system-health}
  */
 export function useGetSystemHealth<TData = GetSystemHealthQueryResponse, TQueryData = GetSystemHealthQueryResponse, TQueryKey extends QueryKey = GetSystemHealthQueryKey>(options: 
 {

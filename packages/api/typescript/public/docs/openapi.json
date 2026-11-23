@@ -11042,7 +11042,7 @@
         }
       }
     },
-    "/ui/system/health": {
+    "/ui/system-health": {
       "get": {
         "tags": [
           "ui"
