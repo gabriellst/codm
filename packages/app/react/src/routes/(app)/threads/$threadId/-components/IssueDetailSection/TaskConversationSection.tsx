@@ -24,7 +24,8 @@ export function TaskConversationSection({
 	const items = useMemo(() => {
 		const open = new Map<string, OpenStop<AskView>>()
 		for (const stop of needsYou?.stops ?? [])
-			if (stop.issueId === issueId) open.set(stop.stopId, { ask: stop.ask, resolutions: stop.availableResolutions })
+			if (stop.issueId === issueId)
+				open.set(stop.stopId, { ask: stop.ask, resolutions: stop.availableResolutions, detail: stop.detail || undefined })
 		return buildConversation(timeline?.items ?? [], { openStopOf: stopId => open.get(stopId) })
 	}, [timeline, needsYou, issueId])
 

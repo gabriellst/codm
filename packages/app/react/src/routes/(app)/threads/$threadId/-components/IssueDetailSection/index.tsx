@@ -28,7 +28,7 @@ import { providerLabel } from '@/components/console/glyphs'
 import { useLocale } from '@/hooks'
 import { enumLabel } from '@/lib'
 import { formatTimeOfDay } from '@/lib/format'
-import { TASK_COLUMN_OF } from '@/lib/task/issueBoard'
+import { TASK_COLUMN_LABEL_KEY, TASK_COLUMN_OF } from '@/lib/task/issueBoard'
 import { createdAt, requesterEntryId } from '@/lib/task/taskConversation'
 import { cn } from '@/lib/utils'
 import { DesktopTaskSurface } from './DesktopTaskSurface'
@@ -116,6 +116,8 @@ function TaskHeader({ threadId, detail, className, ...props }: ComponentProps<'d
 	const created = createdAt(items)
 	const openAsks = (needsYou?.stops ?? []).filter(stop => stop.issueId === issue.issueId && stop.ask).length
 	const meta = [
+		// The agent's own one-line note on the task (`GetIssueDetail.issue.meta`), as the old header showed it.
+		issue.meta,
 		requesterName && t('task.metaRequestedBy', { name: requesterName }),
 		created && formatTimeOfDay(created, locale),
 		providerLabel[detail.provider],
@@ -135,7 +137,7 @@ function TaskHeader({ threadId, detail, className, ...props }: ComponentProps<'d
 					</p>
 					{/* The kanban column's name — the same words the board shows; the exact state rides the `title`. */}
 					<StatusPill tone={TASK_COLUMN_OF[issue.lifeState]} title={enumLabel('IssueLifeState', issue.lifeState)}>
-						{t(`task.columns.${TASK_COLUMN_OF[issue.lifeState]}`)}
+						{t(TASK_COLUMN_LABEL_KEY[TASK_COLUMN_OF[issue.lifeState]])}
 					</StatusPill>
 				</div>
 				<p className="font-mono text-[11.5px] text-caption-foreground">{meta.join(' · ')}</p>
