@@ -2256,6 +2256,7 @@ type GetIssueTimeline200JSONResponseBodyItems1 struct {
 
 // GetIssueTimeline200JSONResponseBodyItems2 defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBodyItems2 struct {
+	ArtifactId     *openapi_types.UUID   `json:"artifactId,omitempty"`
 	At             string                `json:"at"`
 	Classification *ClassificationMethod `json:"classification,omitempty"`
 	EntryId        openapi_types.UUID    `json:"entryId"`
@@ -2271,6 +2272,7 @@ type GetIssueTimeline200JSONResponseBodyItems2 struct {
 type GetIssueTimeline200JSONResponseBodyItems3 struct {
 	At          string  `json:"at"`
 	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Failed      *bool   `json:"failed,omitempty"`
 	Id          string  `json:"id"`
 	Kind        string  `json:"kind"`
 	ReadAt      *string `json:"readAt,omitempty"`
@@ -10912,21 +10914,31 @@ type GetSessionIssuesResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Archived []struct {
-			Archived bool               `json:"archived"`
-			IssueId  openapi_types.UUID `json:"issueId"`
-			Key      string             `json:"key"`
-			Meta     *string            `json:"meta,omitempty"`
-			Status   IssueStatus        `json:"status"`
-			Title    string             `json:"title"`
+			Archived                bool               `json:"archived"`
+			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
+			Meta                    *string            `json:"meta,omitempty"`
+			Paused                  bool               `json:"paused"`
+			RetryingAt              *string            `json:"retryingAt,omitempty"`
+			Status                  IssueStatus        `json:"status"`
+			Title                   string             `json:"title"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"archived"`
 		Groups []struct {
 			Items []struct {
-				Archived bool               `json:"archived"`
-				IssueId  openapi_types.UUID `json:"issueId"`
-				Key      string             `json:"key"`
-				Meta     *string            `json:"meta,omitempty"`
-				Status   IssueStatus        `json:"status"`
-				Title    string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"items"`
 			Status IssueStatus `json:"status"`
 		} `json:"groups"`
@@ -14748,21 +14760,31 @@ func ParseGetSessionIssuesResponse(rsp *http.Response) (*GetSessionIssuesRespons
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Archived []struct {
-				Archived bool               `json:"archived"`
-				IssueId  openapi_types.UUID `json:"issueId"`
-				Key      string             `json:"key"`
-				Meta     *string            `json:"meta,omitempty"`
-				Status   IssueStatus        `json:"status"`
-				Title    string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"archived"`
 			Groups []struct {
 				Items []struct {
-					Archived bool               `json:"archived"`
-					IssueId  openapi_types.UUID `json:"issueId"`
-					Key      string             `json:"key"`
-					Meta     *string            `json:"meta,omitempty"`
-					Status   IssueStatus        `json:"status"`
-					Title    string             `json:"title"`
+					Archived                bool               `json:"archived"`
+					EscalatedAt             *string            `json:"escalatedAt,omitempty"`
+					IssueId                 openapi_types.UUID `json:"issueId"`
+					Key                     string             `json:"key"`
+					LifeState               IssueLifeState     `json:"lifeState"`
+					Meta                    *string            `json:"meta,omitempty"`
+					Paused                  bool               `json:"paused"`
+					RetryingAt              *string            `json:"retryingAt,omitempty"`
+					Status                  IssueStatus        `json:"status"`
+					Title                   string             `json:"title"`
+					WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 				} `json:"items"`
 				Status IssueStatus `json:"status"`
 			} `json:"groups"`

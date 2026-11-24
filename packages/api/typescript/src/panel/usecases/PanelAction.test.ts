@@ -23,6 +23,7 @@ import { RequestPanelAction } from './RequestPanelAction'
 import { GetPanelAction } from './GetPanelAction'
 import { RotatePanelLink } from './RotatePanelLink'
 import { GetPanelIssue } from './GetPanelIssue'
+import { GetPanelBoard } from './GetPanelBoard'
 
 const OWNER = '019e4d24-6524-7041-9e1c-8108180cde10'
 const OTHER_OWNER = '019e4d24-6524-7041-9e1c-8108180cde11'
@@ -237,6 +238,9 @@ describe('panel — acting as an identified member', () => {
 		// The page reads every open ask of the issue, as the daemon reported it.
 		const { openStops } = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
 		expect(openStops.map(stop => stop.ask?.code)).toEqual([undefined, 'APP-1 · D1', 'APP-1 · D2'])
+		// The board card carries the issue's open asks (the same views), in that order — a plain stop is not an ask.
+		const card = (await testBed.resolve(GetPanelBoard).execute({ token })).issues.find(row => row.issueId === ISSUE)
+		expect(card?.openAsks).toEqual([DECISION_ASK.ask, QUESTION_ASK.ask].filter(ask => ask !== undefined))
 	})
 
 	it('the outcome round-trips: the daemon reports, the page reads DONE / REFUSED with the code — first report wins', async () => {

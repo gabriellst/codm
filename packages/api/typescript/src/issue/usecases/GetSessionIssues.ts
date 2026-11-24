@@ -2,7 +2,12 @@ import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
-import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { QuotaStatusReader } from '@agent/services/QuotaStatusReader'
+import { DeclaredWaitReader } from '@agent/services/DeclaredWaitReader'
+import { providerWaitByIssue, retryWaitByIssue } from '../utils/providerWaitByIssue'
+import { escalatedAtByIssue } from '../utils/escalatedAtByIssue'
+import { lifeStateByIssue } from '../utils/issueLifeState'
 
 const IssueSummarySchema = z.object({
 	issueId: z.uuid(),
@@ -11,6 +16,16 @@ const IssueSummarySchema = z.object({
 	status: z.enum(IssueStatus),
 	meta: z.string().optional(),
 	archived: z.boolean(),
+	/** Where the work stands right now, by rule (`lifeStateOf`) — the column of the conversation's kanban. */
+	lifeState: z.enum(IssueLifeState),
+	/** Someone paused THIS issue (fase 2, item 2). */
+	paused: z.boolean(),
+	/** Until when the provider's quota holds the issue back, when it does. */
+	waitingForProviderUntil: z.string().optional(),
+	/** Fase 5 — when a failed turn's next attempt runs (`WAITING_RETRY`). */
+	retryingAt: z.string().optional(),
+	/** Fase 5 — when the supervisor last escalated the issue (badge only). */
+	escalatedAt: z.string().optional(),
 })
 
 export const GetSessionIssuesInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
@@ -30,12 +45,33 @@ export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema
 	readonly inputSchema = GetSessionIssuesInputSchema
 	readonly outputSchema = GetSessionIssuesOutputSchema
 
-	constructor(private readonly driver: LibSqlDatabaseDriver) {
+	constructor(
+		private readonly driver: LibSqlDatabaseDriver,
+		private readonly quota: QuotaStatusReader,
+		private readonly declaredWait: DeclaredWaitReader,
+	) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const rows = await this.driver.db.select().from(issues).where(eq(issues.threadId, input.threadId))
+		// The same readings `GetIssueDetail` and `GetIssuesOverview` make, so the kanban and the detail agree.
+		// An empty conversation reads nothing more (no `IN ()` to build).
+		const ids = rows.map(r => r.id)
+		const none = new Map<string, never>()
+		const [waiting, retrying, escalated, life] =
+			ids.length === 0
+				? [none, none, none, none]
+				: await Promise.all([
+						providerWaitByIssue(this.driver, ids),
+						retryWaitByIssue(this.driver, ids),
+						escalatedAtByIssue(this.driver, ids),
+						lifeStateByIssue(
+							this.driver,
+							rows.map(r => ({ issueId: r.id, status: r.status as IssueStatus })),
+							{ budgetHeld: this.quota.holdsIssueLane(), declaredWait: this.declaredWait },
+						),
+					])
 		const items = rows.map(r => ({
 			issueId: r.id,
 			key: r.key,
@@ -43,6 +79,11 @@ export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema
 			status: r.status as IssueStatus,
 			meta: r.meta ?? undefined,
 			archived: r.archived,
+			lifeState: life.get(r.id) ?? IssueLifeState.STALLED,
+			paused: r.paused,
+			waitingForProviderUntil: waiting.get(r.id)?.toISOString(),
+			retryingAt: retrying.get(r.id)?.toISOString(),
+			escalatedAt: escalated.get(r.id)?.toISOString(),
 		}))
 		const active = items.filter(i => !i.archived)
 		const byStatus = (s: IssueStatus) => active.filter(i => i.status === s)

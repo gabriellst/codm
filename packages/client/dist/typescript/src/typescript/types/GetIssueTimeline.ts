@@ -203,6 +203,10 @@ export type GetIssueTimeline200 = {
          * @type string | undefined
         */
         routing?: OutputRouting;
+        /**
+         * @type string | undefined, uuid
+        */
+        artifactId?: string;
     } | {
         /**
          * @type string
@@ -232,6 +236,10 @@ export type GetIssueTimeline200 = {
          * @type boolean
         */
         reminder: boolean;
+        /**
+         * @type boolean | undefined
+        */
+        failed?: boolean;
     } | {
         /**
          * @type string

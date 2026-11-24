@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { AskOption } from "./AskOption.ts";
 import type { Batch } from "./Batch.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
@@ -14,6 +15,30 @@ export type GetPanelBoardPathParams = {
     */
     token: string;
 };
+
+export const OpenAsksKindEnum = {
+    DECISION_REQUESTED: "DECISION_REQUESTED"
+} as const;
+
+export type OpenAsksKindEnumKey = (typeof OpenAsksKindEnum)[keyof typeof OpenAsksKindEnum];
+
+export const ReplyKindEnum3 = {
+    OPTION: "OPTION"
+} as const;
+
+export type ReplyKindEnum3Key = (typeof ReplyKindEnum3)[keyof typeof ReplyKindEnum3];
+
+export const ReplyKindEnum4 = {
+    TEXT: "TEXT"
+} as const;
+
+export type ReplyKindEnum4Key = (typeof ReplyKindEnum4)[keyof typeof ReplyKindEnum4];
+
+export const OpenAsksKindEnum2 = {
+    QUESTION_ASKED: "QUESTION_ASKED"
+} as const;
+
+export type OpenAsksKindEnum2Key = (typeof OpenAsksKindEnum2)[keyof typeof OpenAsksKindEnum2];
 
 /**
  * @description A group\'s issue board, by its panel link token (public)
@@ -77,6 +102,84 @@ export type GetPanelBoard200 = {
          * @type string
         */
         updatedAt: string;
+        /**
+         * @type array
+        */
+        openAsks: ({
+            /**
+             * @type string
+            */
+            kind: OpenAsksKindEnumKey;
+            /**
+             * @type string
+            */
+            code: string;
+            /**
+             * @type string
+            */
+            question: string;
+            reply: ({
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum3Key;
+                /**
+                 * @type array
+                */
+                options: AskOption[];
+            } | {
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum4Key;
+            });
+            /**
+             * @type boolean
+            */
+            releaseRequired: boolean;
+        } | {
+            /**
+             * @type string
+            */
+            kind: OpenAsksKindEnum2Key;
+            /**
+             * @type string
+            */
+            code: string;
+            /**
+             * @type string
+            */
+            question: string;
+            reply: ({
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum3Key;
+                /**
+                 * @type array
+                */
+                options: AskOption[];
+            } | {
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum4Key;
+            });
+            /**
+             * @type string
+            */
+            defaultLabel: string;
+            /**
+             * @type string | undefined
+            */
+            dueAt?: string;
+        })[];
+        /**
+         * @minLength 0
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        artifactCount: number;
     }[];
 };
 

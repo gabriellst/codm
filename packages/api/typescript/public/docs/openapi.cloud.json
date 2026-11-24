@@ -985,6 +985,11 @@
                                   },
                                   "routing": {
                                     "$ref": "#/components/schemas/OutputRouting"
+                                  },
+                                  "artifactId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                                   }
                                 },
                                 "required": [
@@ -1019,6 +1024,9 @@
                                     "type": "string"
                                   },
                                   "reminder": {
+                                    "type": "boolean"
+                                  },
+                                  "failed": {
                                     "type": "boolean"
                                   }
                                 },
@@ -2187,6 +2195,151 @@
                           },
                           "updatedAt": {
                             "type": "string"
+                          },
+                          "openAsks": {
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "DECISION_REQUESTED"
+                                    },
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string"
+                                    },
+                                    "reply": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "OPTION"
+                                            },
+                                            "options": {
+                                              "minItems": 1,
+                                              "maxItems": 6,
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/AskOption"
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "kind",
+                                            "options"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "TEXT"
+                                            }
+                                          },
+                                          "required": [
+                                            "kind"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "releaseRequired": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "code",
+                                    "question",
+                                    "reply",
+                                    "releaseRequired"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "QUESTION_ASKED"
+                                    },
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string"
+                                    },
+                                    "reply": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "OPTION"
+                                            },
+                                            "options": {
+                                              "minItems": 1,
+                                              "maxItems": 6,
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/AskOption"
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "kind",
+                                            "options"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "TEXT"
+                                            }
+                                          },
+                                          "required": [
+                                            "kind"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "defaultLabel": {
+                                      "type": "string"
+                                    },
+                                    "dueAt": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "code",
+                                    "question",
+                                    "reply",
+                                    "defaultLabel"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          },
+                          "artifactCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -2195,7 +2348,9 @@
                           "title",
                           "status",
                           "lifeState",
-                          "updatedAt"
+                          "updatedAt",
+                          "openAsks",
+                          "artifactCount"
                         ],
                         "additionalProperties": false
                       }
@@ -2374,6 +2529,11 @@
                               },
                               "routing": {
                                 "$ref": "#/components/schemas/OutputRouting"
+                              },
+                              "artifactId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                               }
                             },
                             "required": [
@@ -2409,6 +2569,9 @@
                                 "type": "string"
                               },
                               "reminder": {
+                                "type": "boolean"
+                              },
+                              "failed": {
                                 "type": "boolean"
                               }
                             },

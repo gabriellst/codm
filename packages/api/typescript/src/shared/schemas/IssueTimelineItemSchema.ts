@@ -95,6 +95,11 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 		 */
 		level: z.enum(IssueSignalLevel).optional(),
 		routing: z.enum(OutputRouting).optional(),
+		/**
+		 * The artifact this message delivered, when it delivered one — the ARTIFACT item shows the file, so a
+		 * surface can fold the two into one. Optional: rows the cloud stored before it are still valid.
+		 */
+		artifactId: z.uuid().optional(),
 	}),
 	z.object({
 		kind: z.literal(IssueTimelineItemKind.STEER),
@@ -105,6 +110,11 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 		readAt: z.string().optional(),
 		/** The automatic declaration reminder, not something a person sent. */
 		reminder: z.boolean(),
+		/**
+		 * True when the queue gave up on the steer (poisoned) — it never reached the agent. Optional: rows the
+		 * cloud stored before it are still valid (and read as not failed).
+		 */
+		failed: z.boolean().optional(),
 	}),
 	z.object({
 		kind: z.literal(IssueTimelineItemKind.ARTIFACT),

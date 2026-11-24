@@ -6586,6 +6586,11 @@ pub mod types {
     ///              "transcriptKind"
     ///            ],
     ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -6636,6 +6641,9 @@ pub mod types {
     ///              },
     ///              "deliveredAt": {
     ///                "type": "string"
+    ///              },
+    ///              "failed": {
+    ///                "type": "boolean"
     ///              },
     ///              "id": {
     ///                "type": "string"
@@ -7215,6 +7223,11 @@ pub mod types {
     ///        "transcriptKind"
     ///      ],
     ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -7265,6 +7278,9 @@ pub mod types {
     ///        },
     ///        "deliveredAt": {
     ///          "type": "string"
+    ///        },
+    ///        "failed": {
+    ///          "type": "boolean"
     ///        },
     ///        "id": {
     ///          "type": "string"
@@ -7775,6 +7791,12 @@ pub mod types {
         TurnStarted { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "MESSAGE")]
         Message {
+            #[serde(
+                rename = "artifactId",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            artifact_id: ::std::option::Option<::uuid::Uuid>,
             at: ::std::string::String,
             #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
             classification: ::std::option::Option<
@@ -7804,6 +7826,8 @@ pub mod types {
                 skip_serializing_if = "::std::option::Option::is_none"
             )]
             delivered_at: ::std::option::Option<::std::string::String>,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            failed: ::std::option::Option<bool>,
             id: ::std::string::String,
             #[serde(
                 rename = "readAt",
@@ -11108,12 +11132,17 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "title"
     ///        ],
     ///        "properties": {
     ///          "archived": {
     ///            "type": "boolean"
+    ///          },
+    ///          "escalatedAt": {
+    ///            "type": "string"
     ///          },
     ///          "issueId": {
     ///            "type": "string",
@@ -11123,13 +11152,25 @@ pub mod types {
     ///          "key": {
     ///            "type": "string"
     ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
     ///          "meta": {
+    ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "retryingAt": {
     ///            "type": "string"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
     ///          },
     ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -11153,12 +11194,17 @@ pub mod types {
     ///                "archived",
     ///                "issueId",
     ///                "key",
+    ///                "lifeState",
+    ///                "paused",
     ///                "status",
     ///                "title"
     ///              ],
     ///              "properties": {
     ///                "archived": {
     ///                  "type": "boolean"
+    ///                },
+    ///                "escalatedAt": {
+    ///                  "type": "string"
     ///                },
     ///                "issueId": {
     ///                  "type": "string",
@@ -11168,13 +11214,25 @@ pub mod types {
     ///                "key": {
     ///                  "type": "string"
     ///                },
+    ///                "lifeState": {
+    ///                  "$ref": "#/components/schemas/IssueLifeState"
+    ///                },
     ///                "meta": {
+    ///                  "type": "string"
+    ///                },
+    ///                "paused": {
+    ///                  "type": "boolean"
+    ///                },
+    ///                "retryingAt": {
     ///                  "type": "string"
     ///                },
     ///                "status": {
     ///                  "$ref": "#/components/schemas/IssueStatus"
     ///                },
     ///                "title": {
+    ///                  "type": "string"
+    ///                },
+    ///                "waitingForProviderUntil": {
     ///                  "type": "string"
     ///                }
     ///              },
@@ -11243,12 +11301,17 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "title"
     ///  ],
     ///  "properties": {
     ///    "archived": {
     ///      "type": "boolean"
+    ///    },
+    ///    "escalatedAt": {
+    ///      "type": "string"
     ///    },
     ///    "issueId": {
     ///      "type": "string",
@@ -11258,13 +11321,25 @@ pub mod types {
     ///    "key": {
     ///      "type": "string"
     ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
     ///    "meta": {
+    ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "retryingAt": {
     ///      "type": "string"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
     ///    },
     ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
     ///      "type": "string"
     ///    }
     ///  },
@@ -11276,13 +11351,34 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSessionIssuesResponseArchivedItem {
         pub archived: bool,
+        #[serde(
+            rename = "escalatedAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub escalated_at: ::std::option::Option<::std::string::String>,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
+        #[serde(
+            rename = "retryingAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub retrying_at: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseArchivedItem>
     for GetSessionIssuesResponseArchivedItem {
@@ -11310,12 +11406,17 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "title"
     ///        ],
     ///        "properties": {
     ///          "archived": {
     ///            "type": "boolean"
+    ///          },
+    ///          "escalatedAt": {
+    ///            "type": "string"
     ///          },
     ///          "issueId": {
     ///            "type": "string",
@@ -11325,13 +11426,25 @@ pub mod types {
     ///          "key": {
     ///            "type": "string"
     ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
     ///          "meta": {
+    ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "retryingAt": {
     ///            "type": "string"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
     ///          },
     ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -11369,12 +11482,17 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "title"
     ///  ],
     ///  "properties": {
     ///    "archived": {
     ///      "type": "boolean"
+    ///    },
+    ///    "escalatedAt": {
+    ///      "type": "string"
     ///    },
     ///    "issueId": {
     ///      "type": "string",
@@ -11384,13 +11502,25 @@ pub mod types {
     ///    "key": {
     ///      "type": "string"
     ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
     ///    "meta": {
+    ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "retryingAt": {
     ///      "type": "string"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
     ///    },
     ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
     ///      "type": "string"
     ///    }
     ///  },
@@ -11402,13 +11532,34 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSessionIssuesResponseGroupsItemItemsItem {
         pub archived: bool,
+        #[serde(
+            rename = "escalatedAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub escalated_at: ::std::option::Option<::std::string::String>,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
+        #[serde(
+            rename = "retryingAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub retrying_at: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseGroupsItemItemsItem>
     for GetSessionIssuesResponseGroupsItemItemsItem {

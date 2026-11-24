@@ -55,7 +55,8 @@ get "level"(){
               },
 get "routing"(){
                 return outputRoutingSchema.optional()
-              }
+              },
+"artifactId": z.optional(z.uuid())
     }), z.object({
     "kind": z.enum(["STEER"]),
 "id": z.string(),
@@ -63,7 +64,8 @@ get "routing"(){
 "text": z.string(),
 "deliveredAt": z.optional(z.string()),
 "readAt": z.optional(z.string()),
-"reminder": z.boolean()
+"reminder": z.boolean(),
+"failed": z.optional(z.boolean())
     }), z.object({
     "kind": z.enum(["ARTIFACT"]),
 "id": z.string(),

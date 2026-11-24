@@ -1449,6 +1449,62 @@ type RequestPanelActionJSONBody4 struct {
 	StopId  openapi_types.UUID `json:"stopId"`
 }
 
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks0 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks0 struct {
+	Code            string                                                   `json:"code"`
+	Kind            string                                                   `json:"kind"`
+	Question        string                                                   `json:"question"`
+	ReleaseRequired bool                                                     `json:"releaseRequired"`
+	Reply           GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply `json:"reply"`
+}
+
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply struct {
+	union json.RawMessage
+}
+
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks1 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks1 struct {
+	Code         string                                                   `json:"code"`
+	DefaultLabel string                                                   `json:"defaultLabel"`
+	DueAt        *string                                                  `json:"dueAt,omitempty"`
+	Kind         string                                                   `json:"kind"`
+	Question     string                                                   `json:"question"`
+	Reply        GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply `json:"reply"`
+}
+
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1 defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply struct {
+	union json.RawMessage
+}
+
+// GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item defines parameters for GetPanelBoard.
+type GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item struct {
+	union json.RawMessage
+}
+
 // RequestPanelCodeJSONBody defines parameters for RequestPanelCode.
 type RequestPanelCodeJSONBody struct {
 	MemberId string `json:"memberId"`
@@ -1527,6 +1583,7 @@ type GetPanelIssue200JSONResponseBodyTimeline1 struct {
 
 // GetPanelIssue200JSONResponseBodyTimeline2 defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBodyTimeline2 struct {
+	ArtifactId     *openapi_types.UUID   `json:"artifactId,omitempty"`
 	At             string                `json:"at"`
 	Classification *ClassificationMethod `json:"classification,omitempty"`
 	EntryId        openapi_types.UUID    `json:"entryId"`
@@ -1542,6 +1599,7 @@ type GetPanelIssue200JSONResponseBodyTimeline2 struct {
 type GetPanelIssue200JSONResponseBodyTimeline3 struct {
 	At          string  `json:"at"`
 	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Failed      *bool   `json:"failed,omitempty"`
 	Id          string  `json:"id"`
 	Kind        string  `json:"kind"`
 	ReadAt      *string `json:"readAt,omitempty"`
@@ -1853,6 +1911,7 @@ type SyncPanelJSONBodyIssuesTimeline1 struct {
 
 // SyncPanelJSONBodyIssuesTimeline2 defines parameters for SyncPanel.
 type SyncPanelJSONBodyIssuesTimeline2 struct {
+	ArtifactId     *openapi_types.UUID   `json:"artifactId,omitempty"`
 	At             string                `json:"at"`
 	Classification *ClassificationMethod `json:"classification,omitempty"`
 	EntryId        openapi_types.UUID    `json:"entryId"`
@@ -1868,6 +1927,7 @@ type SyncPanelJSONBodyIssuesTimeline2 struct {
 type SyncPanelJSONBodyIssuesTimeline3 struct {
 	At          string  `json:"at"`
 	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Failed      *bool   `json:"failed,omitempty"`
 	Id          string  `json:"id"`
 	Kind        string  `json:"kind"`
 	ReadAt      *string `json:"readAt,omitempty"`
@@ -2416,6 +2476,192 @@ func (t RequestPanelActionJSONBody) MarshalJSON() ([]byte, error) {
 }
 
 func (t *RequestPanelActionJSONBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_0_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_1_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks0
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks0() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks0, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks0
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks0(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1 returns the union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item as a GetPanelBoard200JSONResponseBodyIssuesOpenAsks1
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) AsGetPanelBoard200JSONResponseBodyIssuesOpenAsks1() (GetPanelBoard200JSONResponseBodyIssuesOpenAsks1, error) {
+	var body GetPanelBoard200JSONResponseBodyIssuesOpenAsks1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1 overwrites any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item as the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) FromGetPanelBoard200JSONResponseBodyIssuesOpenAsks1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1 performs a merge with any union data inside the GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item, using the provided GetPanelBoard200JSONResponseBodyIssuesOpenAsks1
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) MergeGetPanelBoard200JSONResponseBodyIssuesOpenAsks1(v GetPanelBoard200JSONResponseBodyIssuesOpenAsks1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -6078,15 +6324,17 @@ type GetPanelBoardResponse struct {
 		} `json:"group"`
 		Health *PanelHealth `json:"health,omitempty"`
 		Issues []struct {
-			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
-			IssueId                 openapi_types.UUID `json:"issueId"`
-			Key                     string             `json:"key"`
-			LifeState               IssueLifeState     `json:"lifeState"`
-			RetryingAt              *string            `json:"retryingAt,omitempty"`
-			Status                  IssueStatus        `json:"status"`
-			Title                   string             `json:"title"`
-			UpdatedAt               string             `json:"updatedAt"`
-			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+			ArtifactCount           int                                                     `json:"artifactCount"`
+			EscalatedAt             *string                                                 `json:"escalatedAt,omitempty"`
+			IssueId                 openapi_types.UUID                                      `json:"issueId"`
+			Key                     string                                                  `json:"key"`
+			LifeState               IssueLifeState                                          `json:"lifeState"`
+			OpenAsks                []GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item `json:"openAsks"`
+			RetryingAt              *string                                                 `json:"retryingAt,omitempty"`
+			Status                  IssueStatus                                             `json:"status"`
+			Title                   string                                                  `json:"title"`
+			UpdatedAt               string                                                  `json:"updatedAt"`
+			WaitingForProviderUntil *string                                                 `json:"waitingForProviderUntil,omitempty"`
 		} `json:"issues"`
 	}
 }
@@ -7319,15 +7567,17 @@ func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, err
 			} `json:"group"`
 			Health *PanelHealth `json:"health,omitempty"`
 			Issues []struct {
-				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
-				IssueId                 openapi_types.UUID `json:"issueId"`
-				Key                     string             `json:"key"`
-				LifeState               IssueLifeState     `json:"lifeState"`
-				RetryingAt              *string            `json:"retryingAt,omitempty"`
-				Status                  IssueStatus        `json:"status"`
-				Title                   string             `json:"title"`
-				UpdatedAt               string             `json:"updatedAt"`
-				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+				ArtifactCount           int                                                     `json:"artifactCount"`
+				EscalatedAt             *string                                                 `json:"escalatedAt,omitempty"`
+				IssueId                 openapi_types.UUID                                      `json:"issueId"`
+				Key                     string                                                  `json:"key"`
+				LifeState               IssueLifeState                                          `json:"lifeState"`
+				OpenAsks                []GetPanelBoard200JSONResponseBody_Issues_OpenAsks_Item `json:"openAsks"`
+				RetryingAt              *string                                                 `json:"retryingAt,omitempty"`
+				Status                  IssueStatus                                             `json:"status"`
+				Title                   string                                                  `json:"title"`
+				UpdatedAt               string                                                  `json:"updatedAt"`
+				WaitingForProviderUntil *string                                                 `json:"waitingForProviderUntil,omitempty"`
 			} `json:"issues"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
