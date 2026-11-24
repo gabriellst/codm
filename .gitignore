@@ -41,6 +41,8 @@ packages/api/go/public/docs/*
 packages/api/typescript/public/app/**
 # Storybook estático (entrada da régua de fidelity)
 packages/app/react/storybook-static/
+# Painel da nuvem (`bun run --cwd packages/app/react build:panel`) — o api o estagia em dist/panel-web
+packages/app/react/dist-panel/
 
 # ─── Artefatos regeneráveis ─────────────────────────────────────────────────────────────────────
 # Code-graph (`bun cli graph build`)

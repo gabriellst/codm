@@ -1,0 +1,6 @@
+/* The cloud panel's stylesheet: the app's own (tokens, @theme utilities, the class-based dark variant) plus
+   what Tailwind must scan. Tailwind v4 detects sources from the Vite ROOT — here `src/panel/web/` — so without
+   this @source no class used only in `src/panel/**`, `src/components/task/**` or `src/lib/task/**` would be
+   emitted (spec review C2). `index.css` keeps its own `@source` for `packages/app/ui/src`. */
+@import "../../index.css";
+@source "../..";

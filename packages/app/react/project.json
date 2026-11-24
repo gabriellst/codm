@@ -46,6 +46,18 @@
 				"cwd": "packages/app/react"
 			}
 		},
+		"build-panel": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["tsc"],
+			"//": "O painel da nuvem (spec 2026-11-24 §5/§6): segunda entrada Vite, raiz src/panel/web, saída dist-panel — a nuvem a serve em /panel/g/:token e /panel/assets/:file.",
+			"inputs": ["production", "^production", "{projectRoot}/vite.panel.config.ts"],
+			"outputs": ["{projectRoot}/dist-panel"],
+			"options": {
+				"command": "vite build -c vite.panel.config.ts",
+				"cwd": "packages/app/react"
+			}
+		},
 		"dev": {
 			"executor": "nx:run-commands",
 			"cache": false,

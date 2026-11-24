@@ -1069,5 +1069,74 @@
 			"showDone": "Done · {{count}}",
 			"hideDone": "Hide done"
 		}
+	},
+	"panel": {
+		"title": "{{group}} · tasks",
+		"invalidLink": {
+			"title": "Invalid or replaced link",
+			"description": "Ask for the panel link again in the group."
+		},
+		"unavailable": {
+			"title": "Could not open the panel right now",
+			"description": "Try again in a moment."
+		},
+		"board": {
+			"counts": "{{open}} open tasks · {{done}} done",
+			"columns": "Board columns"
+		},
+		"health": {
+			"now": "updated just now",
+			"stale": "no contact with codm for {{count}} min",
+			"window": "window {{percent}}%",
+			"week": "week {{percent}}%",
+			"slots": "slots {{inUse}}/{{effective}}",
+			"queue": "{{count}} queued"
+		},
+		"batchChip": "Batch {{code}}",
+		"identity": {
+			"you": "You · {{name}}",
+			"canRelease": "can release",
+			"identify": "Identify me",
+			"forget": "Sign out"
+		},
+		"identify": {
+			"title": "Identify me",
+			"description": "To answer decisions and steer tasks, confirm who you are in this group.",
+			"who": "Who are you in this group?",
+			"noMembers": "Nobody from the group is on the list yet.",
+			"send": "Send a code to my WhatsApp",
+			"sent": "codm will send a code to {{name}}'s WhatsApp within 15 seconds. It is valid for 10 minutes.",
+			"code": "6-digit code",
+			"codeHint": "Type the 6 digits of the code.",
+			"confirm": "Confirm",
+			"otherName": "Choose another name"
+		},
+		"task": {
+			"back": "Board",
+			"sections": "Task sections",
+			"list": "Group tasks",
+			"identifyToAct": "Identify yourself to answer and steer this task.",
+			"updated": "Updated",
+			"steerTooLong": "The steer is longer than 2000 characters.",
+			"steerHint": "Reaches only this task's agent — the group does not see it.",
+			"artifactsNote": "To open an artifact, use the codm app."
+		},
+		"action": {
+			"sending": "Sending…",
+			"sent": "Request sent — codm does it within 15 seconds.",
+			"done": "Done.",
+			"refused": "Refused: {{reason}}",
+			"refusedGeneric": "codm could not do that right now.",
+			"noAnswer": "No answer from codm. Try again."
+		},
+		"batch": {
+			"title": "Batch {{code}}",
+			"item": "{{n}} · {{destination}}",
+			"noDestination": "no destination",
+			"empty": "This batch is no longer on the panel."
+		},
+		"errors": {
+			"generic": "That did not work. Try again."
+		}
 	}
 }
