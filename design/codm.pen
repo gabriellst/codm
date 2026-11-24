@@ -1,5 +1,5 @@
 {
-  "version": "2.21",
+  "version": "2.25",
   "children": [
     {
       "type": "frame",
@@ -46220,6 +46220,1306 @@
               "children": [
                 {
                   "type": "frame",
+                  "id": "v5fdJ",
+                  "name": "Screen — P2 · Tarefas da conversa em kanban",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "TJbwQ",
+                      "name": "Caption",
+                      "fill": "$canvas-label",
+                      "content": "P2 · Tarefas da conversa — o mesmo kanban (concluídas num link)",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ndHbD",
+                      "name": "Window",
+                      "clip": true,
+                      "width": 1440,
+                      "height": 900,
+                      "fill": "$bg",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pIzru",
+                          "name": "Title Bar",
+                          "width": "fill_container",
+                          "height": 40,
+                          "padding": [
+                            0,
+                            18
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "KxvJ7",
+                              "name": "Traffic Lights",
+                              "gap": 9,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "IOOe2",
+                                  "name": "Light",
+                                  "fill": "#FF5F57",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "ellipse",
+                                  "id": "Y4ZBlC",
+                                  "name": "Light",
+                                  "fill": "#FEBC2E",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "ellipse",
+                                  "id": "Q8IY0",
+                                  "name": "Light",
+                                  "fill": "#28C840",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Fmnuo",
+                              "name": "Window Title",
+                              "fill": "$muted-foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "codm",
+                              "textAlign": "center",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "X6V36",
+                              "name": "Spacer",
+                              "width": 54,
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EOBay",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "children": [
+                            {
+                              "id": "XxbLx",
+                              "type": "ref",
+                              "ref": "ZMw1S",
+                              "name": "Rail",
+                              "height": "fill_container",
+                              "descendants": {
+                                "A1BcE": {
+                                  "fill": "#00000000"
+                                },
+                                "wYnuS": {
+                                  "fill": "$foreground"
+                                },
+                                "t78B5B": {
+                                  "fill": "$foreground",
+                                  "fontWeight": "500"
+                                },
+                                "r0lbr": {
+                                  "fill": "$secondary"
+                                },
+                                "NsBQK": {
+                                  "fill": "$secondary-foreground",
+                                  "fontWeight": "700"
+                                },
+                                "ubWP6": {
+                                  "fill": "$primary"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "IT8w7",
+                              "name": "Main",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "WR7SI",
+                                  "name": "Conversation Header",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    22,
+                                    32,
+                                    0,
+                                    32
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "cyt64",
+                                      "name": "Identity Row",
+                                      "width": "fill_container",
+                                      "gap": 14,
+                                      "padding": [
+                                        0,
+                                        0,
+                                        16,
+                                        0
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "Z9FEw7",
+                                          "name": "Avatar",
+                                          "width": 48,
+                                          "height": 48,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "GKvub",
+                                              "x": 0,
+                                              "y": 0,
+                                              "name": "Circle",
+                                              "width": 44,
+                                              "height": 44,
+                                              "fill": "$secondary",
+                                              "cornerRadius": 22,
+                                              "justifyContent": "center",
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "VB0Bz",
+                                                  "name": "Initials",
+                                                  "fill": "$secondary-foreground",
+                                                  "content": "DS",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 14,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "fQD2L",
+                                              "x": 28,
+                                              "y": 28,
+                                              "name": "Channel Badge",
+                                              "width": 19,
+                                              "height": 19,
+                                              "fill": "$foreground",
+                                              "cornerRadius": 10,
+                                              "stroke": "$bg",
+                                              "strokeWidth": 2,
+                                              "strokeAlignment": "outer",
+                                              "justifyContent": "center",
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "id": "Tk9Jg",
+                                                  "name": "Glyph",
+                                                  "width": 11,
+                                                  "height": 11,
+                                                  "icon": "message-circle",
+                                                  "library": "lucide",
+                                                  "fill": "$bg"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "ZTwoY",
+                                          "name": "Identity",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "gap": 5,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "RGUKu",
+                                              "name": "Name Row",
+                                              "gap": 10,
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "HKMZs",
+                                                  "name": "Thread Name",
+                                                  "fill": "$foreground",
+                                                  "content": "DEMO SHOP BOT",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 22,
+                                                  "fontWeight": "800",
+                                                  "letterSpacing": -0.4
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "uaOXN",
+                                                  "name": "Status Chip",
+                                                  "fill": "$primary",
+                                                  "cornerRadius": [
+                                                    12,
+                                                    12,
+                                                    12,
+                                                    4
+                                                  ],
+                                                  "gap": 7,
+                                                  "padding": [
+                                                    5,
+                                                    11
+                                                  ],
+                                                  "alignItems": "center",
+                                                  "children": [
+                                                    {
+                                                      "type": "ellipse",
+                                                      "id": "uemD6",
+                                                      "name": "Dot",
+                                                      "fill": "$primary-foreground",
+                                                      "width": 6,
+                                                      "height": 6
+                                                    },
+                                                    {
+                                                      "type": "text",
+                                                      "id": "cOtzu",
+                                                      "name": "Label",
+                                                      "fill": "$primary-foreground",
+                                                      "content": "Em execução",
+                                                      "fontFamily": "$font-sans",
+                                                      "fontSize": 11.5,
+                                                      "fontWeight": "700"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Rhgti",
+                                              "name": "Meta Line",
+                                              "fill": "$caption-foreground",
+                                              "content": "/Users/work/Desktop/Projetos/aurora-labs  ·  Claude Code",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 11.5,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "iBFqG",
+                                          "name": "Icon Button / Pause",
+                                          "width": 38,
+                                          "height": 38,
+                                          "fill": "$muted",
+                                          "cornerRadius": [
+                                            14,
+                                            14,
+                                            14,
+                                            5
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "p6mPAQ",
+                                              "name": "Glyph",
+                                              "width": 17,
+                                              "height": 17,
+                                              "icon": "pause",
+                                              "library": "lucide",
+                                              "fill": "$foreground"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "pAgiK",
+                                          "name": "Icon Button / Settings",
+                                          "width": 38,
+                                          "height": 38,
+                                          "fill": "$muted",
+                                          "cornerRadius": [
+                                            14,
+                                            14,
+                                            14,
+                                            5
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "W2yjs",
+                                              "name": "Glyph",
+                                              "width": 17,
+                                              "height": 17,
+                                              "icon": "settings-2",
+                                              "library": "lucide",
+                                              "fill": "$foreground"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ti9Oy",
+                                      "name": "Tabs Row",
+                                      "width": "fill_container",
+                                      "stroke": "$border",
+                                      "strokeWidth": {
+                                        "bottom": 1
+                                      },
+                                      "strokeAlignment": "inner",
+                                      "gap": 26,
+                                      "alignItems": "end",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "ygl3q",
+                                          "name": "Tab / Chat",
+                                          "stroke": "#00000000",
+                                          "strokeWidth": {
+                                            "bottom": 2
+                                          },
+                                          "strokeAlignment": "inner",
+                                          "padding": [
+                                            0,
+                                            2,
+                                            12,
+                                            2
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "WrmIJ",
+                                              "name": "Label",
+                                              "fill": "$muted-foreground",
+                                              "content": "Chat",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "eHwbv",
+                                          "name": "Tab / Tarefas",
+                                          "stroke": "$primary",
+                                          "strokeWidth": {
+                                            "bottom": 2
+                                          },
+                                          "strokeAlignment": "inner",
+                                          "padding": [
+                                            0,
+                                            2,
+                                            12,
+                                            2
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "thag6",
+                                              "name": "Label",
+                                              "fill": "$foreground",
+                                              "content": "Tarefas",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": 14,
+                                              "fontWeight": "700"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Pldz5",
+                                          "name": "Tab / Artefatos",
+                                          "stroke": "#00000000",
+                                          "strokeWidth": {
+                                            "bottom": 2
+                                          },
+                                          "strokeAlignment": "inner",
+                                          "padding": [
+                                            0,
+                                            2,
+                                            12,
+                                            2
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "MtFW3",
+                                              "name": "Label",
+                                              "fill": "$muted-foreground",
+                                              "content": "Artefatos",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "E8dBPy",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "wSSBF",
+                                          "name": "Mention Note Wrap",
+                                          "padding": [
+                                            0,
+                                            0,
+                                            12,
+                                            0
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "NZgBV",
+                                              "name": "Mention Note",
+                                              "fill": "$caption-foreground",
+                                              "content": "Só responde quando mencionada com @aurora",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "op2lB",
+                                  "name": "Kanban Area",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 14,
+                                  "padding": [
+                                    18,
+                                    28,
+                                    22,
+                                    28
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "WQxyH",
+                                      "name": "Summary",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "lmdoK",
+                                          "name": "Text",
+                                          "fill": "$muted-foreground",
+                                          "content": "2 precisam de você · 3 em andamento · 2 esperando · 1 parada · 2 na fila",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "V6d0D",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "STaxg",
+                                          "name": "Done Link",
+                                          "gap": 5,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "M0EOyv",
+                                              "name": "Label",
+                                              "fill": "$muted-foreground",
+                                              "content": "Concluídas · 12",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": 13,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "icon",
+                                              "id": "V7Cigo",
+                                              "name": "Chevron",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "chevron-right",
+                                              "library": "lucide",
+                                              "fill": "$muted-foreground"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "jEIk2",
+                                      "name": "Kanban",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "gap": 10,
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "XPJef",
+                                          "name": "Coluna / Na fila",
+                                          "width": "fill_container",
+                                          "height": "fill_container",
+                                          "fill": "$card",
+                                          "cornerRadius": [
+                                            18,
+                                            18,
+                                            18,
+                                            6
+                                          ],
+                                          "layout": "vertical",
+                                          "gap": 8,
+                                          "padding": 8,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "SUNMT",
+                                              "name": "Header",
+                                              "width": "fill_container",
+                                              "height": 30,
+                                              "fill": "#00000000",
+                                              "cornerRadius": [
+                                                12,
+                                                12,
+                                                12,
+                                                4
+                                              ],
+                                              "gap": 7,
+                                              "padding": [
+                                                0,
+                                                9
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "ellipse",
+                                                  "id": "WGIdh",
+                                                  "name": "Dot",
+                                                  "fill": "$caption-foreground",
+                                                  "width": 7,
+                                                  "height": 7
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "g7lWj",
+                                                  "name": "Label",
+                                                  "fill": "$foreground",
+                                                  "content": "Na fila",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12.5,
+                                                  "fontWeight": "700"
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "I2S2W",
+                                                  "name": "Spacer",
+                                                  "width": "fill_container",
+                                                  "height": 1
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "vIwPp",
+                                                  "name": "Count",
+                                                  "fill": "$caption-foreground",
+                                                  "content": "2",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "mfVrT",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-16",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-16"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Traduzir e-mails de carrinho abandonado",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "list-ordered",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "próxima da fila",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "LzhH5",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-17",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-17"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Ajustar banner da Black Friday",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "layers",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "lote L-31 · item 4",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "X8vTK",
+                                          "name": "Coluna / Fazendo",
+                                          "width": "fill_container",
+                                          "height": "fill_container",
+                                          "fill": "$card",
+                                          "cornerRadius": [
+                                            18,
+                                            18,
+                                            18,
+                                            6
+                                          ],
+                                          "layout": "vertical",
+                                          "gap": 8,
+                                          "padding": 8,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "CCmSd",
+                                              "name": "Header",
+                                              "width": "fill_container",
+                                              "height": 30,
+                                              "fill": "#00000000",
+                                              "cornerRadius": [
+                                                12,
+                                                12,
+                                                12,
+                                                4
+                                              ],
+                                              "gap": 7,
+                                              "padding": [
+                                                0,
+                                                9
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "ellipse",
+                                                  "id": "xfhT7",
+                                                  "name": "Dot",
+                                                  "fill": "$primary",
+                                                  "width": 7,
+                                                  "height": 7
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "LTS0W",
+                                                  "name": "Label",
+                                                  "fill": "$foreground",
+                                                  "content": "Fazendo",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12.5,
+                                                  "fontWeight": "700"
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "dXrBH",
+                                                  "name": "Spacer",
+                                                  "width": "fill_container",
+                                                  "height": 1
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "Y0huN",
+                                                  "name": "Count",
+                                                  "fill": "$caption-foreground",
+                                                  "content": "3",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "fAcjr",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-14",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-14"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Página de frete grátis acima de R$ 199",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "paperclip",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "2 artefatos · 10:40",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "JBbID",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-13",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-13"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Corrigir ordenação da busca",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "paperclip",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "1 artefato · 10:38",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "la0V3",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-18",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-18"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Página de troca e devolução",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "play",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "começou 10:41",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "E11m1",
+                                          "name": "Coluna / Precisa de você",
+                                          "width": "fill_container",
+                                          "height": "fill_container",
+                                          "fill": "$card",
+                                          "cornerRadius": [
+                                            18,
+                                            18,
+                                            18,
+                                            6
+                                          ],
+                                          "layout": "vertical",
+                                          "gap": 8,
+                                          "padding": 8,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "FVUlj",
+                                              "name": "Header",
+                                              "width": "fill_container",
+                                              "height": 30,
+                                              "fill": "$foreground",
+                                              "cornerRadius": [
+                                                12,
+                                                12,
+                                                12,
+                                                4
+                                              ],
+                                              "gap": 7,
+                                              "padding": [
+                                                0,
+                                                9
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "ellipse",
+                                                  "id": "ZPF2M",
+                                                  "name": "Dot",
+                                                  "fill": "$success-bright",
+                                                  "width": 7,
+                                                  "height": 7
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "iydSg",
+                                                  "name": "Label",
+                                                  "fill": "#ffffff",
+                                                  "content": "Precisa de você",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12.5,
+                                                  "fontWeight": "700"
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "kvDjo",
+                                                  "name": "Spacer",
+                                                  "width": "fill_container",
+                                                  "height": 1
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "b6W2JG",
+                                                  "name": "Count",
+                                                  "fill": "$on-dark-muted",
+                                                  "content": "2",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "U7Iijk",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-12",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-12"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Botão de cupom some no iPhone SE",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "message-circle-question-mark",
+                                                  "fill": "$foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "D1 · publico agora ou no fim do dia?",
+                                                  "fill": "$foreground",
+                                                  "fontWeight": "600",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "nvEbM",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-10",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-10"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Migrar cupons antigos",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "message-circle-question-mark",
+                                                  "fill": "$foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "P1 · segue com “não” às 11:15",
+                                                  "fill": "$foreground",
+                                                  "fontWeight": "600",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "zrcSp",
+                                          "name": "Coluna / Esperando cota",
+                                          "width": "fill_container",
+                                          "height": "fill_container",
+                                          "fill": "$card",
+                                          "cornerRadius": [
+                                            18,
+                                            18,
+                                            18,
+                                            6
+                                          ],
+                                          "layout": "vertical",
+                                          "gap": 8,
+                                          "padding": 8,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "HgIGR",
+                                              "name": "Header",
+                                              "width": "fill_container",
+                                              "height": 30,
+                                              "fill": "#00000000",
+                                              "cornerRadius": [
+                                                12,
+                                                12,
+                                                12,
+                                                4
+                                              ],
+                                              "gap": 7,
+                                              "padding": [
+                                                0,
+                                                9
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "ellipse",
+                                                  "id": "Q5eAl",
+                                                  "name": "Dot",
+                                                  "fill": "$status-paused",
+                                                  "width": 7,
+                                                  "height": 7
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "MPGZY",
+                                                  "name": "Label",
+                                                  "fill": "$foreground",
+                                                  "content": "Esperando cota",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12.5,
+                                                  "fontWeight": "700"
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "N4cDnm",
+                                                  "name": "Spacer",
+                                                  "width": "fill_container",
+                                                  "height": 1
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "erKEe",
+                                                  "name": "Count",
+                                                  "fill": "$caption-foreground",
+                                                  "content": "2",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "fjpcK",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-15",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-15"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Relatório semanal de vendas",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "clock-3",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "volta sozinha às 14:00",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "DZp7u",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-09",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-09"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Revisar textos do app",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "refresh-cw",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "nova tentativa às 10:52 (2 de 5)",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Rwxq4",
+                                          "name": "Coluna / Parada",
+                                          "width": "fill_container",
+                                          "height": "fill_container",
+                                          "fill": "$card",
+                                          "cornerRadius": [
+                                            18,
+                                            18,
+                                            18,
+                                            6
+                                          ],
+                                          "layout": "vertical",
+                                          "gap": 8,
+                                          "padding": 8,
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "Vd4X8",
+                                              "name": "Header",
+                                              "width": "fill_container",
+                                              "height": 30,
+                                              "fill": "#00000000",
+                                              "cornerRadius": [
+                                                12,
+                                                12,
+                                                12,
+                                                4
+                                              ],
+                                              "gap": 7,
+                                              "padding": [
+                                                0,
+                                                9
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "ellipse",
+                                                  "id": "D9YxOW",
+                                                  "name": "Dot",
+                                                  "fill": "$status-attention",
+                                                  "width": 7,
+                                                  "height": 7
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "gpSh9",
+                                                  "name": "Label",
+                                                  "fill": "$foreground",
+                                                  "content": "Parada",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12.5,
+                                                  "fontWeight": "700"
+                                                },
+                                                {
+                                                  "type": "frame",
+                                                  "id": "Ga60U",
+                                                  "name": "Spacer",
+                                                  "width": "fill_container",
+                                                  "height": 1
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "nPoLH",
+                                                  "name": "Count",
+                                                  "fill": "$caption-foreground",
+                                                  "content": "2",
+                                                  "fontFamily": "$font-sans",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "700"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "upU9J",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-11",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-11"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Integração Pix — sandbox fora do ar",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "triangle-alert",
+                                                  "fill": "$attention-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "escalada pelo supervisor",
+                                                  "fill": "$attention-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "id": "WJFhe",
+                                              "type": "ref",
+                                              "ref": "c3IFgg",
+                                              "name": "Tarefa / APP-08",
+                                              "width": "fill_container",
+                                              "descendants": {
+                                                "gDT7K": {
+                                                  "content": "APP-08"
+                                                },
+                                                "jkLAk": {
+                                                  "enabled": false
+                                                },
+                                                "J5rbMM": {
+                                                  "content": "Export de pedidos em CSV",
+                                                  "fontSize": 14
+                                                },
+                                                "mx7hu": {
+                                                  "icon": "pause",
+                                                  "fill": "$caption-foreground"
+                                                },
+                                                "CgSHw": {
+                                                  "content": "pausada por Bruno",
+                                                  "fill": "$caption-foreground",
+                                                  "fontWeight": "normal",
+                                                  "textGrowth": "fixed-width",
+                                                  "width": "fill_container"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "SYPxx",
                   "name": "Screen — P1 · Tarefa por dentro",
                   "layout": "vertical",
@@ -47553,6 +48853,2084 @@
               "children": [
                 {
                   "type": "frame",
+                  "id": "gKTEp",
+                  "name": "Screen — N6 · Quadro kanban (tela larga)",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d7OGn1",
+                      "name": "Canvas Caption",
+                      "fill": "$canvas-label",
+                      "content": "N6 · Quadro kanban — as 6 colunas de hoje, com os componentes do app",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xdgjL",
+                      "name": "Browser",
+                      "clip": true,
+                      "width": 1440,
+                      "height": 900,
+                      "fill": "$bg",
+                      "cornerRadius": [
+                        24,
+                        24,
+                        24,
+                        8
+                      ],
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "H43W4",
+                          "name": "Browser Bar",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$card",
+                          "gap": 16,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "GJqoh",
+                              "name": "Traffic Lights",
+                              "width": 120,
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "TuvUp",
+                                  "name": "Light",
+                                  "fill": "#FF5F57",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "ellipse",
+                                  "id": "pgijt",
+                                  "name": "Light",
+                                  "fill": "#FEBC2E",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "ellipse",
+                                  "id": "FmW0n",
+                                  "name": "Light",
+                                  "fill": "#28C840",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "J8p9r",
+                              "name": "URL Wrap",
+                              "width": "fill_container",
+                              "justifyContent": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "nkhjN",
+                                  "name": "URL",
+                                  "width": 440,
+                                  "height": 28,
+                                  "fill": "$bg",
+                                  "cornerRadius": [
+                                    11,
+                                    11,
+                                    11,
+                                    4
+                                  ],
+                                  "gap": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "bPBHr",
+                                      "name": "Lock",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "lock",
+                                      "library": "lucide",
+                                      "fill": "$caption-foreground"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "bQ7iK",
+                                      "name": "Text",
+                                      "fill": "$muted-foreground",
+                                      "content": "codm.app/panel/g/••••••",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 11.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wDvJM",
+                              "name": "Spacer",
+                              "width": 120,
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l2Jld",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 18,
+                          "padding": [
+                            20,
+                            24,
+                            24,
+                            24
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "clhZv",
+                              "name": "Header",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "AjV9N",
+                                  "name": "Group Avatar",
+                                  "width": 40,
+                                  "height": 40,
+                                  "fill": "$accent",
+                                  "cornerRadius": 20,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rHjOg",
+                                      "name": "Initials",
+                                      "fill": "$secondary-foreground",
+                                      "content": "AL",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 13,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "KTITQ",
+                                  "name": "Group Name",
+                                  "layout": "vertical",
+                                  "gap": 1,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "caAR6",
+                                      "name": "Name",
+                                      "fill": "$foreground",
+                                      "content": "Aurora Labs",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 20,
+                                      "fontWeight": "800",
+                                      "letterSpacing": -0.4
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "tUfqI",
+                                      "name": "Sub",
+                                      "fill": "$caption-foreground",
+                                      "content": "13 tarefas abertas · 12 concluídas esta semana",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YS8JN",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "FydVw",
+                                  "name": "Health",
+                                  "height": 32,
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    11,
+                                    11,
+                                    11,
+                                    4
+                                  ],
+                                  "gap": 8,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "y56t5",
+                                      "name": "Dot",
+                                      "fill": "$primary",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "zzQFb",
+                                      "name": "Text",
+                                      "fill": "$muted-foreground",
+                                      "content": "atualizado agora · cota ok · vagas 3/4 · 1 na fila",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "RhK5U",
+                                  "name": "Batch",
+                                  "height": 32,
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    11,
+                                    11,
+                                    11,
+                                    4
+                                  ],
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "n5Jiq",
+                                      "name": "Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "layers",
+                                      "library": "lucide",
+                                      "fill": "$muted-foreground"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "jbQLX",
+                                      "name": "Text",
+                                      "fill": "$muted-foreground",
+                                      "content": "Lote L-31",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "p7PCo",
+                                  "name": "Me Chip",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": [
+                                    11,
+                                    11,
+                                    11,
+                                    4
+                                  ],
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12,
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "b2aj7",
+                                      "name": "Avatar",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$secondary",
+                                      "cornerRadius": 11,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "wlhnm",
+                                          "name": "Initials",
+                                          "fill": "$secondary-foreground",
+                                          "content": "AN",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 9,
+                                          "fontWeight": "800"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "zrvTD",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Você · Ana",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ydcR2",
+                              "name": "Kanban",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "gap": 12,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "iklcA",
+                                  "name": "Coluna / Na fila",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "K8sgNd",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "fgWuo",
+                                          "name": "Dot",
+                                          "fill": "$caption-foreground",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "GZUaT",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Na fila",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "ZNgym",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "JJV0J",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "LtxKv",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-16",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-16"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Traduzir e-mails de carrinho abandonado",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "list-ordered",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "próxima da fila",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "XkVq6",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-17",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-17"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Ajustar banner da Black Friday",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "layers",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "lote L-31 · item 4",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "DLftH",
+                                  "name": "Coluna / Fazendo",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "p9OApI",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "TgVwF",
+                                          "name": "Dot",
+                                          "fill": "$primary",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "R8rj7W",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Fazendo",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "tJba3",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "XoZFj",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "3",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "jfz5K",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-14",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-14"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Página de frete grátis acima de R$ 199",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "paperclip",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "2 artefatos · 10:40",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "USAlB",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-13",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-13"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Corrigir ordenação da busca",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "paperclip",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "1 artefato · 10:38",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "QJKgd",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-18",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-18"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Página de troca e devolução",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "play",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "começou 10:41",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "eZmyy",
+                                  "name": "Coluna / Precisa de você",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "vWZNZ",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "$foreground",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "t2StT",
+                                          "name": "Dot",
+                                          "fill": "$success-bright",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "siTNo",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "Precisa de você",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "o5xLDt",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Ppehm",
+                                          "name": "Count",
+                                          "fill": "$on-dark-muted",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "XDNxc",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-12",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-12"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Botão de cupom some no iPhone SE",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "message-circle-question-mark",
+                                          "fill": "$foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "D1 · publico agora ou no fim do dia?",
+                                          "fill": "$foreground",
+                                          "fontWeight": "600",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "rfriw",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-10",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-10"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Migrar cupons antigos",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "message-circle-question-mark",
+                                          "fill": "$foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "P1 · segue com “não” às 11:15",
+                                          "fill": "$foreground",
+                                          "fontWeight": "600",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "WIKt8",
+                                  "name": "Coluna / Esperando cota",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "oDm4R",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "hAvq1",
+                                          "name": "Dot",
+                                          "fill": "$status-paused",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "P2Epv",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Esperando cota",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Uiv72",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "dkR2D",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "UpT4Q",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-15",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-15"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Relatório semanal de vendas",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "clock-3",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "volta sozinha às 14:00",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "m0M7EK",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-09",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-09"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Revisar textos do app",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "refresh-cw",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "nova tentativa às 10:52 (2 de 5)",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "c2WWB6",
+                                  "name": "Coluna / Parada",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "wa2vl",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "X8u4h",
+                                          "name": "Dot",
+                                          "fill": "$status-attention",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "qLduH",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Parada",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "ibquC",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "yBmpI",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "e6JUf",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-11",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-11"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Integração Pix — sandbox fora do ar",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "triangle-alert",
+                                          "fill": "$attention-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "escalada pelo supervisor",
+                                          "fill": "$attention-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "UEd0A",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-08",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-08"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Export de pedidos em CSV",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "pause",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "pausada por Bruno",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gXYNU",
+                                  "name": "Coluna / Concluída",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "id2ZV",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "P2wsa",
+                                          "name": "Dot",
+                                          "fill": "$fg-20",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Gzp6C",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Concluída",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "r6nMN",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Au5fw",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "12",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "tjGgz",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-07",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-07"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Favicon novo",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "check",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "concluída 09:58",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "ZG4g3",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-06",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-06"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Corrigir link do rodapé",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "check",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "concluída ontem",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "A0xOUd",
+                                      "name": "More",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        6,
+                                        8
+                                      ],
+                                      "justifyContent": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "gU8nR",
+                                          "name": "Label",
+                                          "fill": "$muted-foreground",
+                                          "content": "+ 10 concluídas",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OmDZZ",
+                  "name": "Screen — N7 · Quadro kanban (celular)",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NEpqQ",
+                      "name": "Canvas Caption",
+                      "fill": "$canvas-label",
+                      "content": "N7 · Quadro kanban no celular — uma coluna por vez, desliza de lado",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Vp2cI",
+                      "name": "Phone",
+                      "clip": true,
+                      "width": 390,
+                      "height": 844,
+                      "fill": "$bg",
+                      "cornerRadius": [
+                        36,
+                        36,
+                        36,
+                        12
+                      ],
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "OvZw0",
+                          "name": "URL Bar",
+                          "width": "fill_container",
+                          "fill": "$card",
+                          "gap": 6,
+                          "padding": [
+                            14,
+                            20,
+                            10,
+                            20
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "fwz0l",
+                              "name": "Lock",
+                              "width": 11,
+                              "height": 11,
+                              "icon": "lock",
+                              "library": "lucide",
+                              "fill": "$caption-foreground"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IMsPE",
+                              "name": "URL",
+                              "fill": "$muted-foreground",
+                              "content": "codm.app/panel/g/••••••",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11.5,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q7JwoT",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": [
+                            16,
+                            20,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "w8aDUD",
+                              "name": "Group Row",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Ac2ua",
+                                  "name": "Group Avatar",
+                                  "width": 40,
+                                  "height": 40,
+                                  "fill": "$accent",
+                                  "cornerRadius": 20,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "pygjx",
+                                      "name": "Initials",
+                                      "fill": "$secondary-foreground",
+                                      "content": "AL",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 13,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "IWXYw",
+                                  "name": "Group Name",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 1,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "FfP7L",
+                                      "name": "Name",
+                                      "fill": "$foreground",
+                                      "content": "Aurora Labs",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 18,
+                                      "fontWeight": "800",
+                                      "letterSpacing": -0.3
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "eoB0F",
+                                      "name": "Sub",
+                                      "fill": "$caption-foreground",
+                                      "content": "tarefas do grupo",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "UyDn9",
+                                  "name": "Me Chip",
+                                  "height": 30,
+                                  "fill": "$muted",
+                                  "cornerRadius": [
+                                    11,
+                                    11,
+                                    11,
+                                    4
+                                  ],
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    10,
+                                    0,
+                                    4
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "U83zS7",
+                                      "name": "Avatar",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$secondary",
+                                      "cornerRadius": 11,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "ULrDL",
+                                          "name": "Initials",
+                                          "fill": "$secondary-foreground",
+                                          "content": "AN",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 9,
+                                          "fontWeight": "800"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "S798TA",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Você · Ana",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SOHMK",
+                              "name": "Health",
+                              "width": "fill_container",
+                              "fill": "$card",
+                              "cornerRadius": [
+                                11,
+                                11,
+                                11,
+                                4
+                              ],
+                              "gap": 8,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "ocYAF",
+                                  "name": "Dot",
+                                  "fill": "$primary",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eOqIz",
+                                  "name": "Text",
+                                  "fill": "$muted-foreground",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "agora · cota ok · vagas 3/4 · 1 na fila",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xw96i",
+                          "name": "Board",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "B3Ozu8",
+                              "name": "Column Tabs",
+                              "clip": true,
+                              "width": "fill_container",
+                              "gap": 6,
+                              "padding": [
+                                2,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "C9FTeu",
+                                  "name": "Tab / Na fila",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "UMc8V",
+                                      "name": "Dot",
+                                      "fill": "$caption-foreground",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Bdjeq",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Na fila",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Y3i5h",
+                                      "name": "Count",
+                                      "fill": "$caption-foreground",
+                                      "content": "2",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ebBsk",
+                                  "name": "Tab / Fazendo",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "nl9Rr",
+                                      "name": "Dot",
+                                      "fill": "$primary",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "enSds",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Fazendo",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "e7t7JZ",
+                                      "name": "Count",
+                                      "fill": "$caption-foreground",
+                                      "content": "3",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lEvCT",
+                                  "name": "Tab / Precisa de você",
+                                  "height": 32,
+                                  "fill": "$foreground",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "hnMms",
+                                      "name": "Dot",
+                                      "fill": "$success-bright",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "EvCA3",
+                                      "name": "Label",
+                                      "fill": "#ffffff",
+                                      "content": "Precisa de você",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "U1W8N",
+                                      "name": "Count",
+                                      "fill": "$on-dark-muted",
+                                      "content": "2",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "KWrG0",
+                                  "name": "Tab / Esperando cota",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "o8bg5k",
+                                      "name": "Dot",
+                                      "fill": "$status-paused",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "lJma3",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Esperando cota",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "rrbMR",
+                                      "name": "Count",
+                                      "fill": "$caption-foreground",
+                                      "content": "2",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Q140w",
+                                  "name": "Tab / Parada",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "fQgsx",
+                                      "name": "Dot",
+                                      "fill": "$status-attention",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "iEnjA",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Parada",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Bv4G2",
+                                      "name": "Count",
+                                      "fill": "$caption-foreground",
+                                      "content": "2",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "NGHq0",
+                                  "name": "Tab / Concluída",
+                                  "height": 32,
+                                  "fill": "$muted",
+                                  "cornerRadius": 999,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "S7cMN",
+                                      "name": "Dot",
+                                      "fill": "$fg-20",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "YzMPL",
+                                      "name": "Label",
+                                      "fill": "$foreground",
+                                      "content": "Concluída",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "M3cDWs",
+                                      "name": "Count",
+                                      "fill": "$caption-foreground",
+                                      "content": "12",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "b6Hrx",
+                              "name": "Columns",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "gap": 12,
+                              "padding": [
+                                4,
+                                16,
+                                16,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "WDXyP",
+                                  "name": "Coluna / Precisa de você",
+                                  "width": 300,
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "b3XBV",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "$foreground",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "r6RXl",
+                                          "name": "Dot",
+                                          "fill": "$success-bright",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "EJSwP",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "Precisa de você",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "SuHw4",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "m3sEg",
+                                          "name": "Count",
+                                          "fill": "$on-dark-muted",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "d1hlJS",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-12",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-12"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Botão de cupom some no iPhone SE",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "message-circle-question-mark",
+                                          "fill": "$foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "D1 · publico agora ou no fim do dia?",
+                                          "fill": "$foreground",
+                                          "fontWeight": "600",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "u9BXt0",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-10",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-10"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Migrar cupons antigos",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "message-circle-question-mark",
+                                          "fill": "$foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "P1 · segue com “não” às 11:15",
+                                          "fill": "$foreground",
+                                          "fontWeight": "600",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "NID5j",
+                                  "name": "Coluna / Esperando cota",
+                                  "width": 300,
+                                  "fill": "$card",
+                                  "cornerRadius": [
+                                    18,
+                                    18,
+                                    18,
+                                    6
+                                  ],
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "padding": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "A1D90w",
+                                      "name": "Header",
+                                      "width": "fill_container",
+                                      "height": 30,
+                                      "fill": "#00000000",
+                                      "cornerRadius": [
+                                        12,
+                                        12,
+                                        12,
+                                        4
+                                      ],
+                                      "gap": 7,
+                                      "padding": [
+                                        0,
+                                        9
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "JDnSK",
+                                          "name": "Dot",
+                                          "fill": "$status-paused",
+                                          "width": 7,
+                                          "height": 7
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "brvmY",
+                                          "name": "Label",
+                                          "fill": "$foreground",
+                                          "content": "Esperando cota",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12.5,
+                                          "fontWeight": "700"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "NsoBd",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "rz5U8",
+                                          "name": "Count",
+                                          "fill": "$caption-foreground",
+                                          "content": "2",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "A94Jbs",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-15",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-15"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Relatório semanal de vendas",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "clock-3",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "volta sozinha às 14:00",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "V9Chc",
+                                      "type": "ref",
+                                      "ref": "c3IFgg",
+                                      "name": "Tarefa / APP-09",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "gDT7K": {
+                                          "content": "APP-09"
+                                        },
+                                        "jkLAk": {
+                                          "enabled": false
+                                        },
+                                        "J5rbMM": {
+                                          "content": "Revisar textos do app",
+                                          "fontSize": 14
+                                        },
+                                        "mx7hu": {
+                                          "icon": "refresh-cw",
+                                          "fill": "$caption-foreground"
+                                        },
+                                        "CgSHw": {
+                                          "content": "nova tentativa às 10:52 (2 de 5)",
+                                          "fill": "$caption-foreground",
+                                          "fontWeight": "normal",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "QVutV",
                   "name": "Screen — N1 · Quadro (celular)",
                   "layout": "vertical",
@@ -47563,7 +50941,7 @@
                       "id": "R0vXQC",
                       "name": "Canvas Caption",
                       "fill": "$canvas-label",
-                      "content": "N1 · Quadro — quem precisa de você primeiro",
+                      "content": "N1 · Quadro em lista — alternativa ao kanban no celular",
                       "fontFamily": "$font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -47878,7 +51256,7 @@
                                   "content": "Botão de cupom some no iPhone SE"
                                 },
                                 "mx7hu": {
-                                  "icon": "message-circle-question",
+                                  "icon": "message-circle-question-mark",
                                   "fill": "$foreground"
                                 },
                                 "CgSHw": {
@@ -48024,7 +51402,7 @@
                                   "content": "Relatório semanal de vendas"
                                 },
                                 "mx7hu": {
-                                  "icon": "clock"
+                                  "icon": "clock-3"
                                 },
                                 "CgSHw": {
                                   "content": "volta sozinha às 14:00"
@@ -49329,7 +52707,7 @@
                                   "content": "Botão de cupom some no iPhone SE"
                                 },
                                 "mx7hu": {
-                                  "icon": "message-circle-question",
+                                  "icon": "message-circle-question-mark",
                                   "fill": "$foreground"
                                 },
                                 "CgSHw": {
@@ -49475,7 +52853,7 @@
                                   "content": "Relatório semanal de vendas"
                                 },
                                 "mx7hu": {
-                                  "icon": "clock"
+                                  "icon": "clock-3"
                                 },
                                 "CgSHw": {
                                   "content": "volta sozinha às 14:00"
@@ -50274,7 +53652,7 @@
                                     },
                                     "mx7hu": {
                                       "fill": "$foreground",
-                                      "icon": "message-circle-question"
+                                      "icon": "message-circle-question-mark"
                                     },
                                     "CgSHw": {
                                       "content": "D1 · publico agora ou no fim do dia?",
@@ -50338,7 +53716,7 @@
                                       "content": "Relatório semanal de vendas"
                                     },
                                     "mx7hu": {
-                                      "icon": "clock"
+                                      "icon": "clock-3"
                                     },
                                     "CgSHw": {
                                       "content": "volta sozinha às 14:00"
@@ -51056,7 +54434,7 @@
                   "fill": "$muted-foreground",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Pill de status (variantes do Badge) · ChatBubble (pessoa / agente / orientação) · ChatEvent · AskCard (decisão e pergunta; resposta por opção ou texto; trava “só quem pode liberar”) · ArtifactTile · ArtifactChip · TaskCard · SteerComposer.",
+                  "content": "Pill de status (variantes do Badge) · ChatBubble (pessoa / agente / orientação) · ChatEvent · AskCard (decisão e pergunta; resposta por opção ou texto; trava “só quem pode liberar”) · ArtifactTile · ArtifactChip · TaskCard · KanbanColumn (o mesmo kanban no painel, na aba Tarefas da conversa e no celular) · SteerComposer.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-sans",
                   "fontSize": 14,
