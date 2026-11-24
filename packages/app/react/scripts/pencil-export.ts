@@ -204,6 +204,43 @@ export function withMeasuredDims(manifest: ScreensManifest, dims: Record<string,
 	return { ...manifest, screens }
 }
 
+/**
+ * `--only=<slug,slug>` — the slugs a run writes and exports, or `undefined` for every screen. Discovery and the
+ * manifest stay COMPLETE either way (the manifest is rebuilt from the whole document); only the write/export
+ * loops are narrowed, so redesigning one screen never rewrites the other targets.
+ */
+export function parseOnly(args: readonly string[]): ReadonlySet<string> | undefined {
+	const flag = args.find(arg => arg.startsWith('--only='))
+	if (!flag) return undefined
+	const slugs = flag
+		.slice('--only='.length)
+		.split(',')
+		.map(slug => slug.trim())
+		.filter(Boolean)
+	return new Set(slugs)
+}
+
+/**
+ * Under `--only`, the screens the run does NOT touch keep the dims their last full export measured — the specs
+ * stage rebuilds the manifest from discovery (which has no height for an auto-layout frame), and only the
+ * targets stage measures, so without this every untouched screen would lose its measured height.
+ */
+export function keepUntouchedDims(manifest: ScreensManifest, existing: ScreensManifest | undefined, only: ReadonlySet<string> | undefined): ScreensManifest {
+	if (!only || !existing) return manifest
+	const before = new Map(existing.screens.map(screen => [screen.slug, screen]))
+	const screens = manifest.screens.map((screen): ManifestScreen => {
+		const old = before.get(screen.slug)
+		if (only.has(screen.slug) || !old) return screen
+		return { ...screen, width: old.width, height: old.height }
+	})
+	return { ...manifest, screens }
+}
+
+/** The manifest screens a run touches: all of them, or those named by `--only`. */
+export function selectScreens<T extends { slug: string }>(screens: readonly T[], only: ReadonlySet<string> | undefined): T[] {
+	return only ? screens.filter(screen => only.has(screen.slug)) : [...screens]
+}
+
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // ─── Pure: tokens.json stable serialization ────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -463,15 +500,16 @@ async function runTokensStage(bridge: PencilBridge): Promise<StageResult> {
 	}
 }
 
-async function runSpecsStage(bridge: PencilBridge): Promise<{ manifest: ScreensManifest } & StageResult> {
+async function runSpecsStage(bridge: PencilBridge, only?: ReadonlySet<string>): Promise<{ manifest: ScreensManifest } & StageResult> {
 	const discoveryText = await bridge.execute(DISCOVERY_SNIPPET)
 	const discovered = JSON.parse(discoveryText) as ScreenInput[]
-	const manifest = buildManifest(discovered, loadExistingManifest())
+	const existing = loadExistingManifest()
+	const manifest = keepUntouchedDims(buildManifest(discovered, existing), existing, only)
 
 	mkdirSync(SCREENS_DIR, { recursive: true })
 	let ok = 0
 	let fail = 0
-	for (const screen of manifest.screens) {
+	for (const screen of selectScreens(manifest.screens, only)) {
 		try {
 			const text = await bridge.execute(specSnippet(screen.id))
 			writeFileSync(join(SCREENS_DIR, `${screen.slug}.json`), `${text}\n`)
@@ -486,14 +524,14 @@ async function runSpecsStage(bridge: PencilBridge): Promise<{ manifest: ScreensM
 	return { manifest, ok, fail }
 }
 
-async function runTargetsStage(bridge: PencilBridge, manifest: ScreensManifest): Promise<StageResult> {
+async function runTargetsStage(bridge: PencilBridge, manifest: ScreensManifest, only?: ReadonlySet<string>): Promise<StageResult> {
 	mkdirSync(TARGETS_DIR, { recursive: true })
 	const stagingDir = mkdtempSync(join(tmpdir(), 'pencil-export-'))
 	const measuredDims: Record<string, { width: number; height: number }> = {}
 	let ok = 0
 	let fail = 0
 	try {
-		for (const screen of manifest.screens) {
+		for (const screen of selectScreens(manifest.screens, only)) {
 			const exportId = screen.exportNodeId ?? screen.id
 			try {
 				await bridge.execute(exportSnippet(exportId, stagingDir))
@@ -531,10 +569,16 @@ async function runTargetsStage(bridge: PencilBridge, manifest: ScreensManifest):
 
 async function main(): Promise<void> {
 	const args = process.argv.slice(2)
+	const only = parseOnly(args)
+	if (only && only.size === 0) {
+		console.error('design:export: --only= sem nenhum slug')
+		process.exit(1)
+	}
+	// `--only` re-exports some screens: their spec and target, never the tokens (a document-wide stage).
 	const explicit = args.includes('--tokens') || args.includes('--specs') || args.includes('--targets')
-	const doTokens = explicit ? args.includes('--tokens') : true
-	const doSpecs = explicit ? args.includes('--specs') : true
-	const doTargets = explicit ? args.includes('--targets') : true
+	const doTokens = only ? false : explicit ? args.includes('--tokens') : true
+	const doSpecs = only ? true : explicit ? args.includes('--specs') : true
+	const doTargets = only ? true : explicit ? args.includes('--targets') : true
 
 	const bridge = new PencilBridge(PENCIL_MCP_BIN, PENCIL_APP)
 	try {
@@ -556,7 +600,7 @@ async function main(): Promise<void> {
 
 		let manifest: ScreensManifest | undefined
 		if (doSpecs) {
-			const result = await runSpecsStage(bridge)
+			const result = await runSpecsStage(bridge, only)
 			manifest = result.manifest
 			ok += result.ok
 			fail += result.fail
@@ -568,7 +612,7 @@ async function main(): Promise<void> {
 				console.error('design:export: --targets precisa de um manifesto — rode com --specs primeiro (ou garanta screens.manifest.json commitado)')
 				fail += 1
 			} else {
-				const result = await runTargetsStage(bridge, manifest)
+				const result = await runTargetsStage(bridge, manifest, only)
 				ok += result.ok
 				fail += result.fail
 			}
