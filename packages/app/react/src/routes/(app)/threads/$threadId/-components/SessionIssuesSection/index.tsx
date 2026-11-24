@@ -11,7 +11,7 @@ import { Skeleton } from '@codm/app-ui/skeleton'
 import { TaskCard } from '@codm/app-ui/task-card'
 import { useCardMeta } from '@/components/task/useCardMeta'
 import { cardMetaOf } from '@/lib/task/cardMeta'
-import { groupByTaskColumn, TASK_COLUMNS, type TaskColumn } from '@/lib/task/issueBoard'
+import { groupByTaskColumn, TASK_COLUMN_LABEL_KEY, TASK_COLUMNS, type TaskColumn } from '@/lib/task/issueBoard'
 import { cn } from '@/lib/utils'
 
 const issuesRoute = getRouteApi('/(app)/threads/$threadId/issues/')
@@ -84,7 +84,7 @@ export function SessionIssuesSection({ threadId, className, ...props }: Componen
 							<KanbanColumnHeader
 								tone={column}
 								emphasis={column === 'needsYou'}
-								title={t(`task.columns.${column}`)}
+								title={t(TASK_COLUMN_LABEL_KEY[column])}
 								count={column === 'done' ? finished.length : count(column)}
 							/>
 							<BoardColumnBody>

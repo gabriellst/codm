@@ -31,3 +31,14 @@ export function groupByTaskColumn<T extends { lifeState: IssueLifeState }>(items
 	for (const item of items) byColumn.get(TASK_COLUMN_OF[item.lifeState])?.push(item)
 	return byColumn
 }
+
+/** The catalog key of each column's name — a KEY map, literal per column (bp-25: a template-literal key is
+ *  reserved for enum labels, and a column is not a wire enum). */
+export const TASK_COLUMN_LABEL_KEY = {
+	queued: 'task.columns.queued',
+	working: 'task.columns.working',
+	needsYou: 'task.columns.needsYou',
+	waiting: 'task.columns.waiting',
+	stalled: 'task.columns.stalled',
+	done: 'task.columns.done',
+} as const satisfies Record<TaskColumn, string>

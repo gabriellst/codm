@@ -27,7 +27,12 @@ const LOOK: { [L in Item['look']]: (props: { entry: ItemOfLook<L> }) => ReactNod
 		<TaskAskCard ask={entry.open.ask} stopId={entry.item.stopId} raisedAt={entry.item.at} className="w-full max-w-[34rem]" />
 	),
 	stop: ({ entry }) => (
-		<TaskStopCard stopId={entry.item.stopId} stopKind={entry.item.stopKind} title={entry.item.title} resolutions={entry.open.resolutions} />
+		<TaskStopCard
+			stopId={entry.item.stopId}
+			stopKind={entry.item.stopKind}
+			title={entry.open.detail ?? entry.item.title}
+			resolutions={entry.open.resolutions}
+		/>
 	),
 	event: ({ entry }) => <EventLine entry={entry} />,
 }

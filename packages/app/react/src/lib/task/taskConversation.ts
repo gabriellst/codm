@@ -14,6 +14,8 @@ type ItemOf<K extends IssueTimelineItemKind> = Extract<TimelineItem, { kind: K }
 export interface OpenStop<A> {
 	ask?: A
 	resolutions: readonly StopResolution[]
+	/** What the agent said about the stop (the desktop's needs-you `detail`) — absent where the surface lacks it. */
+	detail?: string
 }
 
 /**
