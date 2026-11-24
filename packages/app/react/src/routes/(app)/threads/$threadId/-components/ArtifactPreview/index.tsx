@@ -1,7 +1,7 @@
 import { type ComponentProps, type ComponentType, useState } from 'react'
+import { artifactGlyph } from '@/lib/task/artifactGlyph'
 import { useTranslation } from 'react-i18next'
-import { IconExternalLink, IconFile, IconLink, IconMovie, IconMusic, IconPhoto } from '@tabler/icons-react'
-import type { Icon } from '@tabler/icons-react'
+import { IconExternalLink, IconLink } from '@tabler/icons-react'
 import { getArtifactContentQueryKey } from '@codm/client-typescript/typescript'
 import type { ArtifactKind, ListArtifactsQueryResponse } from '@codm/client-typescript/typescript'
 import { daemonBaseUrl } from '@/lib/config'
@@ -12,14 +12,9 @@ import { DialogContent, DialogHeader, DialogTitle } from '@codm/app-ui/dialog'
 
 export type Artifact = ListArtifactsQueryResponse['artifacts'][number]
 
-/** The glyph that stands for a kind — icon map, not a label map (labels are i18n's job). */
-export const artifactGlyph: Record<ArtifactKind, Icon> = {
-	IMAGE: IconPhoto,
-	AUDIO: IconMusic,
-	VIDEO: IconMovie,
-	FILE: IconFile,
-	LINK: IconLink,
-}
+/** The glyph that stands for a kind — moved to `lib/task` (the task conversation and the cloud panel use it
+ *  too); re-exported so this screen's consumers keep their import. */
+export { artifactGlyph }
 
 /**
  * Where the browser fetches an artifact's BYTES.
