@@ -5,15 +5,15 @@ import i18n from '@/lib/i18n'
 import { enumLabel } from '@/lib'
 import { mountRouter, type MountedRouter } from '../../../../../../../tests/support/mountRouter'
 import { loadBackendGivens, useIntegrationBackend, type IntegrationBackend } from '../../../../../../../tests/support/integration-harness'
-import { IssueTimeline } from './IssueTimeline'
+import { DesktopTaskSurface } from './DesktopTaskSurface'
+import { TaskConversationSection } from './TaskConversationSection'
 
 /**
- * Fase 5 (S6) — the autonomy moments on an issue's timeline, CONTRA O BACKEND REAL: the agent's facts (a nudge, the
+ * Fase 5 (S6) — the autonomy moments in the task conversation (they were the timeline list's before P1), CONTRA O BACKEND REAL: the agent's facts (a nudge, the
  * supervisor's acted escalation, one only observed) are seeded as the agent records them, the real reader assembles
  * the timeline and the SDK hook brings it. Proves each variant's words — "empurrão 1 de 2" with the episode's length
  * from the wire (`outOf`), the supervisor's verdict WITH its reason — and that a verdict only observed never shows.
- * A sanctioned harness-backed sibling (SB-04): `IssueTimeline` has no story of its own, and a `play` under MSW cannot
- * run the reader.
+ * A sanctioned harness-backed sibling (SB-04): a `play` under MSW cannot run the reader.
  */
 let backend: IntegrationBackend
 
@@ -30,7 +30,7 @@ function fact(name: string, issueId: string, ownerId: string, payload: object) {
 	return { ...event, toJSON: () => event, serialize: () => JSON.stringify(event) }
 }
 
-describe('IssueTimeline — fase 5, contra o backend real', () => {
+describe('TaskConversationSection — fase 5, contra o backend real', () => {
 	let mounted: MountedRouter | null = null
 
 	beforeEach(async () => {
@@ -83,7 +83,9 @@ describe('IssueTimeline — fase 5, contra o backend real', () => {
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		mounted = await mountRouter(
 			<QueryClientProvider client={queryClient}>
-				<IssueTimeline issueId={issueId} />
+				<DesktopTaskSurface threadId={threadId} issueId={issueId}>
+					<TaskConversationSection threadId={threadId} issueId={issueId} />
+				</DesktopTaskSurface>
 			</QueryClientProvider>,
 		)
 		const nudged = i18n.t('session.timelineNudged', { ordinal: 1, outOf: 2, source: enumLabel('NudgeSource', NudgeSource.RECONCILER) })

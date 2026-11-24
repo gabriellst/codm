@@ -1,3 +1,4 @@
+import { IssueTimelineItemKindEnum as K, TranscriptKindEnum } from '@codm/client-typescript/typescript'
 import type { GetIssueTimelineQueryResponse, IssueTimelineItemKind, StopResolution } from '@codm/client-typescript/typescript'
 
 /** One item of a task's timeline, as the daemon (`GET /ui/issues/:id/timeline`) and the cloud panel
@@ -47,14 +48,14 @@ function classifyMessage<A>(item: ItemOf<'MESSAGE'>): ConversationItem<A> | null
 	// A message that delivered an artifact is folded into the artifact's chip (its text becomes the caption).
 	if (item.artifactId) return null
 	switch (item.transcriptKind) {
-		case 'CONTACT':
+		case TranscriptKindEnum.CONTACT:
 			return { look: 'person', item }
-		case 'SYSTEM':
-		case 'DIRECT':
+		case TranscriptKindEnum.SYSTEM:
+		case TranscriptKindEnum.DIRECT:
 			return { look: 'agent', item }
-		case 'WHISPER':
+		case TranscriptKindEnum.WHISPER:
 			return { look: 'whisper', item }
-		case 'ACTION':
+		case TranscriptKindEnum.ACTION:
 			return event(item)
 		default: {
 			const _exhaustive: never = item.transcriptKind
@@ -73,27 +74,27 @@ function classifyStop<A>(item: ItemOf<'STOP_RAISED'>, join: ConversationJoin<A>)
 /** One rule per kind — a kind added to the contract fails to compile until it is placed here. */
 function classify<A>(item: TimelineItem, join: ConversationJoin<A>, captions: ReadonlyMap<string, string>): ConversationItem<A> | null {
 	switch (item.kind) {
-		case 'MESSAGE':
+		case K.MESSAGE:
 			return classifyMessage(item)
-		case 'STEER':
+		case K.STEER:
 			return { look: 'steer', item, failed: item.failed ?? false }
-		case 'ARTIFACT':
+		case K.ARTIFACT:
 			return { look: 'artifact', item, caption: captions.get(item.artifactId) }
-		case 'STOP_RAISED':
+		case K.STOP_RAISED:
 			return classifyStop(item, join)
-		case 'CREATED':
-		case 'TURN_STARTED':
-		case 'STOP_RESOLVED':
-		case 'COMPLETED':
-		case 'ARCHIVED':
-		case 'PAUSED':
-		case 'RESUMED':
-		case 'REGRET_WINDOW':
-		case 'BATCH_LINKED':
-		case 'PUBLISH_RAN':
-		case 'NUDGED':
-		case 'RETRY_SCHEDULED':
-		case 'SUPERVISOR_REVIEWED':
+		case K.CREATED:
+		case K.TURN_STARTED:
+		case K.STOP_RESOLVED:
+		case K.COMPLETED:
+		case K.ARCHIVED:
+		case K.PAUSED:
+		case K.RESUMED:
+		case K.REGRET_WINDOW:
+		case K.BATCH_LINKED:
+		case K.PUBLISH_RAN:
+		case K.NUDGED:
+		case K.RETRY_SCHEDULED:
+		case K.SUPERVISOR_REVIEWED:
 			return event(item)
 		default: {
 			const _exhaustive: never = item
@@ -105,7 +106,7 @@ function classify<A>(item: TimelineItem, join: ConversationJoin<A>, captions: Re
 /** The task conversation: the timeline in its own order (oldest first), each item given its look. */
 export function buildConversation<A>(items: readonly TimelineItem[], join: ConversationJoin<A> = {}): ConversationItem<A>[] {
 	const captions = new Map<string, string>()
-	for (const item of items) if (item.kind === 'MESSAGE' && item.artifactId && item.text.trim()) captions.set(item.artifactId, item.text)
+	for (const item of items) if (item.kind === K.MESSAGE && item.artifactId && item.text.trim()) captions.set(item.artifactId, item.text)
 	const out: ConversationItem<A>[] = []
 	for (const item of items) {
 		const shown = classify(item, join, captions)
@@ -116,23 +117,23 @@ export function buildConversation<A>(items: readonly TimelineItem[], join: Conve
 
 /** Who asked for the task: the first message a person sent into it (its transcript entry id). */
 export function requesterEntryId(items: readonly TimelineItem[]): string | undefined {
-	for (const item of items) if (item.kind === 'MESSAGE' && item.transcriptKind === 'CONTACT') return item.entryId
+	for (const item of items) if (item.kind === K.MESSAGE && item.transcriptKind === TranscriptKindEnum.CONTACT) return item.entryId
 	return undefined
 }
 
 /** When the task was created (the CREATED item), if the timeline has it. */
 export function createdAt(items: readonly TimelineItem[]): string | undefined {
-	return items.find(item => item.kind === 'CREATED')?.at
+	return items.find(item => item.kind === K.CREATED)?.at
 }
 
 /** How many retries were scheduled for the task — "Tentativas" in the details. */
 export function retryCount(items: readonly TimelineItem[]): number {
-	return items.filter(item => item.kind === 'RETRY_SCHEDULED').length
+	return items.filter(item => item.kind === K.RETRY_SCHEDULED).length
 }
 
 /** The batch the task belongs to (the last BATCH_LINKED), if any. */
 export function batchOf(items: readonly TimelineItem[]): { batchCode: string; n: number } | undefined {
 	let found: { batchCode: string; n: number } | undefined
-	for (const item of items) if (item.kind === 'BATCH_LINKED') found = { batchCode: item.batchCode, n: item.n }
+	for (const item of items) if (item.kind === K.BATCH_LINKED) found = { batchCode: item.batchCode, n: item.n }
 	return found
 }

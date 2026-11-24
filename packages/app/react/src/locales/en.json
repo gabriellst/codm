@@ -1019,5 +1019,55 @@
 		"too_small_array": "Must have at least {{minimum}} item(s)",
 		"too_small_number": "Must be at least {{minimum}}",
 		"too_small_string": "Must be at least {{minimum}} character(s)"
+	},
+	"task": {
+		"answerInGroup": "or answer in the group quoting {{code}}",
+		"fromGroup": "In the group",
+		"whisper": "Whisper",
+		"steer": "Steer",
+		"conversation": "Conversation",
+		"conversationEmpty": "Nothing has happened on this task yet.",
+		"artifacts": "Artifacts",
+		"artifactsCount": "Artifacts · {{count}}",
+		"artifactsEmpty": "No artifacts yet.",
+		"session": "Session",
+		"expand": "Expand",
+		"collapse": "Collapse",
+		"details": "Details",
+		"requestedBy": "Requested by",
+		"agent": "Agent",
+		"attempts": "Attempts",
+		"noRetries": "no failures",
+		"retries_one": "{{count}} retry",
+		"retries_other": "{{count}} retries",
+		"batch": "Batch",
+		"batchItem": "{{code}} · item {{n}}",
+		"createdAt": "Created",
+		"unknown": "—",
+		"metaRequestedBy": "requested by {{name}}",
+		"openAsks_one": "{{count}} open decision",
+		"openAsks_other": "{{count}} open decisions",
+		"columns": {
+			"queued": "Queued",
+			"working": "Working",
+			"needsYou": "Needs you",
+			"waiting": "Waiting",
+			"stalled": "Stalled",
+			"done": "Done"
+		},
+		"cardMeta": {
+			"retryAt": "retry at {{time}}",
+			"backAt": "back at {{time}}",
+			"escalated": "escalated by the supervisor",
+			"paused": "paused",
+			"artifacts_one": "{{count}} artifact",
+			"artifacts_other": "{{count}} artifacts",
+			"askCode": "{{code}} · {{question}}"
+		},
+		"board": {
+			"summary": "{{needsYou}} need you · {{working}} working · {{waiting}} waiting · {{stalled}} stalled · {{queued}} queued",
+			"showDone": "Done · {{count}}",
+			"hideDone": "Hide done"
+		}
 	}
 }

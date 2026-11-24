@@ -1,30 +1,30 @@
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getRouteApi, Link } from '@tanstack/react-router'
-import {
-	useGetIssueTimeline,
-	useGetPublishRunOutput,
-	ClassificationMethodEnum,
-	TranscriptKindEnum,
-} from '@codm/client-typescript/typescript'
-import type { GetIssueTimelineQueryResponse, IssueTimelineItemKind } from '@codm/client-typescript/typescript'
+import { ClassificationMethodEnum, TranscriptKindEnum, useGetPublishRunOutput } from '@codm/client-typescript/typescript'
+import type { IssueTimelineItemKind } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { Skeleton } from '@codm/app-ui/skeleton'
-import { useLocale } from '@/hooks'
-import { enumLabel } from '@/lib'
+import { useLocale } from '@/hooks/useLocale'
+import { enumLabel } from '@/lib/enums'
 import { formatDayAndTime } from '@/lib/format'
+import type { TimelineItem } from '@/lib/task/taskConversation'
 import { cn } from '@/lib/utils'
 
-const threadRoute = getRouteApi('/(app)/threads/$threadId')
+type ItemOf<K extends IssueTimelineItemKind> = Extract<TimelineItem, { kind: K }>
 
-type Item = GetIssueTimelineQueryResponse['items'][number]
-type ItemOf<K extends IssueTimelineItemKind> = Extract<Item, { kind: K }>
+/**
+ * What a surface can offer beyond the words — the desktop has both, the cloud panel neither:
+ * - `issueId` + `publishOutput`: a publish run's line gets "ver saída" (the output is read from the daemon).
+ * - `renderBatchLink`: the batch line becomes a link (the desktop routes to the batch screen).
+ */
+export interface EventDetailCapabilities {
+	issueId?: string
+	publishOutput?: boolean
+	renderBatchLink?: (item: ItemOf<'BATCH_LINKED'>, label: string) => ReactNode
+}
 
-/** What every detail renderer receives: its own member of the union, and the issue it belongs to (a publish
- *  run's output is addressed by issue + timeline item). */
-interface DetailProps<K extends IssueTimelineItemKind> {
+interface DetailProps<K extends IssueTimelineItemKind> extends EventDetailCapabilities {
 	item: ItemOf<K>
-	issueId: string
 }
 
 /** The detail line of each kind. One renderer per member of the union — never a chain on `kind` (CMP-P18). */
@@ -41,12 +41,23 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: DetailProps<K>) => ReactNo
 	PAUSED: ({ item }) => <ControlDetail item={item} />,
 	RESUMED: ({ item }) => <ControlDetail item={item} />,
 	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
-	BATCH_LINKED: ({ item }) => <BatchLinkedDetail item={item} />,
-	PUBLISH_RAN: ({ item, issueId }) => <PublishRanDetail item={item} issueId={issueId} />,
+	BATCH_LINKED: props => <BatchLinkedDetail {...props} />,
+	PUBLISH_RAN: props => <PublishRanDetail {...props} />,
 	// Fase 5 — the nudge ("empurrão 1 de 2"), the scheduled retry and what the supervisor did, with why it looked.
 	NUDGED: ({ item }) => <NudgedDetail item={item} />,
 	RETRY_SCHEDULED: ({ item }) => <RetryScheduledDetail item={item} />,
 	SUPERVISOR_REVIEWED: ({ item }) => <SupervisorReviewedDetail item={item} />,
+}
+
+/**
+ * The words of one timeline item — shared by the timeline list, the desktop task conversation and the
+ * cloud panel, so a kind is described once.
+ */
+export function TaskEventDetail({ item, ...capabilities }: { item: TimelineItem } & EventDetailCapabilities) {
+	// TS cannot correlate `DETAIL[item.kind]` with `item` across a union, so the lookup is widened once here;
+	// `DETAIL`'s own type is what keeps each renderer honest.
+	const Detail = DETAIL[item.kind] as (props: { item: TimelineItem } & EventDetailCapabilities) => ReactNode
+	return <Detail item={item} {...capabilities} />
 }
 
 function NudgedDetail({ item }: { item: ItemOf<'NUDGED'> }) {
@@ -78,49 +89,6 @@ function RetryScheduledDetail({ item }: { item: ItemOf<'RETRY_SCHEDULED'> }) {
 				time: formatDayAndTime(item.retryAt, locale),
 			})}
 		</>
-	)
-}
-
-/**
- * The issue's TIMELINE (fase 1, item 1): everything that happened to it, oldest first — created, each
- * turn, what was said about it and the replies that quoted it, each steer with where it stands, its
- * artifacts, its stops and their answers, and how it ended.
- */
-export function IssueTimeline({ issueId, className, ...props }: ComponentProps<'section'> & { issueId: string }) {
-	const { t } = useTranslation()
-	const { data, isLoading } = useGetIssueTimeline(issueId)
-
-	return (
-		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className="label-eyebrow">{t('session.timeline')}</h2>
-			{isLoading || !data ? (
-				<Skeleton className="h-24 rounded-2xl" />
-			) : (
-				<ol className="flex flex-col gap-2">
-					{data.items.map(item => (
-						<TimelineRow key={item.id} item={item} issueId={issueId} />
-					))}
-				</ol>
-			)}
-		</section>
-	)
-}
-
-function TimelineRow({ item, issueId, className, ...props }: ComponentProps<'li'> & { item: Item; issueId: string }) {
-	const locale = useLocale()
-	// The renderer for THIS member. TS cannot correlate `DETAIL[item.kind]` with `item` across a union,
-	// so the lookup is widened once here; `DETAIL`'s own type is what keeps each renderer honest.
-	const Detail = DETAIL[item.kind] as (props: { item: Item; issueId: string }) => ReactNode
-	return (
-		<li className={cn('flex items-start gap-3 rounded-asymmetric-sm bg-background p-3', className)} {...props}>
-			<span className="w-24 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{formatDayAndTime(item.at, locale)}</span>
-			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
-				<span className="text-xs font-semibold text-foreground">{enumLabel('IssueTimelineItemKind', item.kind)}</span>
-				<div className="min-w-0 whitespace-pre-wrap break-words text-sm text-muted-foreground">
-					<Detail item={item} issueId={issueId} />
-				</div>
-			</div>
-		</li>
 	)
 }
 
@@ -180,13 +148,7 @@ function StopResolvedDetail({ item }: { item: ItemOf<'STOP_RESOLVED'> }) {
 
 function SteerDetail({ item }: { item: ItemOf<'STEER'> }) {
 	const { t } = useTranslation()
-	const locale = useLocale()
-	const when = (iso: string) => formatDayAndTime(iso, locale)
-	const status = item.readAt
-		? t('session.steerRead', { when: when(item.readAt) })
-		: item.deliveredAt
-			? t('session.steerDelivered', { when: when(item.deliveredAt) })
-			: t('session.steerSent', { when: when(item.at) })
+	const status = useSteerStatus(item)
 	return (
 		<>
 			{item.reminder && <span className="mr-1.5 text-xs text-foreground">{t('session.steerAutoReminder')}</span>}
@@ -194,6 +156,16 @@ function SteerDetail({ item }: { item: ItemOf<'STEER'> }) {
 			<span className="block text-xs">{status}</span>
 		</>
 	)
+}
+
+/** Where a steer stands — read, delivered, or only sent — with when. */
+export function useSteerStatus(item: Pick<ItemOf<'STEER'>, 'at' | 'deliveredAt' | 'readAt'>): string {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	const when = (iso: string) => formatDayAndTime(iso, locale)
+	if (item.readAt) return t('session.steerRead', { when: when(item.readAt) })
+	if (item.deliveredAt) return t('session.steerDelivered', { when: when(item.deliveredAt) })
+	return t('session.steerSent', { when: when(item.at) })
 }
 
 /** Who held / released the work and from where (fase 2, item 2) — the source alone when no name was recorded. */
@@ -217,19 +189,11 @@ function RegretWindowDetail({ item }: { item: ItemOf<'REGRET_WINDOW'> }) {
 	)
 }
 
-/** "L-31 · item 4" — which item of which batch was sent to this issue (fase 4, item 5), linking to the batch screen. */
-function BatchLinkedDetail({ item, className }: { item: ItemOf<'BATCH_LINKED'> } & Pick<ComponentProps<typeof Link>, 'className'>) {
+/** "L-31 · item 4" — which item of which batch was sent to this issue (fase 4, item 5); a link where the surface has one. */
+function BatchLinkedDetail({ item, renderBatchLink }: DetailProps<'BATCH_LINKED'>) {
 	const { t } = useTranslation()
-	const { threadId } = threadRoute.useParams()
-	return (
-		<Link
-			to="/threads/$threadId/batches/$batchCode"
-			params={{ threadId, batchCode: item.batchCode }}
-			className={cn('underline-offset-4 hover:underline', className)}
-		>
-			{t('session.timelineBatchLinked', { code: item.batchCode, n: item.n })}
-		</Link>
-	)
+	const label = t('session.timelineBatchLinked', { code: item.batchCode, n: item.n })
+	return <>{renderBatchLink ? renderBatchLink(item, label) : label}</>
 }
 
 /** The run's line: with no duration nobody saw it end (`UNKNOWN`, the daemon stopped mid-run) — it asks for a check. */
@@ -247,15 +211,17 @@ function publishRanLine(
 }
 
 /** How the workspace's publish command ended (fase 4, item 6c) — outcome, exit code, duration; never the command.
- *  "ver saída" opens what the run printed — fetched only once opened. */
-function PublishRanDetail({ item, issueId }: DetailProps<'PUBLISH_RAN'>) {
+ *  "ver saída" opens what the run printed — fetched only once opened, and only where the surface reads the daemon. */
+function PublishRanDetail({ item, issueId, publishOutput }: DetailProps<'PUBLISH_RAN'>) {
 	const { t } = useTranslation()
 	// Private disclosure of this row — truly local transient UI (state placement, case 5).
 	const [open, setOpen] = useState(false)
 	const outcome = enumLabel('PublishRunOutcome', item.outcome)
+	const line = publishRanLine(t, outcome, item.durationMs, item.exitCode)
+	if (!publishOutput || !issueId) return <>{line}</>
 	return (
 		<>
-			{publishRanLine(t, outcome, item.durationMs, item.exitCode)}
+			{line}
 			<Button
 				type="button"
 				variant="link"
