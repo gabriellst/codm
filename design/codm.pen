@@ -7534,6 +7534,9 @@
                                                   "content": "Traduzir e-mails de carrinho abandonado",
                                                   "fontSize": 14
                                                 },
+                                                "KMgIV": {
+                                                  "enabled": false
+                                                },
                                                 "mx7hu": {
                                                   "fill": "$caption-foreground",
                                                   "icon": "list-ordered"
@@ -7563,6 +7566,9 @@
                                                 "J5rbMM": {
                                                   "content": "Ajustar banner da Black Friday",
                                                   "fontSize": 14
+                                                },
+                                                "KMgIV": {
+                                                  "enabled": false
                                                 },
                                                 "mx7hu": {
                                                   "fill": "$caption-foreground",
@@ -7677,7 +7683,7 @@
                                                 "CgSHw": {
                                                   "width": "fill_container",
                                                   "fill": "$caption-foreground",
-                                                  "content": "2 artefatos · 10:40",
+                                                  "content": "2 artefatos",
                                                   "textGrowth": "fixed-width",
                                                   "fontWeight": "normal"
                                                 }
@@ -7707,7 +7713,7 @@
                                                 "CgSHw": {
                                                   "width": "fill_container",
                                                   "fill": "$caption-foreground",
-                                                  "content": "1 artefato · 10:38",
+                                                  "content": "1 artefato",
                                                   "textGrowth": "fixed-width",
                                                   "fontWeight": "normal"
                                                 }
@@ -7729,6 +7735,9 @@
                                                 "J5rbMM": {
                                                   "content": "Página de troca e devolução",
                                                   "fontSize": 14
+                                                },
+                                                "KMgIV": {
+                                                  "enabled": false
                                                 },
                                                 "mx7hu": {
                                                   "fill": "$caption-foreground",
@@ -7931,7 +7940,7 @@
                                                   "id": "ml2iu",
                                                   "name": "Label",
                                                   "fill": "$foreground",
-                                                  "content": "Esperando cota",
+                                                  "content": "Esperando",
                                                   "fontFamily": "$font-sans",
                                                   "fontSize": 12.5,
                                                   "fontWeight": "700"
@@ -7979,7 +7988,7 @@
                                                 "CgSHw": {
                                                   "width": "fill_container",
                                                   "fill": "$caption-foreground",
-                                                  "content": "volta sozinha às 14:00",
+                                                  "content": "volta às 14:00",
                                                   "textGrowth": "fixed-width",
                                                   "fontWeight": "normal"
                                                 }
@@ -8009,7 +8018,7 @@
                                                 "CgSHw": {
                                                   "width": "fill_container",
                                                   "fill": "$caption-foreground",
-                                                  "content": "nova tentativa às 10:52 (2 de 5)",
+                                                  "content": "nova tentativa às 10:52",
                                                   "textGrowth": "fixed-width",
                                                   "fontWeight": "normal"
                                                 }
@@ -8145,7 +8154,7 @@
                                                 "CgSHw": {
                                                   "width": "fill_container",
                                                   "fill": "$caption-foreground",
-                                                  "content": "pausada por Bruno",
+                                                  "content": "pausada",
                                                   "textGrowth": "fixed-width",
                                                   "fontWeight": "normal"
                                                 }
@@ -10837,7 +10846,7 @@
                                                       "fill": "$foreground",
                                                       "textGrowth": "fixed-width",
                                                       "width": "fill_container",
-                                                      "content": "Claude Code · sessão 2",
+                                                      "content": "Claude Code",
                                                       "fontFamily": "$font-sans",
                                                       "fontSize": 12.5,
                                                       "fontWeight": "600"
@@ -45309,7 +45318,7 @@
                           "fill": "$status-paused"
                         },
                         "y6Atm": {
-                          "content": "Esperando cota",
+                          "content": "Esperando",
                           "fill": "$foreground"
                         }
                       }
@@ -45616,7 +45625,7 @@
                                   "id": "w7xoJR",
                                   "name": "Who",
                                   "fill": "$muted-foreground",
-                                  "content": "Orientação · Bruno",
+                                  "content": "Orientação",
                                   "fontFamily": "$font-sans",
                                   "fontSize": 11.5,
                                   "fontWeight": "700"
@@ -46390,7 +46399,7 @@
                               "id": "CgSHw",
                               "name": "Meta",
                               "fill": "$caption-foreground",
-                              "content": "2 artefatos · atualizada 10:40",
+                              "content": "2 artefatos",
                               "fontFamily": "$font-sans",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -47117,6 +47126,9 @@
                                                   "content": "Traduzir e-mails de carrinho abandonado",
                                                   "fontSize": 14
                                                 },
+                                                "KMgIV": {
+                                                  "enabled": false
+                                                },
                                                 "mx7hu": {
                                                   "icon": "list-ordered",
                                                   "fill": "$caption-foreground"
@@ -47146,6 +47158,9 @@
                                                 "J5rbMM": {
                                                   "content": "Ajustar banner da Black Friday",
                                                   "fontSize": 14
+                                                },
+                                                "KMgIV": {
+                                                  "enabled": false
                                                 },
                                                 "mx7hu": {
                                                   "icon": "layers",
@@ -47258,7 +47273,7 @@
                                                   "fill": "$caption-foreground"
                                                 },
                                                 "CgSHw": {
-                                                  "content": "2 artefatos · 10:40",
+                                                  "content": "2 artefatos",
                                                   "fill": "$caption-foreground",
                                                   "fontWeight": "normal",
                                                   "textGrowth": "fixed-width",
@@ -47288,7 +47303,7 @@
                                                   "fill": "$caption-foreground"
                                                 },
                                                 "CgSHw": {
-                                                  "content": "1 artefato · 10:38",
+                                                  "content": "1 artefato",
                                                   "fill": "$caption-foreground",
                                                   "fontWeight": "normal",
                                                   "textGrowth": "fixed-width",
@@ -47312,6 +47327,9 @@
                                                 "J5rbMM": {
                                                   "content": "Página de troca e devolução",
                                                   "fontSize": 14
+                                                },
+                                                "KMgIV": {
+                                                  "enabled": false
                                                 },
                                                 "mx7hu": {
                                                   "icon": "play",
@@ -47514,7 +47532,7 @@
                                                   "id": "MPGZY",
                                                   "name": "Label",
                                                   "fill": "$foreground",
-                                                  "content": "Esperando cota",
+                                                  "content": "Esperando",
                                                   "fontFamily": "$font-sans",
                                                   "fontSize": 12.5,
                                                   "fontWeight": "700"
@@ -47560,7 +47578,7 @@
                                                   "fill": "$caption-foreground"
                                                 },
                                                 "CgSHw": {
-                                                  "content": "volta sozinha às 14:00",
+                                                  "content": "volta às 14:00",
                                                   "fill": "$caption-foreground",
                                                   "fontWeight": "normal",
                                                   "textGrowth": "fixed-width",
@@ -47590,7 +47608,7 @@
                                                   "fill": "$caption-foreground"
                                                 },
                                                 "CgSHw": {
-                                                  "content": "nova tentativa às 10:52 (2 de 5)",
+                                                  "content": "nova tentativa às 10:52",
                                                   "fill": "$caption-foreground",
                                                   "fontWeight": "normal",
                                                   "textGrowth": "fixed-width",
@@ -47726,7 +47744,7 @@
                                                   "fill": "$caption-foreground"
                                                 },
                                                 "CgSHw": {
-                                                  "content": "pausada por Bruno",
+                                                  "content": "pausada",
                                                   "fill": "$caption-foreground",
                                                   "fontWeight": "normal",
                                                   "textGrowth": "fixed-width",
@@ -48531,7 +48549,12 @@
                                                   "id": "Uy5SZ",
                                                   "type": "ref",
                                                   "ref": "ShZwj",
-                                                  "name": "Orientação / Bruno"
+                                                  "name": "Orientação / Bruno",
+                                                  "descendants": {
+                                                    "w7xoJR": {
+                                                      "content": "Orientação"
+                                                    }
+                                                  }
                                                 },
                                                 {
                                                   "id": "a9VrV",
@@ -48945,7 +48968,7 @@
                                                       "fill": "$foreground",
                                                       "textGrowth": "fixed-width",
                                                       "width": "fill_container",
-                                                      "content": "Claude Code · sessão 2",
+                                                      "content": "Claude Code",
                                                       "fontFamily": "$font-sans",
                                                       "fontSize": 12.5,
                                                       "fontWeight": "600"
@@ -49291,7 +49314,7 @@
                                       "id": "tUfqI",
                                       "name": "Sub",
                                       "fill": "$caption-foreground",
-                                      "content": "13 tarefas abertas · 12 concluídas esta semana",
+                                      "content": "13 tarefas abertas · 12 concluídas",
                                       "fontFamily": "$font-sans",
                                       "fontSize": 12.5,
                                       "fontWeight": "normal"
@@ -49542,6 +49565,9 @@
                                           "content": "Traduzir e-mails de carrinho abandonado",
                                           "fontSize": 14
                                         },
+                                        "KMgIV": {
+                                          "enabled": false
+                                        },
                                         "mx7hu": {
                                           "icon": "list-ordered",
                                           "fill": "$caption-foreground"
@@ -49571,6 +49597,9 @@
                                         "J5rbMM": {
                                           "content": "Ajustar banner da Black Friday",
                                           "fontSize": 14
+                                        },
+                                        "KMgIV": {
+                                          "enabled": false
                                         },
                                         "mx7hu": {
                                           "icon": "layers",
@@ -49683,7 +49712,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "2 artefatos · 10:40",
+                                          "content": "2 artefatos",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -49713,7 +49742,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "1 artefato · 10:38",
+                                          "content": "1 artefato",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -49737,6 +49766,9 @@
                                         "J5rbMM": {
                                           "content": "Página de troca e devolução",
                                           "fontSize": 14
+                                        },
+                                        "KMgIV": {
+                                          "enabled": false
                                         },
                                         "mx7hu": {
                                           "icon": "play",
@@ -49939,7 +49971,7 @@
                                           "id": "P2Epv",
                                           "name": "Label",
                                           "fill": "$foreground",
-                                          "content": "Esperando cota",
+                                          "content": "Esperando",
                                           "fontFamily": "$font-sans",
                                           "fontSize": 12.5,
                                           "fontWeight": "700"
@@ -49985,7 +50017,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "volta sozinha às 14:00",
+                                          "content": "volta às 14:00",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -50015,7 +50047,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "nova tentativa às 10:52 (2 de 5)",
+                                          "content": "nova tentativa às 10:52",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -50151,7 +50183,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "pausada por Bruno",
+                                          "content": "pausada",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -50252,6 +50284,9 @@
                                           "content": "Favicon novo",
                                           "fontSize": 14
                                         },
+                                        "KMgIV": {
+                                          "enabled": false
+                                        },
                                         "mx7hu": {
                                           "icon": "check",
                                           "fill": "$caption-foreground"
@@ -50281,6 +50316,9 @@
                                         "J5rbMM": {
                                           "content": "Corrigir link do rodapé",
                                           "fontSize": 14
+                                        },
+                                        "KMgIV": {
+                                          "enabled": false
                                         },
                                         "mx7hu": {
                                           "icon": "check",
@@ -50759,7 +50797,7 @@
                                       "id": "lJma3",
                                       "name": "Label",
                                       "fill": "$foreground",
-                                      "content": "Esperando cota",
+                                      "content": "Esperando",
                                       "fontFamily": "$font-sans",
                                       "fontSize": 12.5,
                                       "fontWeight": "700"
@@ -51065,7 +51103,7 @@
                                           "id": "brvmY",
                                           "name": "Label",
                                           "fill": "$foreground",
-                                          "content": "Esperando cota",
+                                          "content": "Esperando",
                                           "fontFamily": "$font-sans",
                                           "fontSize": 12.5,
                                           "fontWeight": "700"
@@ -51111,7 +51149,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "volta sozinha às 14:00",
+                                          "content": "volta às 14:00",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -51141,7 +51179,7 @@
                                           "fill": "$caption-foreground"
                                         },
                                         "CgSHw": {
-                                          "content": "nova tentativa às 10:52 (2 de 5)",
+                                          "content": "nova tentativa às 10:52",
                                           "fill": "$caption-foreground",
                                           "fontWeight": "normal",
                                           "textGrowth": "fixed-width",
@@ -51604,7 +51642,7 @@
                                   "icon": "paperclip"
                                 },
                                 "CgSHw": {
-                                  "content": "2 artefatos · atualizada 10:40"
+                                  "content": "2 artefatos"
                                 }
                               }
                             },
@@ -51625,7 +51663,7 @@
                                   "fill": "$status-paused"
                                 },
                                 "jkLAk/y6Atm": {
-                                  "content": "Esperando cota",
+                                  "content": "Esperando",
                                   "fill": "$foreground"
                                 },
                                 "J5rbMM": {
@@ -51635,7 +51673,7 @@
                                   "icon": "clock-3"
                                 },
                                 "CgSHw": {
-                                  "content": "volta sozinha às 14:00"
+                                  "content": "volta às 14:00"
                                 }
                               }
                             },
@@ -51667,7 +51705,7 @@
                                   "fill": "$attention-foreground"
                                 },
                                 "CgSHw": {
-                                  "content": "escalada pelo supervisor · 2 empurrões",
+                                  "content": "escalada pelo supervisor",
                                   "fill": "$attention-foreground"
                                 }
                               }
@@ -52050,8 +52088,14 @@
                               "ref": "QAXvX",
                               "name": "Pessoa / Ana",
                               "descendants": {
+                                "bmOZr": {
+                                  "enabled": false
+                                },
                                 "p0R93r": {
                                   "width": 290
+                                },
+                                "Ed2Ga": {
+                                  "content": "No grupo"
                                 },
                                 "QQ6dF": {
                                   "content": "o botão de cupom some no iPhone SE 🙁"
@@ -52066,6 +52110,9 @@
                               "descendants": {
                                 "RKkw2": {
                                   "width": 290
+                                },
+                                "w7xoJR": {
+                                  "content": "Orientação"
                                 }
                               }
                             },
@@ -53055,7 +53102,7 @@
                                   "icon": "paperclip"
                                 },
                                 "CgSHw": {
-                                  "content": "2 artefatos · atualizada 10:40"
+                                  "content": "2 artefatos"
                                 }
                               }
                             },
@@ -53076,7 +53123,7 @@
                                   "fill": "$status-paused"
                                 },
                                 "jkLAk/y6Atm": {
-                                  "content": "Esperando cota",
+                                  "content": "Esperando",
                                   "fill": "$foreground"
                                 },
                                 "J5rbMM": {
@@ -53086,7 +53133,7 @@
                                   "icon": "clock-3"
                                 },
                                 "CgSHw": {
-                                  "content": "volta sozinha às 14:00"
+                                  "content": "volta às 14:00"
                                 }
                               }
                             },
@@ -53118,7 +53165,7 @@
                                   "fill": "$attention-foreground"
                                 },
                                 "CgSHw": {
-                                  "content": "escalada pelo supervisor · 2 empurrões",
+                                  "content": "escalada pelo supervisor",
                                   "fill": "$attention-foreground"
                                 }
                               }
@@ -53918,7 +53965,7 @@
                                       "icon": "paperclip"
                                     },
                                     "CgSHw": {
-                                      "content": "2 artefatos · atualizada 10:40"
+                                      "content": "2 artefatos"
                                     }
                                   }
                                 },
@@ -53939,7 +53986,7 @@
                                       "fill": "$status-paused"
                                     },
                                     "jkLAk/y6Atm": {
-                                      "content": "Esperando cota",
+                                      "content": "Esperando",
                                       "fill": "$foreground"
                                     },
                                     "J5rbMM": {
@@ -53949,7 +53996,7 @@
                                       "icon": "clock-3"
                                     },
                                     "CgSHw": {
-                                      "content": "volta sozinha às 14:00"
+                                      "content": "volta às 14:00"
                                     }
                                   }
                                 },
@@ -53982,7 +54029,7 @@
                                     },
                                     "CgSHw": {
                                       "fill": "$attention-foreground",
-                                      "content": "escalada pelo supervisor · 2 empurrões"
+                                      "content": "escalada pelo supervisor"
                                     }
                                   }
                                 }
@@ -54156,6 +54203,12 @@
                                       "ref": "QAXvX",
                                       "name": "Pessoa / Ana",
                                       "descendants": {
+                                        "bmOZr": {
+                                          "enabled": false
+                                        },
+                                        "Ed2Ga": {
+                                          "content": "No grupo"
+                                        },
                                         "QQ6dF": {
                                           "content": "o botão de cupom some no iPhone SE 🙁"
                                         }
@@ -54165,7 +54218,12 @@
                                       "id": "BLMxd",
                                       "type": "ref",
                                       "ref": "ShZwj",
-                                      "name": "Orientação / Bruno"
+                                      "name": "Orientação / Bruno",
+                                      "descendants": {
+                                        "w7xoJR": {
+                                          "content": "Orientação"
+                                        }
+                                      }
                                     },
                                     {
                                       "id": "Upcxj",
@@ -54441,7 +54499,7 @@
                                           "fill": "$foreground",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Ana Ribeiro",
+                                          "content": "No grupo",
                                           "fontFamily": "$font-sans",
                                           "fontSize": 12.5,
                                           "fontWeight": "600"
