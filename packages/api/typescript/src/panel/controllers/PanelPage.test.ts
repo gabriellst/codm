@@ -1,51 +1,81 @@
 import { describe, expect, it } from 'bun:test'
-import {
-	IssueLifeState,
-	IssueTimelineItemKind,
-	NudgeSource,
-	StopResolution,
-	SupervisorVerdict,
-	SuspicionReason,
-} from '@codm/contracts-typescript/wire/enums'
-import { PANEL_HTML } from './PanelPage'
+import type { HttpControllerRequest } from '@codm/core-typescript'
+import { MockPanelWebBundle, MOCK_PANEL_ASSET, PanelWebBundle } from '../services/PanelWebBundle'
+import { PANEL_CSP, PanelPageController } from './PanelPage'
+import { PanelAssetController } from './PanelAsset'
 
 /**
- * THE PANEL PAGE (fase 1; fase 5 S6) — a public page that shows text people wrote in a chat. Two things are checked
- * on its source, since it is one self-contained document with an inline script:
- *  - every value goes in as TEXT: no `innerHTML`, `outerHTML`, `insertAdjacentHTML` nor `document.write` anywhere;
- *  - its label maps are TOTAL over the wire enums they translate, so a new member (fase 5: `WAITING_RETRY`, the three
- *    timeline moments, `AUTO_RETRY`, the supervisor's reasons and verdicts) never shows as a raw code.
+ * THE PANEL PAGE (spec 2026-11-24 §6) — the React app's shell and its files, served by the cloud on the same
+ * origin and path the group links already use.
  *
- * The maps are one-line object literals of the script; each is read back and evaluated as data.
+ * What must hold: the shell keeps every header the old page had (no referrer, no framing, no store, no index)
+ * and adds a CSP that only lets this origin's files run; a file is served only by its exact built name — any
+ * other value, a traversal attempt included, is a 404; and with no bundle built the page says what to run
+ * instead of serving an empty document.
  */
-const script = PANEL_HTML.slice(PANEL_HTML.indexOf('<script>'), PANEL_HTML.indexOf('</script>'))
+const request = <P>(params: P) => ({ params, headers: {}, ctx: {} }) as unknown as HttpControllerRequest<unknown>
 
-function mapOf(name: string): Record<string, unknown> {
-	const match = script.match(new RegExp(`const ${name} = (\\{[^\\n]*\\});`))
-	if (!match?.[1]) throw new Error(`map ${name} not found in the panel script`)
-	return new Function(`return (${match[1]})`)() as Record<string, unknown>
+/** A bundle that was never built — the dev profile before `build:panel`. */
+class NoBundle extends PanelWebBundle {
+	shell(): undefined {
+		return undefined
+	}
+	asset(): undefined {
+		return undefined
+	}
 }
 
-describe('panel page', () => {
-	it('never parses a value as markup', () => {
-		for (const sink of ['innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write']) expect(PANEL_HTML).not.toContain(sink)
+const page = (bundle: PanelWebBundle) => async () =>
+	(await new PanelPageController(bundle).execute(request({ token: 'kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA' }))) as unknown as Response
+const asset = async (file: string) =>
+	(await new PanelAssetController(new MockPanelWebBundle()).execute(request({ file }))) as unknown as Response
+
+describe('panel page — the shell', () => {
+	it('serves the shell with the old headers and a same-origin CSP', async () => {
+		const res = await page(new MockPanelWebBundle())()
+		expect(res.status).toBe(200)
+		expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8')
+		expect(res.headers.get('referrer-policy')).toBe('no-referrer')
+		expect(res.headers.get('x-frame-options')).toBe('DENY')
+		expect(res.headers.get('cache-control')).toBe('no-store')
+		expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+		expect(res.headers.get('content-security-policy')).toBe(PANEL_CSP)
+		expect(await res.text()).toContain(`/panel/assets/${MOCK_PANEL_ASSET}`)
 	})
 
-	it.each([
-		['COLUMN_OF', Object.values(IssueLifeState)],
-		['KIND', Object.values(IssueTimelineItemKind)],
-		['RESOLUTION', Object.values(StopResolution)],
-		['NUDGER', Object.values(NudgeSource)],
-		['SUSPICION', Object.values(SuspicionReason)],
-		['VERDICT', Object.values(SupervisorVerdict)],
-	] as const)('%s labels every member of its enum', (name, members) => {
-		expect(Object.keys(mapOf(name)).sort()).toEqual([...members].sort())
+	it('lets only this origin run code — no inline script, no other host', () => {
+		expect(PANEL_CSP).toContain("script-src 'self'")
+		expect(PANEL_CSP).not.toMatch(/script-src[^;]*unsafe-inline/)
+		expect(PANEL_CSP).toContain("frame-ancestors 'none'")
+		expect(PANEL_CSP).toContain("connect-src 'self'")
 	})
 
-	it('fase 5: the card says when the retry runs and that the supervisor escalated; the nudge says "n de m"', () => {
-		expect(script).toContain("'Nova tentativa às ' + fmtNear(issue.retryingAt)")
-		expect(script).toContain("'Escalada pelo supervisor'")
-		expect(script).toContain("(i.outOf ? ' de ' + i.outOf : '')")
-		expect(mapOf('RESOLUTION')[StopResolution.AUTO_RETRY]).toBe('tentado de novo pelo supervisor')
+	it('without a built bundle answers 503 with what to run — never an empty page', async () => {
+		const res = await page(new NoBundle())()
+		expect(res.status).toBe(503)
+		expect(await res.text()).toContain('build:panel')
+	})
+})
+
+describe('panel page — the files', () => {
+	it('serves a built file by its exact name, cached for good', async () => {
+		const res = await asset(MOCK_PANEL_ASSET)
+		expect(res.status).toBe(200)
+		expect(res.headers.get('content-type')).toBe('text/javascript; charset=utf-8')
+		expect(res.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+		expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+	})
+
+	it.each(['..', 'index.html', 'panel-mock.JS', '.env', 'panel-mock.js.map'])(
+		'answers 404 for a name the build did not write (%s)',
+		async file => {
+			const res = await asset(file)
+			expect(res.status).toBe(404)
+		},
+	)
+
+	it('refuses a name with a separator before any lookup', () => {
+		const params = new PanelAssetController(new MockPanelWebBundle()).inputSchema.shape.params
+		for (const file of ['../.env', 'a/b.js', '%2e%2e%2fx', '..\\x']) expect(params.safeParse({ file }).success).toBe(false)
 	})
 })

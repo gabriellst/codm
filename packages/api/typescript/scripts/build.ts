@@ -37,6 +37,7 @@
  *     fallback já resolvia certo. O e2e é o primeiro consumidor do par bundle+cloud, e foi ele que
  *     revelou a lacuna (`ENOENT: dist/migrations/meta/_journal.json`).
  */
+import { existsSync } from 'node:fs'
 import { cp, mkdir, rm } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -50,6 +51,10 @@ const stagedMigrations = join(distDir, 'sqlite/migrations')
 // (sem `sqlite/`, por isso os dois destinos diferem). Ver nota 3 do cabeçalho.
 const contractsCloudMigrations = resolve(pkgRoot, '../../contracts/src/db/pg/migrations')
 const stagedCloudMigrations = join(distDir, 'migrations')
+// O painel React da nuvem (spec 2026-11-24 §6) — MIRRORS o sufixo de
+// src/panel/services/PanelWebBundle/panelWebDir.ts. A origem é o build do app (`build:panel`).
+const appPanelWeb = resolve(pkgRoot, '../../app/react/dist-panel')
+const stagedPanelWeb = join(distDir, 'panel-web')
 
 /** Kept external (see header) — the entry point plus the native addon package it bottoms out in. */
 const EXTERNALS = ['@libsql/client', 'libsql'] as const
@@ -119,6 +124,16 @@ async function main(): Promise<void> {
 	// Stage the migrations at the path the rewritten `import.meta.url` fallback resolves to.
 	await cp(contractsMigrations, stagedMigrations, { recursive: true })
 	await cp(contractsCloudMigrations, stagedCloudMigrations, { recursive: true })
+
+	// Stage the cloud panel's React bundle when it was built. `CODM_PANEL_WEB=required` (the cloud image) makes a
+	// missing bundle a BUILD failure — an image that would only answer 503 on every group link never ships.
+	if (existsSync(join(appPanelWeb, 'index.html'))) await cp(appPanelWeb, stagedPanelWeb, { recursive: true })
+	else if (process.env.CODM_PANEL_WEB === 'required') {
+		console.error(
+			`❌ CODM_PANEL_WEB=required, mas o painel não foi buildado (${appPanelWeb}) — rode \`bun run --cwd packages/app/react build:panel\``,
+		)
+		process.exit(1)
+	}
 
 	// Stage the external libsql closure into dist/node_modules so the Node walk-up from
 	// dist/server.js resolves it. `dereference` turns the .bun-store symlinks into real files that

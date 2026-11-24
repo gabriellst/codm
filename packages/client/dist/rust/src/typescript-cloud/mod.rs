@@ -13330,7 +13330,42 @@ Sends a `POST` request to `/owners/{ownerId}/activate`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**The per-group panel page (public HTML)
+    /**A file of the panel app bundle, by its hashed name (public)
+
+Sends a `GET` request to `/panel/assets/{file}`
+
+*/
+    pub async fn panel_asset<'a>(
+        &'a self,
+        file: &'a str,
+    ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
+        let url = format!(
+            "{}/panel/assets/{}", self.baseurl, encode_path(& file.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The per-group panel page (public HTML shell of the panel app)
 
 Sends a `GET` request to `/panel/g/{token}`
 

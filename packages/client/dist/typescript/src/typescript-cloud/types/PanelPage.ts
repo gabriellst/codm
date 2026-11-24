@@ -12,7 +12,7 @@ export type PanelPagePathParams = {
 };
 
 /**
- * @description The per-group panel page (public HTML)
+ * @description The per-group panel page (public HTML shell of the panel app)
 */
 export type PanelPage200 = string;
 

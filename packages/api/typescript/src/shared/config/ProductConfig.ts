@@ -97,6 +97,10 @@ export const ProductEnvSchema = z.object({
 	// que não responde ao próprio nome. O literal fica neste arquivo, que é a config DO PRODUTO, e não
 	// mais espalhado por uma regra de domínio.
 	CODM_MENTION_FALLBACK_TAG: z.string().trim().min(1).default('codm'),
+
+	// O PAINEL REACT DA NUVEM (spec 2026-11-24 §6): `required` na imagem da nuvem (o build exige o bundle),
+	// `optional` em dev — a casca responde 503 com a instrução de buildar o painel em vez de uma página vazia.
+	CODM_PANEL_WEB: z.enum(['required', 'optional']).default('optional'),
 })
 
 /** Structural parity export — compared against REPO.env (owners: ts-product | billing-gateway). */

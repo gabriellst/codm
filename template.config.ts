@@ -387,6 +387,15 @@ export const REPO = {
 		//
 		// Env de PRODUTO porque é a MARCA falando com o usuário final, e um fork que não a trocasse
 		// responderia por um nome que não é dele. Não é kernel: um core portável não tem tag de menção.
+		// O painel React da nuvem (spec 2026-11-24-tarefa-e-painel §6): `required` na imagem da nuvem — o build
+		// recusa sair sem o bundle (`packages/app/react/dist-panel`) e a casca nunca cai no 503; `optional` em
+		// dev, onde a casca responde 503 com a instrução de buildar o painel. Declarada, nunca um booleano solto.
+		CODM_PANEL_WEB: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: 'optional',
+			doc: 'painel React da nuvem: required (imagem — o build exige o bundle) ou optional (dev — 503 com a instrução)',
+		},
 		CODM_MENTION_FALLBACK_TAG: {
 			consumers: ['apiTs'],
 			schema: 'product',

@@ -3768,7 +3768,7 @@
         "tags": [
           "panel"
         ],
-        "description": "The per-group panel page (public HTML)",
+        "description": "The per-group panel page (public HTML shell of the panel app)",
         "operationId": "PanelPage",
         "parameters": [
           {
@@ -3782,7 +3782,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The per-group panel page (public HTML)",
+            "description": "The per-group panel page (public HTML shell of the panel app)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3794,6 +3794,46 @@
                 "examples": {
                   "default": {
                     "value": "<html>…</html>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/assets/{file}": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "A file of the panel app bundle, by its hashed name (public)",
+        "operationId": "PanelAsset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A file of the panel app bundle, by its hashed name (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "/* asset */"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "/* asset */",
                     "summary": "Example"
                   }
                 }

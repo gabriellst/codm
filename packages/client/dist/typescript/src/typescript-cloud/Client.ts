@@ -15,6 +15,7 @@ import {
 	getSession,
 	health,
 	listPanelMembers,
+	panelAsset,
 	panelPage,
 	requestPanelAction,
 	requestPanelCode,
@@ -100,6 +101,10 @@ export class TypescriptCloudClient {
 
 	listPanelMembers(...args: Parameters<typeof listPanelMembers>): ReturnType<typeof listPanelMembers> {
 		return (listPanelMembers as (...a: any[]) => ReturnType<typeof listPanelMembers>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	panelAsset(...args: Parameters<typeof panelAsset>): ReturnType<typeof panelAsset> {
+		return (panelAsset as (...a: any[]) => ReturnType<typeof panelAsset>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	panelPage(...args: Parameters<typeof panelPage>): ReturnType<typeof panelPage> {

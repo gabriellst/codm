@@ -4191,6 +4191,9 @@ type ClientInterface interface {
 	// SetActiveOwner request
 	SetActiveOwner(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PanelAsset request
+	PanelAsset(ctx context.Context, file string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PanelPage request
 	PanelPage(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4404,6 +4407,18 @@ func (c *Client) UpdateOwnerSettings(ctx context.Context, body UpdateOwnerSettin
 
 func (c *Client) SetActiveOwner(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetActiveOwnerRequest(c.Server, ownerId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PanelAsset(ctx context.Context, file string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPanelAssetRequest(c.Server, file)
 	if err != nil {
 		return nil, err
 	}
@@ -5034,6 +5049,40 @@ func NewSetActiveOwnerRequest(server string, ownerId string) (*http.Request, err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPanelAssetRequest generates requests for PanelAsset
+func NewPanelAssetRequest(server string, file string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "file", file, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/assets/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -5829,6 +5878,9 @@ type ClientWithResponsesInterface interface {
 	// SetActiveOwnerWithResponse request
 	SetActiveOwnerWithResponse(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*SetActiveOwnerResponse, error)
 
+	// PanelAssetWithResponse request
+	PanelAssetWithResponse(ctx context.Context, file string, reqEditors ...RequestEditorFn) (*PanelAssetResponse, error)
+
 	// PanelPageWithResponse request
 	PanelPageWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*PanelPageResponse, error)
 
@@ -6209,6 +6261,36 @@ func (r SetActiveOwnerResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r SetActiveOwnerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PanelAssetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *string
+}
+
+// Status returns HTTPResponse.Status
+func (r PanelAssetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PanelAssetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PanelAssetResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -6969,6 +7051,15 @@ func (c *ClientWithResponses) SetActiveOwnerWithResponse(ctx context.Context, ow
 	return ParseSetActiveOwnerResponse(rsp)
 }
 
+// PanelAssetWithResponse request returning *PanelAssetResponse
+func (c *ClientWithResponses) PanelAssetWithResponse(ctx context.Context, file string, reqEditors ...RequestEditorFn) (*PanelAssetResponse, error) {
+	rsp, err := c.PanelAsset(ctx, file, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePanelAssetResponse(rsp)
+}
+
 // PanelPageWithResponse request returning *PanelPageResponse
 func (c *ClientWithResponses) PanelPageWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*PanelPageResponse, error) {
 	rsp, err := c.PanelPage(ctx, token, reqEditors...)
@@ -7448,6 +7539,32 @@ func ParseSetActiveOwnerResponse(rsp *http.Response) (*SetActiveOwnerResponse, e
 		var dest struct {
 			OwnerId string `json:"ownerId"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePanelAssetResponse parses an HTTP response from a PanelAssetWithResponse call
+func ParsePanelAssetResponse(rsp *http.Response) (*PanelAssetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PanelAssetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest string
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

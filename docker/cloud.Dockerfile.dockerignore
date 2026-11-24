@@ -1,0 +1,10 @@
+# Contexto da imagem da nuvem (`docker build -f docker/cloud.Dockerfile .`, contexto = raiz do repo). O
+# BuildKit lê `<Dockerfile>.dockerignore` ao lado do Dockerfile. Sem isto, um build local leva o node_modules
+# do host (binários nativos do darwin) para dentro de `COPY packages/app/react`.
+**/node_modules
+.git
+.claude
+design
+packages/app/react/dist-panel
+packages/app/react/storybook-static
+packages/api/typescript/dist
