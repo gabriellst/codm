@@ -67,6 +67,7 @@ export function IssueDetailSection({
 				<Link
 					to="/threads/$threadId/issues"
 					params={{ threadId }}
+					search={{ done: false }}
 					className="inline-flex w-fit items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
 				>
 					<IconChevronLeft className="size-4" /> {t('session.allIssues')}
@@ -102,7 +103,7 @@ function TaskHeader({ threadId, detail, className, ...props }: ComponentProps<'d
 				queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(issue.issueId) })
 				queryClient.invalidateQueries({ queryKey: getIssueTimelineQueryKey(issue.issueId) })
 				queryClient.invalidateQueries({ queryKey: getSessionIssuesQueryKey(threadId) })
-				navigate({ to: '/threads/$threadId/issues', params: { threadId } })
+				navigate({ to: '/threads/$threadId/issues', params: { threadId }, search: { done: false } })
 			},
 		},
 	})
