@@ -66,14 +66,22 @@ Nas descrições de `AskDecision` / `AskQuestion` / `RequestFeedback` / `Declare
 
 **Opção, se não bastar:** o fechamento volta a passar pelo orquestrador, que reescreve o resultado numa frase. Custa um turno curto por tarefa concluída, contra ~6,9 por issue antes da fase 3.
 
-### 4. Correção no meio de um turno (comportamento novo, precisa de ok)
+### 4. Mensagem no meio de uma resposta: avisar e deixar na fila (decidido 25/11)
 
-Regra proposta, para uma mensagem de quem pode comandar que cai numa issue em turno, por citação ou por chave:
-- **Confirmação imediata no grupo**, por regra e sem modelo: `Recebi — vou ajustar a tarefa do vídeo na página inicial com isso.`
-- **O turno é cortado** do mesmo jeito que o "agora" já corta (`IssueTurnAborter.interrupt`, a sessão é mantida), e o próximo turno começa pela correção.
-- "agora" continua valendo. Uma aprovação ou resposta a uma pergunta aberta continua seguindo o caminho de resposta (não corta).
+O dono decidiu que **não se corta o turno**: a mensagem fica na fila e a pessoa recebe um aviso, por regra e sem modelo, de que o agente responde uma coisa de cada vez. Vale nos dois casos:
+- **Orquestrador respondendo outra mensagem.** Cada mensagem é um turno, e elas não andam juntas. Aviso: `Ainda estou respondendo a mensagem anterior — respondo uma de cada vez. A sua ficou na fila e já vem.`
+- **Recado para uma tarefa em turno** (por citação ou chave). Os recados vão juntos no próximo turno dela. Aviso: `Recebi — <chave> está no meio de um passo e lê isso assim que terminar.`
 
-Alternativa mais conservadora: só a confirmação imediata, sem cortar.
+Um aviso por turno em curso (dedupe pelo item em curso), citando a mensagem nova, nos mesmos ramos do 👀, nunca no caminho de resposta a uma pergunta. "agora" continua cortando como antes.
+
+### 4b. Artefatos de volta à conversa (pedido do dono, 25/11)
+
+Medido nos três grupos: antes, ~95% das imagens registradas chegavam ao grupo (44/45, 23/30, 13/14). No primeiro dia, 14 de 46. Das 32 que não chegaram, 17 eram imagens extras de uma prévia (só a principal vai, as outras viravam "(+N no console)") e 15 nunca foram citadas por um sinal (prints que a 0.9.0 mandava com a ferramenta que a fase 3 tirou). Correção:
+- Toda imagem citada por um sinal vai ao grupo, até 6, cada uma com a sua entrada ligada à tarefa e a legenda `<chave> — <nome do artefato>`.
+- `ReportProgress` passa a citar imagens. O texto do progresso segue a rota do modo (painel no padrão); as imagens vão ao grupo.
+- O que vai por modo fica declarado numa tabela (`ARTIFACTS_TO_GROUP`), não num `if` por nível.
+
+"Mais contexto" lido assim: as imagens voltam, e toda mensagem nomeia a tarefa pela chave legível. Para trazer também o texto do progresso, o modo `EVERYTHING` já existe e passa a ser usável com os formatos limpos.
 
 ### 5. Duas vozes
 
@@ -89,17 +97,12 @@ O orquestrador não repete o estado de uma issue que falou nos últimos 2 min: o
 
 ## O que retiro da conversa anterior
 
-- **Modo `EVERYTHING`**: não resolve. Ele só adiciona mais linhas `APP-7 — texto` ao grupo.
+- **Modo `EVERYTHING`**: não resolve o problema de formato. Com os formatos de hoje, ele só adiciona mais linhas `APP-7 — texto` ao grupo. Depois do §1, ele volta a ser a chave existente para quem quer o progresso no grupo, e não se cria outra.
 - **Reverter o painel React (#81)**: não ajuda um painel que ninguém abre. O que resolve é parar de mandar o link.
 
 ## Ordem
 
-1. Formatos + link (§1): uma release pequena, testes de formato por nível. Até o passo 2, a mensagem nomeia a tarefa pelo título curto.
-2. Nome por slug curto (§1, contrato do `ForkIssue`) + correção do `slugify`.
-3. Limpeza das issues com slug longo (§2): script somente leitura gera a lista, o operador aprova, depois aplica.
-4. Voz e tamanho (§3), depois medir de novo.
-5. Correção no meio do turno (§4), depois do ok do dono sobre a regra.
-6. Duas vozes (§5), depois de rastrear os outros pares.
+Plano em `.plans/2026-11-25-voz-do-grupo.md`: P1 formatos, P2 nome por slug, P3 artefatos, P4 aviso de fila, P5 voz curta, numa release só. A mensagem sempre nomeia a tarefa pela chave; as 7 tarefas abertas com `BDA-n` mantêm o código até fechar. Fora do código: a limpeza das tarefas com slug longo (§2) e as duas vozes (§5).
 
 ## Como medir de novo
 
