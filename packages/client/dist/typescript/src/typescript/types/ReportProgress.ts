@@ -16,7 +16,7 @@ export type ReportProgressPathParams = {
 };
 
 /**
- * @description Record what you did on this task — it goes to the task\'s timeline, not to the group.
+ * @description Record what you did on this task — the text goes to the task\'s timeline; the prints you cite (artifactIds, recorded by this task) go to the group.
 */
 export type ReportProgress200 = any;
 
@@ -27,6 +27,10 @@ export type ReportProgressMutationRequest = {
      * @type string
     */
     text: string;
+    /**
+     * @type array | undefined
+    */
+    artifactIds?: string[];
 };
 
 export type ReportProgressMutationResponse = ReportProgress200;

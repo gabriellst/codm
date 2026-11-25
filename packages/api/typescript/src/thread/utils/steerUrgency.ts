@@ -41,10 +41,10 @@ const URGENCY_OF_WORD: ReadonlyMap<string, SteerUrgency> = new Map(
 
 /**
  * What may come BEFORE the urgency word — the message's addressing, never its content: leading
- * @mentions, then at most one issue key (the target, `APP-12`), each with the punctuation people put
- * after it ("APP-12: agora …", "APP-12, agora …").
+ * @mentions, then at most one task key (the target: `video-na-landing-19`, `APP-12` — any dashed word, the
+ * shape every key has), each with the punctuation people put after it ("APP-12: agora …", "video-na-landing-19, agora …").
  */
-const ADDRESSING = /^(?:\s*@\S+)*\s*(?:[A-Za-z][A-Za-z0-9]{1,5}-\d{1,6}\b\s*[:,\-–—]?\s*)?/u
+const ADDRESSING = /^(?:\s*@\S+)*\s*(?:[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+(?![\p{L}\p{N}])\s*[:,\-–—]?\s*)?/u
 /** The first word, whole, and what follows it after the punctuation that may trail it. */
 const FIRST_WORD = /^(\p{L}+)(?![\p{L}\p{N}])\s*[:,\-–—!.]?\s*/u
 

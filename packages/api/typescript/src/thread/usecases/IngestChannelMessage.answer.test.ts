@@ -201,8 +201,9 @@ describe('IngestChannelMessage — answering an ask in the group', () => {
 		const asked = await commandsNamed('deliver_channel_message')
 		expect(asked).toHaveLength(1)
 		const question = (asked[0]?.input as { text?: string } | undefined)?.text ?? ''
-		expect(question).toContain('APP-12 · D1')
-		expect(question).toContain('APP-12 · D2')
+		// Each question named by its task and its words — no ask code (voz do grupo, 25/11).
+		expect(question).toContain('Tenho 2 perguntas abertas:')
+		expect(question).not.toMatch(/\bD\d\b/u)
 		expect(await testBed.resolve(DomainEventRepository).findByType(AnswerDisambiguationAskedEvent)).toHaveLength(1)
 		expect(await threadTurn()).toBe(false)
 

@@ -13,7 +13,6 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ForkedIssueReader } from '@agent/services/ForkedIssueReader'
-import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
@@ -25,7 +24,7 @@ import { BatchRepository } from '../repositories/BatchRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
-import { enqueueSignalDelivery, issueLink, QUOTES_ORIGIN } from '../utils/issueSignal'
+import { enqueueSignalDelivery, QUOTES_ORIGIN } from '../utils/issueSignal'
 import { BATCH_RECEIPT_LEVEL, routeSignal } from '../utils/OutputPolicy'
 import type { ApplicationErrors } from '../errors'
 
@@ -98,7 +97,6 @@ export class RecordBatch extends Handler<typeof RecordBatchInputSchema, typeof R
 		private readonly mailbox: MailboxRepository,
 		private readonly commands: CommandQueue,
 		private readonly session: CloudSession,
-		private readonly panel: PanelPublisher,
 		private readonly consumed: ConsumedMessageRepository,
 	) {
 		super()
@@ -167,7 +165,6 @@ export class RecordBatch extends Handler<typeof RecordBatchInputSchema, typeof R
 				total: batch.items.length,
 				counts,
 				reasons,
-				link: issueLink(this.panel.linkOf(thread.id.value), batch.code),
 			}),
 			quotedEntry: quotes && source ? { entryId: source.entryId, threadId: source.threadId } : undefined,
 			level: BATCH_RECEIPT_LEVEL,

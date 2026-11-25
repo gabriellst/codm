@@ -42,6 +42,12 @@ export type ForkIssueMutationRequest = {
     */
     title?: string;
     /**
+     * @minLength 2
+     * @maxLength 40
+     * @type string | undefined
+    */
+    name?: string;
+    /**
      * @type string | undefined
     */
     priority?: IssuePriority;

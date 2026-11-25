@@ -4316,6 +4316,11 @@ pub mod types {
     ///      "maxLength": 2000,
     ///      "minLength": 1
     ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 40,
+    ///      "minLength": 2
+    ///    },
     ///    "priority": {
     ///      "$ref": "#/components/schemas/IssuePriority"
     ///    },
@@ -4337,6 +4342,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ForkIssueBody {
         pub goal: ForkIssueBodyGoal,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub name: ::std::option::Option<ForkIssueBodyName>,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub priority: ::std::option::Option<
             ::codm_contracts_rust::wire::enums::IssuePriority,
@@ -4435,6 +4442,87 @@ pub mod types {
         }
     }
     impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyGoal {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`ForkIssueBodyName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 2
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ForkIssueBodyName(::std::string::String);
+    impl ::std::ops::Deref for ForkIssueBodyName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ForkIssueBodyName> for ::std::string::String {
+        fn from(value: ForkIssueBodyName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ForkIssueBodyName> for ForkIssueBodyName {
+        fn from(value: &ForkIssueBodyName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ForkIssueBodyName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 2usize {
+                return Err("shorter than 2 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyName {
         fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
         where
             D: ::serde::Deserializer<'de>,
@@ -14758,6 +14846,15 @@ pub mod types {
     ///    "text"
     ///  ],
     ///  "properties": {
+    ///    "artifactIds": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string",
+    ///        "format": "uuid",
+    ///        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///      },
+    ///      "maxItems": 20
+    ///    },
     ///    "text": {
     ///      "type": "string",
     ///      "maxLength": 2000,
@@ -14769,6 +14866,12 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ReportProgressBody {
+        #[serde(
+            rename = "artifactIds",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub artifact_ids: ::std::vec::Vec<::uuid::Uuid>,
         pub text: ReportProgressBodyText,
     }
     impl ::std::convert::From<&ReportProgressBody> for ReportProgressBody {
@@ -18693,7 +18796,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/fork`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.
+    /**Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/decisions`
 
@@ -18732,7 +18835,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/decisions`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.
+    /**Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/feedback`
 
@@ -18849,7 +18952,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/operator-questio
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Record what you did on this task — it goes to the task's timeline, not to the group.
+    /**Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/progress`
 
@@ -18888,7 +18991,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/progress`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.
+    /**Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/questions`
 

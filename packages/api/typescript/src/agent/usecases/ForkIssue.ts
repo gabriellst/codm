@@ -13,13 +13,13 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
-import { issuePrefixOf } from '@workspace/objects'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
 import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttributes'
 import { IssueSequence } from '../services/IssueSequence'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import { modelForWork } from '../utils/ModelByWorkKind'
+import { defaultIssueName, issueKeyOf } from '../utils/issueKey'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
 export const ForkIssueInputSchema = z.object({
@@ -32,6 +32,11 @@ export const ForkIssueInputSchema = z.object({
 	 * no date, no permission notes (those live in the goal). Absent ⇒ the goal, truncated (long, hard to scan).
 	 */
 	title: z.string().trim().min(1).max(80).optional(),
+	/**
+	 * The task's NAME, 2 to 4 words of what it is about ("vídeo na landing") — it becomes the key the group reads
+	 * (`video-na-landing-19`, voz do grupo 25/11). Absent ⇒ the first words of the title (or the goal).
+	 */
+	name: z.string().trim().min(2).max(40).optional(),
 	/**
 	 * Fase 4 (items 4 and 6d) — what the orchestrator declares about the task at birth: its priority, why it
 	 * has it (`CLIENT_BUG` — a bug a client is hitting — is claimed first) and what kind of work it is
@@ -148,10 +153,11 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		}
 
 		const key = await this.withTransaction(tx, async tx => {
-			// THE SHORT KEY (fase 0, item 4): `<PREFIX>-<n>`, numbered per workspace and drawn in this same
-			// transaction, so a rolled-back fork returns its number. It replaced a slug of the goal's first
-			// 40 characters ("pedido-no-grupo-08-11-14-15-sobre-o-banne") that nobody could say back in a chat.
-			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
+			// THE KEY IS THE NAME (voz do grupo, 25/11): `<slug do nome>-<n>`, the number drawn per workspace in this
+			// same transaction (a rolled-back fork returns it). Not the goal's first 40 characters
+			// ("pedido-no-grupo-08-11-14-15-sobre-o-banne") nor a bare code (`APP-12`): a short name people can read.
+			const name = input.name ?? defaultIssueName(input.title ?? input.goal)
+			const key = issueKeyOf(name, await this.sequences.next(workspace.id.value, tx))
 			// The attributes row commits WITH the work item and the fact: the queue claims by it and the batch receipt
 			// confirms "this issue is of this conversation" by it in the very turn that forked it (`ForkedIssueReader`).
 			await this.attributes.insertIfNew(IssueAttributes.born({ issueId, ownerId: input.ownerId, threadId: input.threadId, ...born }), tx)

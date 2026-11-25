@@ -194,9 +194,13 @@ export class IssueWorkPromptBuilder {
 				'will follow. If nobody answers within 15 minutes after the group sees it, you are told to go on with the default.',
 			`  · a preview people should look at (a screenshot, a video, a link) → record it with the ` +
 				`${operationIdOf(RecordArtifactController)} tool, then call the ${operationIdOf(RequestFeedbackController)} tool ` +
-				'citing it as the main artifact. The group gets the main one; the task does not wait.',
-			`  · what you did along the way → call the ${operationIdOf(ReportProgressController)} tool. It goes to the task ` +
-				'timeline, not to the group.',
+				'citing it as the main artifact and the other prints in artifactIds. The group sees every print you cite; ' +
+				'the task does not wait.',
+			`  · what you did along the way → call the ${operationIdOf(ReportProgressController)} tool. The text goes to the ` +
+				'task timeline; the prints you cite in artifactIds go to the group — cite the screenshot that SHOWS the step.',
+			'  · WHAT THE GROUP READS (summary, question, preview text): at most 3 short sentences in plain words, written for ' +
+				'whoever asked. No PR, merge, branch, worktree, commit, deploy or console, and no task key or code — the message ' +
+				'already names the task. The details belong in the timeline.',
 			`  · produced a link, image or file worth keeping → call the ${operationIdOf(RecordArtifactController)} tool.`,
 			`EFFECTS — on ${operationIdOf(AskDecisionController)} and ${operationIdOf(AskQuestionController)}, list in \`effects\` ` +
 				'everything the answer authorizes: PUBLISH (publishing, deploying or sending something people outside will ' +

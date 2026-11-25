@@ -19,7 +19,7 @@ export type AskDecisionPathParams = {
 };
 
 /**
- * @description Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.
+ * @description Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.
 */
 export type AskDecision200 = {
     /**

@@ -29,6 +29,7 @@ import { detectBatch } from '../utils/BatchDetector'
 import { BoardBulletin } from '../services/BoardBulletin'
 import { BulletinSentEvent } from '../events/BulletinSentEvent'
 import { parseThreadCommand } from '../utils/threadCommand'
+import { derivedId } from '../utils/derivedId'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
@@ -39,7 +40,7 @@ import type { ApplicationErrors } from '../errors'
 import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import { answeredInGroupAs, mayAnswer, seenByTheGroup, YES_NO_RESOLUTION } from '../utils/answerRules'
-import { askCode, optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
+import { optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
 import { AnswerStop } from './AnswerStop'
 import { ResolveStop } from './ResolveStop'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
@@ -134,6 +135,23 @@ const CONTROL_EFFECT: Readonly<
  * transcribed, buffered and quotable like any other — it just does not enqueue a turn. Transcription
  * is observation; the mailbox item is invocation.
  */
+/**
+ * What makes a target BUSY for a new message (voz do grupo, 25/11) — the item the "estou respondendo outra" notice
+ * is deduped on. A conversation answers one message per turn, in order: ANY earlier message still in its queue
+ * (running, held for the triage, or waiting) means this one waits behind it. A task reads its steers when its step
+ * ends: only a RUNNING step makes it busy — queued work has not started, so there is no step to finish.
+ */
+const BUSY_BEHIND: Readonly<
+	Record<
+		MailboxTargetKind,
+		(mailbox: MailboxRepository, targetId: string, ownDedupKey: string, tx: Transaction) => Promise<{ id: string } | undefined>
+	>
+> = {
+	[MailboxTargetKind.THREAD]: (mailbox, targetId, ownDedupKey, tx) =>
+		mailbox.itemAhead(MailboxTargetKind.THREAD, targetId, ownDedupKey, tx),
+	[MailboxTargetKind.ISSUE]: (mailbox, targetId, _ownDedupKey, tx) => mailbox.runningItem(MailboxTargetKind.ISSUE, targetId, tx),
+}
+
 @injectable()
 export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInputSchema, typeof IngestChannelMessageOutputSchema> {
 	readonly name = 'ingest_channel_message' as const
@@ -289,6 +307,16 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					tx,
 				)
 				if (interrupt) await this.domainEventRepository.save(interrupt, tx)
+				// "agora" cuts the turn — nothing to wait for; any other steer waits for the step to end, and says so.
+				if (!interrupt)
+					await this.noticeBusy(
+						thread,
+						input,
+						entry.entryId,
+						{ kind: MailboxTargetKind.ISSUE, id: routed.issue.issueId, key: routed.issue.key },
+						language,
+						tx,
+					)
 			} else if (invocable) {
 				// THE PARALLEL TRIAGE (fase 2) — the rule layer could not route this, so a stateless triage on the
 				// provider's small model decides, in parallel with every other message, whether it is a steer of
@@ -387,6 +415,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// same way `thinkingIndicatorEnabled` gates the "Pensando" placeholder: the entry and the
 				// mailbox item above are written exactly as always, only the 👀 itself is skipped.
 				await this.routedSteer.cue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
+				await this.noticeBusy(thread, input, entry.entryId, { kind: MailboxTargetKind.THREAD, id: thread.id.value }, language, tx)
 			}
 
 			await this.domainEventRepository.save(
@@ -586,7 +615,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		const asks = await Promise.all(
 			stops.map(async stop => {
 				const issue = stop.issueId ? await this.issues.findById(stop.issueId, tx) : undefined
-				return { code: askCode(issue?.key ?? '', stop.seq), question: stop.ask?.question ?? stop.title }
+				return { key: issue?.key ?? '', question: stop.ask?.question ?? stop.title }
 			}),
 		)
 		const entry = thread.recordEntry({
@@ -633,6 +662,52 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			tx,
 		)
 		return this.ingested(thread, input, entry, tx)
+	}
+
+	/**
+	 * "ESTOU RESPONDENDO OUTRA" (voz do grupo, 25/11) — a message that lands while a turn is still answering another
+	 * for the same target waits in the queue (the orchestrator answers one message per turn; a task reads its steers
+	 * when its step ends). The person is told so, by rule, quoting their message — ONCE per running turn: the notice's
+	 * entry id is derived from the running item, so a second message in the same turn finds it and says nothing.
+	 * Only on the branches that wake a turn (the same ones as the 👀), never on the answer path.
+	 */
+	private async noticeBusy(
+		thread: Thread,
+		input: this['input'],
+		entryId: string,
+		target: { kind: MailboxTargetKind; id: string; key?: string },
+		language: ReturnType<typeof resolveThreadLanguage>,
+		tx: Transaction,
+	): Promise<void> {
+		const running = await BUSY_BEHIND[target.kind](this.mailbox, target.id, entryId, tx)
+		if (!running) return
+		const noticeId = derivedId('busy', running.id)
+		if (await this.threads.findEntry(noticeId, tx)) return
+		const text =
+			target.key === undefined ? THREAD_MESSAGES.busyOrchestrator(language) : THREAD_MESSAGES.busyIssue(language, { key: target.key })
+		const notice = thread.recordEntry({
+			entryId: noticeId,
+			kind: TranscriptKind.SYSTEM,
+			text,
+			quotedEntry: { entryId, threadId: thread.id.value },
+		})
+		await this.threads.save(thread, tx)
+		await this.commands.enqueueCommand<DeliverChannelMessage>(
+			'deliver_channel_message',
+			{
+				ownerId: thread.ownerId,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text,
+				author: MessageAuthor.SYSTEM,
+				quotedMessageId: input.platformMessageId,
+				replyEntryId: notice.entryId,
+				replyThreadId: thread.id.value,
+				reactionsEnabled: thread.reactionsEnabled,
+			},
+			{ jobId: notice.entryId },
+			tx,
+		)
 	}
 
 	/**

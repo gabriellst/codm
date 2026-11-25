@@ -19,7 +19,7 @@ import { PublishAgentIntegrationEvents } from '../handlers/PublishAgentIntegrati
  * the assertions read the stop row and the message the output policy recorded. That is the chain a
  * dropped `ask` (at the bridge, at the parse) would break without any unit test noticing.
  */
-describe('AskDecision — a decision reaches the group with its code', () => {
+describe('AskDecision — a decision reaches the group', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 
@@ -56,7 +56,7 @@ describe('AskDecision — a decision reaches the group with its code', () => {
 		return entries.filter(entry => entry.kind === TranscriptKind.SYSTEM && entry.routing === OutputRouting.GROUP)
 	}
 
-	it('raises a DECISION_REQUESTED stop with its ask, and the group reads it with its code and options', async () => {
+	it('raises a DECISION_REQUESTED stop with its ask, and the group reads it with its task and options', async () => {
 		const { threadId, issueId } = await givenIssueOnThread()
 
 		const { stopId } = await testBed.resolve(AskDecision).execute({
@@ -76,7 +76,7 @@ describe('AskDecision — a decision reaches the group with its code', () => {
 		expect(stop?.kind).toBe(StopKind.DECISION_REQUESTED)
 		expect(stop?.ask?.effects).toEqual([AskEffect.PUBLISH])
 		const [message] = await groupMessages(threadId)
-		expect(message?.text).toContain('APP-12 · D1 — A prévia está pronta. Publico?')
+		expect(message?.text).toContain('❓ APP-12 — A prévia está pronta. Publico?')
 		expect(message?.text).toContain('1) Publica')
 		expect(message?.stopId).toBe(stopId)
 	})
@@ -162,8 +162,8 @@ describe('AskDecision — a decision reaches the group with its code', () => {
 		expect(open.map(stop => stop.kind)).toEqual([StopKind.DECISION_REQUESTED, StopKind.DECISION_REQUESTED])
 		const messages = await groupMessages(threadId)
 		expect(messages).toHaveLength(2)
-		expect(messages[0]?.text).toContain('APP-12 · D1 — Qual bucket uso?')
+		expect(messages[0]?.text).toContain('❓ APP-12 — Qual bucket uso?')
 		// An empty NEEDS_INPUT still asks something people can read — the decision title, in the group's language.
-		expect(messages[1]?.text).toContain('APP-12 · D2 — Uma tarefa precisa de uma decisão')
+		expect(messages[1]?.text).toContain('❓ APP-12 — Uma tarefa precisa de uma decisão')
 	})
 })

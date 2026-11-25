@@ -26,7 +26,7 @@ export function requestFeedbackMutationOptions<TContext = unknown>(config: Parti
 }
 
 /**
- * @description Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.
+ * @description Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.
  * {@link /threads/:threadId/issues/:issueId/feedback}
  */
 export function useRequestFeedback<TContext>(options: 

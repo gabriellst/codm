@@ -113,7 +113,7 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 
 		const [closing] = await closings(threadId)
 		expect(closing).toMatchObject({ issueId, routing: OutputRouting.GROUP, quotedEntryId: originEntryId })
-		expect(closing?.text).toContain('✅ APP-12 · Página nova — Página no ar.')
+		expect(closing?.text).toBe('✅ APP-12 — Página no ar.')
 		const [delivery] = await commands('deliver_channel_message')
 		expect(delivery?.input).toMatchObject({ replyEntryId: closing?.entryId, quotedMessageId: 'platform-asked' })
 	})
@@ -123,7 +123,7 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 
 		await testBed.resolve(CloseIssueOnChannel).handle(completed({ threadId, issueId }) as never)
 
-		expect((await closings(threadId))[0]?.text).toContain('✅ APP-12 · Página nova — concluída')
+		expect((await closings(threadId))[0]?.text).toBe('✅ APP-12 — Página nova: concluída')
 	})
 
 	it('a long summary is cut — the whole of it stays behind the link', async () => {

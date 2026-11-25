@@ -40,7 +40,7 @@ export class AskQuestionController extends Controller<typeof AskQuestionControll
 	readonly path = '/threads/:threadId/issues/:issueId/questions'
 	readonly method = 'post' as const
 	readonly description =
-		'Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.'
+		'Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.'
 	readonly inputSchema = AskQuestionControllerInputSchema
 	readonly outputSchema = AskQuestionControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]

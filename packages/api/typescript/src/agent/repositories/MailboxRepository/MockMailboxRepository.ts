@@ -271,6 +271,28 @@ export class MockMailboxRepository extends MailboxRepository {
 		return [...new Set(this.rows.filter(r => !r.consumed && !r.dead && r.targetKind === targetKind).map(r => r.targetId))]
 	}
 
+	async runningItem(targetKind: MailboxTargetKind, targetId: string): Promise<{ id: string } | undefined> {
+		const now = Date.now()
+		const row = this.rows.find(
+			r =>
+				!r.consumed &&
+				!r.dead &&
+				r.claimedBy !== null &&
+				r.firstClaimedAt !== undefined &&
+				(r.leaseUntil ?? 0) >= now &&
+				r.targetKind === targetKind &&
+				r.targetId === targetId,
+		)
+		return row ? { id: row.id } : undefined
+	}
+
+	async itemAhead(targetKind: MailboxTargetKind, targetId: string, ownDedupKey: string): Promise<{ id: string } | undefined> {
+		const row = this.rows.find(
+			r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId && r.dedupKey !== ownDedupKey,
+		)
+		return row ? { id: row.id } : undefined
+	}
+
 	async hasPending(targetKind: MailboxTargetKind, targetId: string): Promise<boolean> {
 		return this.rows.some(r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId)
 	}

@@ -38,7 +38,7 @@ export class RequestFeedbackController extends Controller<
 	readonly path = '/threads/:threadId/issues/:issueId/feedback'
 	readonly method = 'post' as const
 	readonly description =
-		'Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.'
+		'Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.'
 	readonly inputSchema = RequestFeedbackControllerInputSchema
 	readonly outputSchema = RequestFeedbackControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]

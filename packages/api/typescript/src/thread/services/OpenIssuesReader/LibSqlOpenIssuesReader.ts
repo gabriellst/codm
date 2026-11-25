@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, LibSqlTransaction, tryCatchAsync } from '@codm/core-typescript'
 import { issues, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
@@ -74,7 +74,7 @@ export class LibSqlOpenIssuesReader extends OpenIssuesReader {
 		const rows = await (tx ?? this.driver.db)
 			.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status })
 			.from(issues)
-			.where(and(eq(issues.threadId, threadId), eq(issues.key, key), eq(issues.archived, false)))
+			.where(and(eq(issues.threadId, threadId), eq(sql`lower(${issues.key})`, key.toLowerCase()), eq(issues.archived, false)))
 			.limit(1)
 		const row = rows[0]
 		if (!row) return undefined

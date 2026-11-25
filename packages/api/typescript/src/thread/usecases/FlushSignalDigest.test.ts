@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { eq } from 'drizzle-orm'
@@ -28,6 +28,7 @@ import { DeliverIssuePreview } from './DeliverIssuePreview'
 import { FlushSignalDigest } from './FlushSignalDigest'
 import { FlushOverdueDigests } from './FlushOverdueDigests'
 import { RaiseStop } from './RaiseStop'
+import { ROUTING_BY_MODE } from '../utils/OutputPolicy'
 
 /**
  * The per-person digest (fase 3, item 2) and the FEEDBACK's preview. A question and a feedback for the same
@@ -36,6 +37,10 @@ import { RaiseStop } from './RaiseStop'
  *
  * The flush is a command (`flush_signal_digest`) the policy schedules a window later — here it is called
  * directly, as the queue would after the window, and the assertions read the durable command rows.
+ *
+ * THE DRAIN (voz do grupo, 25/11): the policy no longer routes anything to a digest, but signals the fase 3
+ * policy queued before the update still have to leave. These tests put the fase 3 routing back (questions and
+ * previews to the digest) for their own duration — the state a daemon finds the queue in right after updating.
  */
 describe('FlushSignalDigest — one message per person', () => {
 	let testBed: TestBed
@@ -49,8 +54,14 @@ describe('FlushSignalDigest — one message per person', () => {
 		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
 		scratch = mkdtempSync(join(tmpdir(), 'signal-digest-'))
 	})
+	const FASE3_DIGESTED = [IssueSignalLevel.QUESTION, IssueSignalLevel.FEEDBACK] as const
+	const DIGEST_MODES = [GroupOutputMode.DECISIONS_AND_LIVE, GroupOutputMode.EVERYTHING] as const
 	beforeEach(async () => {
 		await testBed.reset()
+		for (const mode of DIGEST_MODES) for (const level of FASE3_DIGESTED) ROUTING_BY_MODE[mode][level] = OutputRouting.DIGEST
+	})
+	afterEach(() => {
+		for (const mode of DIGEST_MODES) for (const level of FASE3_DIGESTED) ROUTING_BY_MODE[mode][level] = OutputRouting.GROUP
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -120,8 +131,8 @@ describe('FlushSignalDigest — one message per person', () => {
 		expect(deliveries).toHaveLength(1)
 		const text = field(deliveries[0], 'text')
 		expect(text).toContain('Pessoa A, 2 coisas:')
-		expect(text).toContain('• APP-12 · D1 — Uso o tema claro?')
-		expect(text).toContain('• APP-12 · D2 — Mantenho o rodapé?')
+		expect(text).toContain('• APP-12 — Uso o tema claro?')
+		expect(text).toContain('• APP-12 — Mantenho o rodapé?')
 
 		const threads = testBed.resolve(ThreadRepository)
 		const digest = (await threads.listEntries(threadId)).find(e => e.kind === TranscriptKind.SYSTEM && e.routing === OutputRouting.GROUP)
@@ -138,8 +149,8 @@ describe('FlushSignalDigest — one message per person', () => {
 		expect(await flush(threadId, PERSON)).toEqual({ flushed: 1 })
 
 		const [delivery] = await commands('deliver_channel_message')
-		expect(field(delivery, 'text')).toContain('APP-12 · D1 — Uso o tema claro?')
-		expect(field(delivery, 'text')).toContain('Sigo com Sim se ninguém disser o contrário em 15 min.')
+		expect(field(delivery, 'text')).toContain('APP-12 — Uso o tema claro?')
+		expect(field(delivery, 'text')).toContain('Se ninguém responder em 15 min: Sim.')
 		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
 		const entry = await testBed.resolve(ThreadRepository).findEntry(stop?.askEntryId ?? '')
 		expect(entry?.routing).toBe(OutputRouting.GROUP)
@@ -190,7 +201,7 @@ describe('FlushSignalDigest — one message per person', () => {
 		expect(await flush(threadId, PERSON)).toEqual({ flushed: 1 })
 	})
 
-	it('a lone FEEDBACK goes out WITH its print — the caption says how many others stay on the console — and does not hold the issue', async () => {
+	it('a lone FEEDBACK goes out WITH its print and does not hold the issue', async () => {
 		const { threadId, issueId } = await setUp()
 		const path = join(scratch, 'preview.png')
 		writeFileSync(path, 'png')
@@ -215,7 +226,7 @@ describe('FlushSignalDigest — one message per person', () => {
 
 		const [attachment] = await commands('deliver_channel_attachment')
 		expect(attachment?.input).toMatchObject({ artifactId: main.id.value, kind: ArtifactKind.IMAGE, replyEntryId: out.entryId })
-		expect(field(attachment, 'caption')).toContain('APP-12 · prévia — prévia da página (+1 no console)')
+		expect(field(attachment, 'caption')).toBe('👀 APP-12 — prévia da página')
 		expect(await commands('deliver_channel_message')).toHaveLength(0)
 		expect(await testBed.resolve(ThreadRepository).openStopsByIssue(issueId)).toHaveLength(0)
 	})

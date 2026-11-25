@@ -1120,7 +1120,7 @@
           "agent",
           "mcp:issue-handling"
         ],
-        "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.",
+        "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.",
         "operationId": "AskDecision",
         "requestBody": {
           "content": {
@@ -1211,7 +1211,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.",
+            "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1243,7 +1243,7 @@
           "agent",
           "mcp:issue-handling"
         ],
-        "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.",
+        "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.",
         "operationId": "AskQuestion",
         "requestBody": {
           "content": {
@@ -1339,7 +1339,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.",
+            "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1375,7 +1375,7 @@
           "agent",
           "mcp:issue-handling"
         ],
-        "description": "Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.",
+        "description": "Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.",
         "operationId": "RequestFeedback",
         "requestBody": {
           "content": {
@@ -1447,7 +1447,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.",
+            "description": "Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -1466,7 +1466,7 @@
           "agent",
           "mcp:issue-handling"
         ],
-        "description": "Record what you did on this task — it goes to the task's timeline, not to the group.",
+        "description": "Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group.",
         "operationId": "ReportProgress",
         "requestBody": {
           "content": {
@@ -1478,6 +1478,15 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 2000
+                  },
+                  "artifactIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   }
                 },
                 "required": [
@@ -1517,7 +1526,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Record what you did on this task — it goes to the task's timeline, not to the group.",
+            "description": "Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -1624,6 +1633,11 @@
                     "minLength": 1,
                     "maxLength": 80
                   },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40
+                  },
                   "priority": {
                     "$ref": "#/components/schemas/IssuePriority"
                   },
@@ -1642,7 +1656,8 @@
                 "default": {
                   "value": {
                     "goal": "põe um toggle de dark mode nas configurações",
-                    "title": "Toggle de dark mode nas configurações"
+                    "title": "Toggle de dark mode nas configurações",
+                    "name": "dark mode"
                   },
                   "summary": "Example"
                 }

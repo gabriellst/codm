@@ -4,7 +4,7 @@ import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
- * @description Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.
+ * @description Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.
  * {@link /threads/:threadId/issues/:issueId/questions}
  */
 export async function askQuestionHandler({ threadId, issueId, data }: { threadId: AskQuestionPathParams["threadId"]; issueId: AskQuestionPathParams["issueId"]; data: AskQuestionMutationRequest }): Promise<Promise<CallToolResult>> {

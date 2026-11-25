@@ -5,6 +5,8 @@ export interface IssueArtifactFile {
 	artifactId: string
 	issueId?: string
 	kind: ArtifactKind
+	/** The name the issue recorded it with — the caption of a print shown on its own (voz do grupo, 25/11). */
+	name: string
 	/** A local path for the media kinds; the URL for a `LINK`. */
 	ref: string
 }

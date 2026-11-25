@@ -519,6 +519,47 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		return rows.map(row => row.targetId)
 	}
 
+	async runningItem(targetKind: MailboxTargetKind, targetId: string, tx?: LibSqlTransaction): Promise<{ id: string } | undefined> {
+		const [row] = await (tx ?? this.driver.db)
+			.select({ id: agentMailbox.id })
+			.from(agentMailbox)
+			.where(
+				and(
+					eq(agentMailbox.targetKind, targetKind),
+					eq(agentMailbox.targetId, targetId),
+					runnable(),
+					isNotNull(agentMailbox.claimedBy),
+					isNotNull(agentMailbox.firstClaimedAt),
+					gte(agentMailbox.leaseUntil, new Date()),
+				),
+			)
+			.orderBy(asc(agentMailbox.createdAt))
+			.limit(1)
+		return row ? { id: row.id } : undefined
+	}
+
+	async itemAhead(
+		targetKind: MailboxTargetKind,
+		targetId: string,
+		ownDedupKey: string,
+		tx?: LibSqlTransaction,
+	): Promise<{ id: string } | undefined> {
+		const [row] = await (tx ?? this.driver.db)
+			.select({ id: agentMailbox.id })
+			.from(agentMailbox)
+			.where(
+				and(
+					eq(agentMailbox.targetKind, targetKind),
+					eq(agentMailbox.targetId, targetId),
+					runnable(),
+					ne(agentMailbox.dedupKey, ownDedupKey),
+				),
+			)
+			.orderBy(asc(agentMailbox.createdAt))
+			.limit(1)
+		return row ? { id: row.id } : undefined
+	}
+
 	async hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: LibSqlTransaction): Promise<boolean> {
 		const dbc = tx ?? this.driver.db
 		const rows = await dbc

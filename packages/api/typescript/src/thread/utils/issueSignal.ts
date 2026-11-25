@@ -21,8 +21,7 @@ export interface IssueSignalDraft {
 	text: string
 	/** The heading of a notice or a closing — the issue's title when absent. */
 	title?: string
-	/** The ask's code (`APP-12 · D1`), its options' labels and, for a question, what it goes on with. */
-	code?: string
+	/** The ask's options' labels and, for a question, what it goes on with. */
 	options?: readonly string[]
 	defaultLabel?: string
 	/** The participant the issue DECLARED it is talking to — named in the message ("quem decide"). */
@@ -36,8 +35,6 @@ export interface IssueSignalDraft {
 	stopId?: string
 	/** The artifact a FEEDBACK previews — sent with the message when it goes out alone. */
 	artifactId?: string
-	/** How many other artifacts the FEEDBACK cites (they stay on the console until the panel has a gallery). */
-	moreArtifacts?: number
 	/** The cause of this notice is already told in the group (`causeAlreadyTold`) — it goes to the panel only. */
 	alreadyTold?: boolean
 	/**
@@ -65,11 +62,6 @@ export const QUOTES_ORIGIN: Record<IssueSignalLevel, boolean> = {
 	[IssueSignalLevel.PROGRESS]: false,
 }
 
-/** Where the issue's link goes: the group's panel page, opened at the issue. Absent without a cloud login. */
-export function issueLink(panelLink: string | undefined, key: string): string | undefined {
-	return panelLink ? `${panelLink}#${key}` : undefined
-}
-
 /**
  * Record what an issue says on the conversation it belongs to, routed by the group's mode — on an
  * aggregate the CALLER holds and will save, so the entry commits with whatever the caller writes beside it
@@ -81,21 +73,18 @@ export function issueLink(panelLink: string | undefined, key: string): string | 
 export function recordIssueSignal(
 	thread: Thread,
 	draft: IssueSignalDraft,
-	context: { language: Language; panelLink?: string },
+	context: { language: Language },
 ): { entry: TranscriptEntry; routing: OutputRouting; sends: boolean } {
 	const routing = routeSignal(thread.outputMode, draft.level, draft.alreadyTold, draft.answersPerson)
 	const text = THREAD_MESSAGES.issueSignal(context.language, {
 		level: draft.level,
 		key: draft.issue.key,
-		code: draft.code,
 		title: draft.title ?? draft.issue.title,
 		text: draft.text,
 		options: draft.options ?? [],
 		defaultLabel: draft.defaultLabel,
 		// A roster NAME or nothing — never the raw address `displayNameOf` would fall back to.
 		decider: draft.addresseeId ? thread.rosterNameOf(draft.addresseeId) : undefined,
-		link: issueLink(context.panelLink, draft.issue.key),
-		moreArtifacts: draft.moreArtifacts,
 	})
 	const entry = thread.recordEntry({
 		entryId: draft.entryId,
