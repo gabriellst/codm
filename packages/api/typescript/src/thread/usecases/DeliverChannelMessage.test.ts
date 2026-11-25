@@ -223,6 +223,8 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 			author: MessageAuthor.SYSTEM,
 			replyEntryId: entryId,
 			replyThreadId: thread.id.value,
+			// The orchestrator's reply — the one delivery that completes a stream (`RecordOrchestratorReply`).
+			endsStreamedReply: true,
 		})
 
 	/**
@@ -311,6 +313,52 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 	 * by running that use case. Nothing here is a stand-in: the message really is on the mock channel and
 	 * the ledger row really is claimed-but-unlinked, which is the state the row is in on a live stream.
 	 */
+	/**
+	 * A RULE MESSAGE DURING A STREAM IS A MESSAGE OF ITS OWN (bug 25/11): the "estou respondendo outra" notice went out
+	 * while the orchestrator's reply was growing and overwrote it. Only the delivery that DECLARES it ends the reply
+	 * completes the stream; anything else is a new balloon, and the stream stays for the reply.
+	 * Falsifier: drop the `endsStreamedReply` gate and the notice lands as an edit of the reply.
+	 */
+	it('a message that does not end the reply goes out as a NEW one while a reply streams — the stream waits for the reply', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const sender = new MockChannelSender()
+		testBed.override(ChannelSender, sender)
+		const streams = testBed.resolve(ReplyStreamer)
+		const firstCut = 'procurando as ferramentas'
+		const { messageId } = await sender.send(
+			{ channelId: thread.channelId, remoteId: thread.contactRef.externalId, text: firstCut },
+			MOCK_CLOUD_OWNER_ID,
+		)
+		streams.opened(streamKey(thread.channelId, thread.contactRef.externalId), {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			messageId,
+			sentAtEpochMs: Date.now(),
+			sequence: 1,
+			baseOffset: 0,
+			deliveredLength: firstCut.length,
+		})
+
+		await testBed.resolve(DeliverChannelMessage).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			channelId: thread.channelId,
+			contactExternalId: thread.contactRef.externalId,
+			text: 'Ainda estou respondendo a mensagem anterior — respondo uma de cada vez. A sua ficou na fila e já vem.',
+			author: MessageAuthor.SYSTEM,
+		})
+
+		expect(sender.edits).toHaveLength(0)
+		expect(sender.sent.map(message => message.text)).toEqual([
+			firstCut,
+			'Ainda estou respondendo a mensagem anterior — respondo uma de cada vez. A sua ficou na fila e já vem.',
+		])
+
+		// The reply still completes its own stream.
+		const agentLine = await givenAgentReply(thread)
+		await deliver(thread, agentLine.entryId)
+		expect(sender.edits).toHaveLength(1)
+		expect(sender.sent).toHaveLength(2)
+	})
+
 	it('FALSEADOR — streamed reply: the message COMPLETED by edit resolves to its entry, and a reply to it invokes with no `@`', async () => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const sender = new MockChannelSender()

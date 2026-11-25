@@ -551,6 +551,7 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 				contactExternalId: remoteId,
 				text: 'here you go',
 				author: MessageAuthor.SYSTEM,
+				endsStreamedReply: true,
 			})
 
 			// The delivery went out as the FINAL EDIT of the placeholder — the streamed path, not the send.

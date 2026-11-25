@@ -110,6 +110,8 @@ export class RecordOrchestratorReply extends Handler<
 					// costs nothing, versus an extra `ThreadRepository.findById` on the hot delivery path for a
 					// command that carries no thread id of its own.
 					reactionsEnabled: thread.reactionsEnabled,
+					// The ONE delivery that completes the reply the contact watched grow — every other one sends anew.
+					endsStreamedReply: true,
 				},
 				{ jobId: entry.entryId },
 				tx,

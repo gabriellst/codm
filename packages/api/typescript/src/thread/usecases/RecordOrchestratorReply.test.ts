@@ -72,6 +72,8 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 				// PASSED THROUGH from the thread the producer already holds (reactions/streaming spec) — the
 				// thread's current setting, not a fixed default; `givenThread` seeds it ON.
 				reactionsEnabled: true,
+				// The one delivery that completes a streamed reply (voz do grupo, 25/11).
+				endsStreamedReply: true,
 			},
 		})
 	})
