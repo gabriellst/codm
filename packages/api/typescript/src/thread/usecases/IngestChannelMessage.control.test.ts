@@ -71,7 +71,7 @@ describe('a control word with a target pauses / resumes the issue, with no turn'
 		})
 
 	/** A thread with one issue and one agent line linked to it — the message a person quotes. */
-	const scene = async (opts: { status?: IssueStatus; paused?: boolean } = {}) => {
+	const scene = async (opts: { status?: IssueStatus; paused?: boolean; key?: string } = {}) => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-12', ...opts })
 		const line = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'subindo a prévia agora', issueId: issue.id.value })
@@ -100,6 +100,17 @@ describe('a control word with a target pauses / resumes the issue, with no turn'
 		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} Segura APP-12`)
 
 		expect(await pausedOf(issue.id.value)).toBe(true)
+	})
+
+	// Voz do grupo (25/11): the key is the task's name — the control words find it the same way.
+	it('"pare video-na-landing-19" pauses it and "continue Video-na-Landing-19" resumes it', async () => {
+		const { thread, issue } = await scene({ key: 'video-na-landing-19' })
+
+		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} pare video-na-landing-19`)
+		expect(await pausedOf(issue.id.value)).toBe(true)
+
+		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} continue Video-na-Landing-19`)
+		expect(await pausedOf(issue.id.value)).toBe(false)
 	})
 
 	it('"continue" quoting a paused issue resumes it, with ▶️', async () => {

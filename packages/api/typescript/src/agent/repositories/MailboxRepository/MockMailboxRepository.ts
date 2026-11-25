@@ -286,6 +286,13 @@ export class MockMailboxRepository extends MailboxRepository {
 		return row ? { id: row.id } : undefined
 	}
 
+	async itemAhead(targetKind: MailboxTargetKind, targetId: string, ownDedupKey: string): Promise<{ id: string } | undefined> {
+		const row = this.rows.find(
+			r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId && r.dedupKey !== ownDedupKey,
+		)
+		return row ? { id: row.id } : undefined
+	}
+
 	async hasPending(targetKind: MailboxTargetKind, targetId: string): Promise<boolean> {
 		return this.rows.some(r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId)
 	}

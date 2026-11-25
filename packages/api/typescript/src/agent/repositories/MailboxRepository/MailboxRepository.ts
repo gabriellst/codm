@@ -354,6 +354,18 @@ export abstract class MailboxRepository {
 	 */
 	abstract runningItem(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<{ id: string } | undefined>
 
+	/**
+	 * The OLDEST item still ahead in this target's queue, other than the one with `ownDedupKey` — running, held for the
+	 * triage, or waiting its turn (voz do grupo, 25/11). For a conversation, any of them means the new message waits
+	 * behind another one; `runningItem` alone missed the first seconds, while the earlier message sat in the triage.
+	 */
+	abstract itemAhead(
+		targetKind: MailboxTargetKind,
+		targetId: string,
+		ownDedupKey: string,
+		tx?: Transaction,
+	): Promise<{ id: string } | undefined>
+
 	/** Whether any runnable (unconsumed, unleased, unpoisoned) item exists for a target. */
 	abstract hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<boolean>
 

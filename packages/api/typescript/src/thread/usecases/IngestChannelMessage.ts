@@ -135,6 +135,23 @@ const CONTROL_EFFECT: Readonly<
  * transcribed, buffered and quotable like any other — it just does not enqueue a turn. Transcription
  * is observation; the mailbox item is invocation.
  */
+/**
+ * What makes a target BUSY for a new message (voz do grupo, 25/11) — the item the "estou respondendo outra" notice
+ * is deduped on. A conversation answers one message per turn, in order: ANY earlier message still in its queue
+ * (running, held for the triage, or waiting) means this one waits behind it. A task reads its steers when its step
+ * ends: only a RUNNING step makes it busy — queued work has not started, so there is no step to finish.
+ */
+const BUSY_BEHIND: Readonly<
+	Record<
+		MailboxTargetKind,
+		(mailbox: MailboxRepository, targetId: string, ownDedupKey: string, tx: Transaction) => Promise<{ id: string } | undefined>
+	>
+> = {
+	[MailboxTargetKind.THREAD]: (mailbox, targetId, ownDedupKey, tx) =>
+		mailbox.itemAhead(MailboxTargetKind.THREAD, targetId, ownDedupKey, tx),
+	[MailboxTargetKind.ISSUE]: (mailbox, targetId, _ownDedupKey, tx) => mailbox.runningItem(MailboxTargetKind.ISSUE, targetId, tx),
+}
+
 @injectable()
 export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInputSchema, typeof IngestChannelMessageOutputSchema> {
 	readonly name = 'ingest_channel_message' as const
@@ -662,7 +679,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		language: ReturnType<typeof resolveThreadLanguage>,
 		tx: Transaction,
 	): Promise<void> {
-		const running = await this.mailbox.runningItem(target.kind, target.id, tx)
+		const running = await BUSY_BEHIND[target.kind](this.mailbox, target.id, entryId, tx)
 		if (!running) return
 		const noticeId = derivedId('busy', running.id)
 		if (await this.threads.findEntry(noticeId, tx)) return

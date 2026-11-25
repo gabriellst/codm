@@ -96,6 +96,19 @@ describe('IngestChannelMessage — a message while another is being answered', (
 		expect(await notices()).toEqual([])
 	})
 
+	// The first message may still be in the triage (no turn yet) when the second lands — it waits behind it all the same.
+	it('two messages in a row with no turn running yet → the second is told it waits; the first is not', async () => {
+		await scene()
+
+		const first = await say('muda a cor do botão')
+		const second = await say('e o texto também')
+
+		const said = await notices()
+		expect(said).toHaveLength(1)
+		expect(said[0]?.quotedEntryId).toBe(second.entryId)
+		expect(said[0]?.quotedEntryId).not.toBe(first.entryId)
+	})
+
 	it('a task in the middle of a step → "Recebi — <chave> …"; an "agora" cuts the step and says nothing', async () => {
 		await scene()
 		const issue = await givenIssue(testBed, { threadId, key: 'video-na-landing-19' })
