@@ -33,7 +33,8 @@ export class ReportProgressController extends Controller<
 	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING]
 	readonly path = '/threads/:threadId/issues/:issueId/progress'
 	readonly method = 'post' as const
-	readonly description = "Record what you did on this task — it goes to the task's timeline, not to the group."
+	readonly description =
+		"Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group."
 	readonly inputSchema = ReportProgressControllerInputSchema
 	readonly outputSchema = ReportProgressControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]

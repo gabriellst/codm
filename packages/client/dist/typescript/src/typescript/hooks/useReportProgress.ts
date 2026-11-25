@@ -26,7 +26,7 @@ export function reportProgressMutationOptions<TContext = unknown>(config: Partia
 }
 
 /**
- * @description Record what you did on this task — it goes to the task's timeline, not to the group.
+ * @description Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group.
  * {@link /threads/:threadId/issues/:issueId/progress}
  */
 export function useReportProgress<TContext>(options: 

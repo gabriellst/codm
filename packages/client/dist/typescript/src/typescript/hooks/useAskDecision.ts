@@ -26,7 +26,7 @@ export function askDecisionMutationOptions<TContext = unknown>(config: Partial<R
 }
 
 /**
- * @description Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.
+ * @description Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.
  * {@link /threads/:threadId/issues/:issueId/decisions}
  */
 export function useAskDecision<TContext>(options: 

@@ -38,7 +38,7 @@ export class AskDecisionController extends Controller<typeof AskDecisionControll
 	readonly path = '/threads/:threadId/issues/:issueId/decisions'
 	readonly method = 'post' as const
 	readonly description =
-		'Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.'
+		'Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.'
 	readonly inputSchema = AskDecisionControllerInputSchema
 	readonly outputSchema = AskDecisionControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]

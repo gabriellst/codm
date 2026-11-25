@@ -18796,7 +18796,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/fork`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.
+    /**Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers. The question: plain words, at most 3 short sentences, no task key or jargon.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/decisions`
 
@@ -18835,7 +18835,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/decisions`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.
+    /**Show the group a preview to look at: one main artifact this task recorded goes with the text, and every other one you cite goes as its own print. Does not hold the task. The text: plain words, at most 3 short sentences.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/feedback`
 
@@ -18952,7 +18952,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/operator-questio
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Record what you did on this task — it goes to the task's timeline, not to the group.
+    /**Record what you did on this task — the text goes to the task's timeline; the prints you cite (artifactIds, recorded by this task) go to the group.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/progress`
 
@@ -18991,7 +18991,7 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/progress`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.
+    /**Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision. The question: plain words, at most 3 short sentences, no task key or jargon.
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/questions`
 
