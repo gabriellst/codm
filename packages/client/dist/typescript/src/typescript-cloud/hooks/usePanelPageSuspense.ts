@@ -27,7 +27,7 @@ export function panelPageSuspenseQueryOptions(token: PanelPagePathParams["token"
 }
 
 /**
- * @description The per-group panel page (public HTML)
+ * @description The per-group panel page (public HTML shell of the panel app)
  * {@link /panel/g/:token}
  */
 export function usePanelPageSuspense<TData = PanelPageQueryResponse, TQueryKey extends QueryKey = PanelPageSuspenseQueryKey>(token: PanelPagePathParams["token"], options: 

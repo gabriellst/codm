@@ -10,7 +10,7 @@ export const panelPagePathParamsSchema = z.object({
     })
 
 /**
- * @description The per-group panel page (public HTML)
+ * @description The per-group panel page (public HTML shell of the panel app)
  */
 export const panelPage200Schema = z.string()
 

@@ -44,6 +44,7 @@ describe('a saída do build carrega o que o bundle não consegue inlinar', () =>
 	const DERIVED_DIR_MODULES = [
 		{ label: 'tronco SQLite', file: join(contractsDb, 'migrations.ts') },
 		{ label: 'tronco cloud', file: join(contractsDb, 'pg/migrations.ts') },
+		{ label: 'painel React da nuvem', file: join(pkgRoot, 'src/panel/services/PanelWebBundle/panelWebDir.ts') },
 	] as const
 
 	/**

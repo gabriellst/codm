@@ -1069,5 +1069,74 @@
 			"showDone": "Concluídas · {{count}}",
 			"hideDone": "Esconder concluídas"
 		}
+	},
+	"panel": {
+		"title": "{{group}} · tarefas",
+		"invalidLink": {
+			"title": "Link inválido ou trocado",
+			"description": "Peça o link do painel de novo no grupo."
+		},
+		"unavailable": {
+			"title": "Não deu para abrir o painel agora",
+			"description": "Tente de novo em instantes."
+		},
+		"board": {
+			"counts": "{{open}} tarefas abertas · {{done}} concluídas",
+			"columns": "Colunas do quadro"
+		},
+		"health": {
+			"now": "atualizado agora",
+			"stale": "sem contato com o codm há {{count}} min",
+			"window": "janela {{percent}}%",
+			"week": "semana {{percent}}%",
+			"slots": "vagas {{inUse}}/{{effective}}",
+			"queue": "{{count}} na fila"
+		},
+		"batchChip": "Lote {{code}}",
+		"identity": {
+			"you": "Você · {{name}}",
+			"canRelease": "pode liberar",
+			"identify": "Identificar-me",
+			"forget": "Sair"
+		},
+		"identify": {
+			"title": "Identificar-me",
+			"description": "Para responder decisões e orientar tarefas, confirme quem você é neste grupo.",
+			"who": "Quem é você neste grupo?",
+			"noMembers": "Ninguém do grupo está na lista ainda.",
+			"send": "Enviar código no meu WhatsApp",
+			"sent": "O codm vai mandar um código no WhatsApp de {{name}} em até 15 segundos. Ele vale 10 minutos.",
+			"code": "Código de 6 números",
+			"codeHint": "Digite os 6 números do código.",
+			"confirm": "Confirmar",
+			"otherName": "Escolher outro nome"
+		},
+		"task": {
+			"back": "Quadro",
+			"sections": "Seções da tarefa",
+			"list": "Tarefas do grupo",
+			"identifyToAct": "Identifique-se para responder e orientar esta tarefa.",
+			"updated": "Atualizada",
+			"steerTooLong": "A orientação passa de 2000 caracteres.",
+			"steerHint": "Chega só ao agente desta tarefa — o grupo não vê.",
+			"artifactsNote": "Para abrir um artefato, use o app do codm."
+		},
+		"action": {
+			"sending": "Enviando…",
+			"sent": "Pedido enviado — o codm faz em até 15 segundos.",
+			"done": "Feito.",
+			"refused": "Recusado: {{reason}}",
+			"refusedGeneric": "o codm não pôde fazer isso agora.",
+			"noAnswer": "Sem resposta do codm. Tente de novo."
+		},
+		"batch": {
+			"title": "Lote {{code}}",
+			"item": "{{n}} · {{destination}}",
+			"noDestination": "sem destino",
+			"empty": "Este lote não está mais no painel."
+		},
+		"errors": {
+			"generic": "Não deu certo. Tente de novo."
+		}
 	}
 }

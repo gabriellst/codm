@@ -11,6 +11,7 @@ export { ForgetPanelDeviceController } from './ForgetPanelDevice'
 export { RequestPanelActionController } from './RequestPanelAction'
 export { GetPanelActionController } from './GetPanelAction'
 export { PanelPageController } from './PanelPage'
+export { PanelAssetController } from './PanelAsset'
 
 import { SyncPanelController } from './SyncPanel'
 import { SyncPanelRosterController } from './SyncPanelRoster'
@@ -25,6 +26,7 @@ import { ForgetPanelDeviceController } from './ForgetPanelDevice'
 import { RequestPanelActionController } from './RequestPanelAction'
 import { GetPanelActionController } from './GetPanelAction'
 import { PanelPageController } from './PanelPage'
+import { PanelAssetController } from './PanelAsset'
 
 /** What this context mounts — the same symbol every context exposes (Decisão 10). */
 export default {
@@ -41,4 +43,5 @@ export default {
 	RequestPanelActionController,
 	GetPanelActionController,
 	PanelPageController,
+	PanelAssetController,
 }

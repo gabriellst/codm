@@ -27,7 +27,7 @@ export function panelPageQueryOptions(token: PanelPagePathParams["token"] | unde
 }
 
 /**
- * @description The per-group panel page (public HTML)
+ * @description The per-group panel page (public HTML shell of the panel app)
  * {@link /panel/g/:token}
  */
 export function usePanelPage<TData = PanelPageQueryResponse, TQueryData = PanelPageQueryResponse, TQueryKey extends QueryKey = PanelPageQueryKey>(token: PanelPagePathParams["token"] | undefined, options: 

@@ -19,6 +19,25 @@
 # =============================================================================
 
 # --- Stage 1: Build the API bundle with Bun ---
+# ── PAINEL WEB (spec 2026-11-24-tarefa-e-painel §6) ──────────────────────────────────────────────────────────────
+# O painel do grupo é o app React (packages/app/react/src/panel) com os componentes do console. Este estágio
+# instala o workspace do app e builda SÓ o painel; dele sai apenas `dist-panel/` (dezenas de KB) — o
+# node_modules do app nunca chega à imagem. O builder abaixo o estagia em `dist/panel-web`.
+FROM oven/bun:latest AS panel-web
+WORKDIR /app
+COPY package.json bun.lock tsconfig.json tsconfig.base.json ./
+COPY ./packages/contracts ./packages/contracts
+COPY ./packages/api/typescript ./packages/api/typescript
+COPY ./packages/client/dist/typescript ./packages/client/dist/typescript
+COPY ./packages/client/package.json ./packages/client/package.json
+COPY ./packages/app/react ./packages/app/react
+COPY ./packages/app/ui ./packages/app/ui
+COPY ./packages/app/astro/package.json ./packages/app/astro/package.json
+COPY ./packages/app/tauri/package.json ./packages/app/tauri/package.json
+COPY ./packages/e2e/package.json ./packages/e2e/package.json
+RUN bun install --frozen-lockfile
+RUN bun run --cwd packages/app/react build:panel
+
 FROM oven/bun:latest AS builder
 
 WORKDIR /app
@@ -50,6 +69,11 @@ COPY ./packages/app/tauri/package.json ./packages/app/tauri/package.json
 COPY ./packages/e2e/package.json ./packages/e2e/package.json
 
 RUN bun install --frozen-lockfile
+
+# O bundle do painel (estágio panel-web acima), para o build estagiar em dist/panel-web. `required` faz o
+# build recusar sair sem ele — uma imagem que respondesse 503 em todo link de grupo nunca é publicada.
+COPY --from=panel-web /app/packages/app/react/dist-panel ./packages/app/react/dist-panel
+ENV CODM_PANEL_WEB=required
 
 ENV NODE_ENV=production
 
@@ -96,6 +120,8 @@ ENV NODE_ENV=production
 # core Config.ts — see that file's own docblock). Only the LITERAL string 'cloud' arms the filter;
 # this is the ONE line that makes this image a cloud image instead of the desktop daemon build.
 ENV CODM_PROFILE=cloud
+# O painel React é parte da imagem (spec 2026-11-24 §6): o bundle está em dist/panel-web.
+ENV CODM_PANEL_WEB=required
 # Embedded SQLite lives on a Railway Volume, not the image's writable layer — the container is
 # disposable, the data is not. NO `VOLUME` instruction: Railway's builder rejects it ("docker
 # VOLUME is not supported, use Railway Volumes" — build error de 2026-08-07). Operação na Railway:

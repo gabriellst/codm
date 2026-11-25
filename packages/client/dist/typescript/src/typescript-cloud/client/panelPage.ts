@@ -13,7 +13,7 @@ function getPanelPageUrl(token: PanelPagePathParams["token"]) {
 }
 
 /**
- * @description The per-group panel page (public HTML)
+ * @description The per-group panel page (public HTML shell of the panel app)
  * {@link /panel/g/:token}
  */
 export async function panelPage(token: PanelPagePathParams["token"], config: Partial<RequestConfig> & { client?: Client } = {}) {

@@ -8,6 +8,7 @@
 	"scripts": {
 		"dev": "vite --host",
 		"build": "vite build",
+		"build:panel": "vite build -c vite.panel.config.ts",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 		"tsc": "bun x tsc --noEmit",
 		"storybook": "storybook dev -p 6006",
