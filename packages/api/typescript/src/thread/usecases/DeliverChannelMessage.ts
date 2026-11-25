@@ -43,6 +43,14 @@ export const DeliverChannelMessageInputSchema = z.object({
 	replyEntryId: z.string().optional(),
 	replyThreadId: z.string().optional(),
 	/**
+	 * THIS DELIVERY IS THE FINAL TEXT OF THE ORCHESTRATOR'S STREAMED REPLY — declared by the one producer that is
+	 * (`RecordOrchestratorReply`), never inferred. Absent ⇒ a message of its own: a NEW balloon, whatever is
+	 * streaming. Measured 25/11: the "estou respondendo outra" notice went out while the orchestrator's reply was
+	 * growing and, with the stream found by the conversation alone, it OVERWROTE the reply being edited — and so
+	 * would any rule message delivered at that instant (a decision, a preview, a closing).
+	 */
+	endsStreamedReply: z.boolean().optional(),
+	/**
 	 * The thread's `reactionsEnabled` setting, PASSED THROUGH by the producer rather than looked up here
 	 * (reactions/streaming spec). This command carries no thread id to read one — only
 	 * `channelId`/`contactExternalId` — and this leg already runs on the hot delivery path, so the
@@ -116,7 +124,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		// grow must be COMPLETED, not repeated: sending here would put the answer in the conversation
 		// twice. The stream is found by the conversation alone, so nothing had to be threaded through the
 		// event, the handler or this command's schema.
-		if (await this.finishStreamedReply(input, tx)) {
+		if (input.endsStreamedReply === true && (await this.finishStreamedReply(input, tx))) {
 			// THE SAME CLOSING MOVE THE PLAIN PATH MAKES, and the line whose absence was the bug: this
 			// early return used to jump straight past `stopTypingPresence` below, so every reply that
 			// STREAMED — which, once the "Pensando" placeholder existed, is every reply — left the loop
