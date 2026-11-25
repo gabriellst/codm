@@ -29,6 +29,7 @@ import { detectBatch } from '../utils/BatchDetector'
 import { BoardBulletin } from '../services/BoardBulletin'
 import { BulletinSentEvent } from '../events/BulletinSentEvent'
 import { parseThreadCommand } from '../utils/threadCommand'
+import { derivedId } from '../utils/derivedId'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
@@ -289,6 +290,16 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					tx,
 				)
 				if (interrupt) await this.domainEventRepository.save(interrupt, tx)
+				// "agora" cuts the turn — nothing to wait for; any other steer waits for the step to end, and says so.
+				if (!interrupt)
+					await this.noticeBusy(
+						thread,
+						input,
+						entry.entryId,
+						{ kind: MailboxTargetKind.ISSUE, id: routed.issue.issueId, key: routed.issue.key },
+						language,
+						tx,
+					)
 			} else if (invocable) {
 				// THE PARALLEL TRIAGE (fase 2) — the rule layer could not route this, so a stateless triage on the
 				// provider's small model decides, in parallel with every other message, whether it is a steer of
@@ -387,6 +398,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// same way `thinkingIndicatorEnabled` gates the "Pensando" placeholder: the entry and the
 				// mailbox item above are written exactly as always, only the 👀 itself is skipped.
 				await this.routedSteer.cue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
+				await this.noticeBusy(thread, input, entry.entryId, { kind: MailboxTargetKind.THREAD, id: thread.id.value }, language, tx)
 			}
 
 			await this.domainEventRepository.save(
@@ -633,6 +645,52 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			tx,
 		)
 		return this.ingested(thread, input, entry, tx)
+	}
+
+	/**
+	 * "ESTOU RESPONDENDO OUTRA" (voz do grupo, 25/11) — a message that lands while a turn is still answering another
+	 * for the same target waits in the queue (the orchestrator answers one message per turn; a task reads its steers
+	 * when its step ends). The person is told so, by rule, quoting their message — ONCE per running turn: the notice's
+	 * entry id is derived from the running item, so a second message in the same turn finds it and says nothing.
+	 * Only on the branches that wake a turn (the same ones as the 👀), never on the answer path.
+	 */
+	private async noticeBusy(
+		thread: Thread,
+		input: this['input'],
+		entryId: string,
+		target: { kind: MailboxTargetKind; id: string; key?: string },
+		language: ReturnType<typeof resolveThreadLanguage>,
+		tx: Transaction,
+	): Promise<void> {
+		const running = await this.mailbox.runningItem(target.kind, target.id, tx)
+		if (!running) return
+		const noticeId = derivedId('busy', running.id)
+		if (await this.threads.findEntry(noticeId, tx)) return
+		const text =
+			target.key === undefined ? THREAD_MESSAGES.busyOrchestrator(language) : THREAD_MESSAGES.busyIssue(language, { key: target.key })
+		const notice = thread.recordEntry({
+			entryId: noticeId,
+			kind: TranscriptKind.SYSTEM,
+			text,
+			quotedEntry: { entryId, threadId: thread.id.value },
+		})
+		await this.threads.save(thread, tx)
+		await this.commands.enqueueCommand<DeliverChannelMessage>(
+			'deliver_channel_message',
+			{
+				ownerId: thread.ownerId,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text,
+				author: MessageAuthor.SYSTEM,
+				quotedMessageId: input.platformMessageId,
+				replyEntryId: notice.entryId,
+				replyThreadId: thread.id.value,
+				reactionsEnabled: thread.reactionsEnabled,
+			},
+			{ jobId: notice.entryId },
+			tx,
+		)
 	}
 
 	/**

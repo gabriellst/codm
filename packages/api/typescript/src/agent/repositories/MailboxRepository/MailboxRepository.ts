@@ -347,6 +347,13 @@ export abstract class MailboxRepository {
 	/** Whether `holder` still holds the item behind `dedupKey` — the cheap check before spending a model run. */
 	abstract isHeld(dedupKey: string, holder: string, tx?: Transaction): Promise<boolean>
 
+	/**
+	 * The item a TURN is running for this target right now, if any (voz do grupo, 25/11) — what the "estou respondendo
+	 * outra" notice is deduped on. Running = handed to a turn (`first_claimed_at` set: a triage HOLD writes a holder at
+	 * birth but never hands the item over), held, its lease alive, not consumed nor dead.
+	 */
+	abstract runningItem(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<{ id: string } | undefined>
+
 	/** Whether any runnable (unconsumed, unleased, unpoisoned) item exists for a target. */
 	abstract hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<boolean>
 

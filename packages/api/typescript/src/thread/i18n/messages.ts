@@ -445,6 +445,12 @@ const PT_MESSAGES = {
 	 * código da pergunta e o link da issue no painel.
 	 */
 	issueSignal: (p: IssueSignalParams) => SIGNAL_PT[p.level](p),
+	/**
+	 * A message that came while a turn is still answering another (voz do grupo, 25/11): the agent answers one at a
+	 * time — the message waits in the queue, and the person is told so instead of guessing it was missed.
+	 */
+	busyOrchestrator: () => 'Ainda estou respondendo a mensagem anterior — respondo uma de cada vez. A sua ficou na fila e já vem.',
+	busyIssue: (p: { key: string }) => `Recebi — ${p.key} está no meio de um passo e lê isso assim que terminar.`,
 	/** A print a task shows on its own (voz do grupo, 25/11) — its caption names the task and the print. */
 	artifactCaption: (p: { key: string; name: string }) => `🖼️ ${p.key} — ${p.name}`,
 	/**
@@ -514,6 +520,8 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
 		artifactCaption: p => `🖼️ ${p.key} — ${p.name}`,
+		busyOrchestrator: () => "I'm still answering the previous message — one at a time. Yours is in the queue and comes next.",
+		busyIssue: p => `Got it — ${p.key} is in the middle of a step and will read this as soon as it finishes.`,
 		defaultApplied: p =>
 			`Nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
 		answerDisambiguation: p => `I have ${p.asks.length} open questions: ${alternatives(p.asks, 'and')}. Reply quoting the one you mean.`,
