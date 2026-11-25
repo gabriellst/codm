@@ -3,7 +3,7 @@
  * `IssueControlCommand`: those act on ONE issue and need a target; this one has none. Context-private.
  */
 export enum ThreadCommand {
-	/** "relatorio" — the board of the group: what waits for a decision, what stopped, what runs, what finished. */
+	/** "boletim" — the board of the group: what waits for a decision, what stopped, what runs, what finished. */
 	REPORT = 'REPORT',
 }
 

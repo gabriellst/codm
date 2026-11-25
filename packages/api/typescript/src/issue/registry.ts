@@ -16,7 +16,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: PanelPublisher, mock: MockPanelPublisher, integration: MockPanelPublisher, real: CloudPanelPublisher },
 	// "Is this issue's work held?" — the one check the dispatcher and the external-tool doors share (fase 2, item 2).
 	{ token: IssueHold, mock: MockIssueHold, real: LibSqlIssueHold },
-	// The board of one group for another context (fase 3, item 4 — `relatorio`): key, title, status, life state.
+	// The board of one group for another context (fase 3, item 4 — `boletim`): key, title, status, life state.
 	{ token: IssueBoardReader, mock: MockIssueBoardReader, real: LibSqlIssueBoardReader },
 	// One issue's timeline for another context (fase 5, item 3 — the supervisor): the same assembly the console shows.
 	{ token: IssueTimelineReader, mock: MockIssueTimelineReader, real: LibSqlIssueTimelineReader },

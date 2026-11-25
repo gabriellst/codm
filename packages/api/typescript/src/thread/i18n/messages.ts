@@ -471,7 +471,7 @@ const PT_MESSAGES = {
 	approvalYes: () => 'Sim',
 	approvalNo: () => 'Não',
 	/**
-	 * O boletim do grupo (fase 3, item 4) — a resposta ao `relatorio`, sem turno de modelo: o que espera
+	 * O boletim do grupo (fase 3, item 4) — a resposta ao `boletim`, sem turno de modelo: o que espera
 	 * decisão, o que parou, o que está andando e o que terminou nas últimas 24 h; uma linha por tarefa, no
 	 * máximo 8 por seção, e o link do painel no fim.
 	 */
@@ -494,7 +494,7 @@ const PT_MESSAGES = {
 	boardBulletin: (p: BoardBulletinParams) =>
 		bulletin(
 			p,
-			{ heading: 'Relatório', empty: 'Nada em andamento.', decides: 'decide', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
+			{ heading: 'Boletim', empty: 'Nada em andamento.', decides: 'decide', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
 			SECTION_PT,
 			CAUSE_PT,
 			ROW_DETAIL_PT,
@@ -529,7 +529,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 			bulletin(
 				p,
 				{
-					heading: 'Report',
+					heading: 'Bulletin',
 					empty: 'Nothing in progress.',
 					decides: 'decides',
 					more: (n, linked) => `+${n}${linked ? ' on the panel' : ''}`,

@@ -1,7 +1,7 @@
 import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 /**
- * Context-private fact (fase 3, item 4): a `relatorio` was answered with the group's bulletin, by rule, with
+ * Context-private fact (fase 3, item 4): a `boletim` was answered with the group's bulletin, by rule, with
  * no model turn. No text — it exists to COUNT the reports asked before and after the phase (spec, "Como
  * medi": `thread.bulletin_sent` × THREAD items).
  */

@@ -172,7 +172,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		const language = await this.disambiguationLanguage(thread)
-		// A CONVERSATION COMMAND (fase 3, item 4 — `relatorio`): its answer is composed HERE, before the
+		// A CONVERSATION COMMAND (fase 3, item 4 — `boletim`): its answer is composed HERE, before the
 		// transaction — reads only (the board, the open asks, the language, which may ask the cloud session) —
 		// and only for the message that is one; every other message pays a regex.
 		const command = parseThreadCommand(thread.textWithoutMention(input.text))
@@ -200,7 +200,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			const answered = await this.answer(thread, input, { quoted, repliesToAgent, language }, tx)
 			if (answered) return answered
 
-			// "relatorio" (fase 3, item 4): after the answers (a quoted question answered "relatório" is an answer),
+			// "boletim" (fase 3, item 4): after the answers (a quoted question answered "boletim" is an answer),
 			// before the control words. Anyone who may command the agent gets the bulletin, with no model turn.
 			if (prepared) {
 				const reported = await this.runCommand(thread, input, prepared, repliesToAgent, tx)
@@ -671,11 +671,11 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	}
 
 	/**
-	 * A CONVERSATION COMMAND (fase 3, item 4) — `relatorio` answered by rule: the message is recorded, the
+	 * A CONVERSATION COMMAND (fase 3, item 4) — `boletim` answered by rule (`relatorio` is the orchestrator's since 25/11): the message is recorded, the
 	 * answer prepared before the transaction is recorded and delivered (quoting the message that asked), and
 	 * `thread.bulletin_sent` counts it. NO model turn — no mailbox item. Only for a sender who may command the
 	 * agent (`Thread.canCommand`: the mention gate and the freshness window — a backlog replay of a week-old
-	 * "relatorio" answers nothing); anyone else's "relatorio" takes the usual path.
+	 * "boletim" answers nothing); anyone else's "boletim" takes the usual path.
 	 */
 	private async runCommand(
 		thread: Thread,
