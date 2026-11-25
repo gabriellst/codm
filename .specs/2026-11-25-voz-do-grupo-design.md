@@ -37,7 +37,7 @@ A mensagem começa pelo **assunto em palavras**, não pela chave. Os códigos de
 
 | Nível | Hoje | Proposto |
 |---|---|---|
-| Decisão | `❓ APP-7 · D1 — O vídeo está ok para publicar?` + opções + link | `❓ Vídeo na página inicial — posso publicar?` + opções numeradas + `Responda com o número ou citando esta mensagem.` |
+| Decisão | `❓ APP-7 · D1 — O vídeo está ok para publicar?` + opções + link | `❓ video-na-landing — posso publicar?` + opções numeradas + `Responda com o número ou citando esta mensagem.` |
 | Pergunta | `APP-7 · D2 — …` + opções + `Sigo com X se ninguém disser o contrário em 15 min.` + link | `Pergunta — Vídeo na página inicial: …` + opções + `Se ninguém responder em 15 min: X.` |
 | Prévia | `APP-7 · prévia — … (+2 no console)` + link | `👀 Prévia — Vídeo na página inicial` + texto; os prints vão como imagem (os que sobram não são citados) |
 | Fechamento | `✅ APP-7 · <título inteiro> — <texto>` + link | `✅ Pronto — Vídeo na página inicial` + texto |
@@ -45,13 +45,20 @@ A mensagem começa pelo **assunto em palavras**, não pela chave. Os códigos de
 | Resumo por pessoa | `operator, 2 coisas:` + itens com chave + link | **sai do padrão**: cada item vai como a sua própria mensagem curta (no grupo A, em um dia, juntou duas coisas sem relação num texto de mais de 1.800 caracteres) |
 | "Para qual?" | `Para qual? APP-7 · D1 ou APP-9 · D1 — responda citando a pergunta.` | `Tenho duas perguntas abertas: a do vídeo na página inicial e a do aviso do app. Responda citando a que for.` |
 
-**Nome curto da tarefa:** o título, cortado na palavra em até ~48 caracteres. Para issue com chave antiga em slug, o mesmo nome curto vale; o slug nunca aparece.
+**O nome da tarefa é um slug curto e legível, não um código (decisão do grupo, 25/11).** Entre `APP-7` e o slug antigo, o grupo prefere o slug, porque ele diz do que se trata. O slug antigo era feio porque vinha do título cru do pedido (`pedido-do-operador-17-11-21-14-abra-o-ch`, cortado em 40 caracteres). A correção:
+- `ForkIssue` / `DeclareIssueOpen` recebem um **nome** de 2 a 4 palavras (≤ 24 caracteres, ex.: "vídeo na landing"), declarado pelo orquestrador além do título.
+- A chave nova é `uniqueSlugKey(nome)`, única por workspace (`video-na-landing`, colisão → `video-na-landing-2`). A sequência `PREFIXO-n` deixa de ser a chave visível.
+- `slugify` passa a tirar os acentos em vez de trocá-los por hífen (hoje `conversação` → `conversac-a-o`, um defeito).
+- As chaves `APP-n` que já existem continuam valendo e continuam aceitas quando alguém digitar.
+- As mensagens nomeiam a tarefa pelo slug: `❓ video-na-landing — posso publicar?`.
+
+Isso muda o contrato do `ForkIssue` (campo novo), então vai como passo próprio, depois dos formatos.
 
 **Link do painel:** sai de todas as mensagens. Fica só no boletim (`boletim`) e quando alguém pedir ("painel"/"link").
 
 ### 2. Limpeza de dados (uma vez, com o operador aprovando)
 
-As 23 issues abertas com slug: listar por grupo com idade e último sinal. As inativas há mais de 7 dias são **concluídas como abandonadas** (operador confirma a lista). As vivas recebem uma chave curta. Assim o boletim e o kanban deixam de mostrar dezenas de "parou sem dizer o que falta" que ninguém acompanha.
+As 23 issues abertas com slug longo: listar por grupo com idade e último sinal. As inativas há mais de 7 dias são **concluídas como abandonadas** (operador confirma a lista). As vivas recebem um **slug curto** pela regra nova (não um `APP-n`). Assim o boletim e o kanban deixam de mostrar dezenas de "parou sem dizer o que falta" que ninguém acompanha.
 
 ### 3. Voz e tamanho (prompt das ferramentas da issue)
 
@@ -87,11 +94,12 @@ O orquestrador não repete o estado de uma issue que falou nos últimos 2 min: o
 
 ## Ordem
 
-1. Formatos + link (§1): uma release pequena, testes de formato por nível.
-2. Limpeza das issues com slug (§2): script somente leitura gera a lista, o operador aprova, depois aplica.
-3. Voz e tamanho (§3), depois medir de novo.
-4. Correção no meio do turno (§4), depois do ok do dono sobre a regra.
-5. Duas vozes (§5), depois de rastrear os outros pares.
+1. Formatos + link (§1): uma release pequena, testes de formato por nível. Até o passo 2, a mensagem nomeia a tarefa pelo título curto.
+2. Nome por slug curto (§1, contrato do `ForkIssue`) + correção do `slugify`.
+3. Limpeza das issues com slug longo (§2): script somente leitura gera a lista, o operador aprova, depois aplica.
+4. Voz e tamanho (§3), depois medir de novo.
+5. Correção no meio do turno (§4), depois do ok do dono sobre a regra.
+6. Duas vozes (§5), depois de rastrear os outros pares.
 
 ## Como medir de novo
 
