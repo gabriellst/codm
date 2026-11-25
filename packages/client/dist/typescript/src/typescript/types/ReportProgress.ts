@@ -27,6 +27,10 @@ export type ReportProgressMutationRequest = {
      * @type string
     */
     text: string;
+    /**
+     * @type array | undefined
+    */
+    artifactIds?: string[];
 };
 
 export type ReportProgressMutationResponse = ReportProgress200;

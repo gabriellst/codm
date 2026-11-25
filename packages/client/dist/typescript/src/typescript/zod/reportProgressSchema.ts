@@ -16,7 +16,8 @@ export const reportProgressPathParamsSchema = z.object({
 export const reportProgress200Schema = z.any()
 
 export const reportProgressMutationRequestSchema = z.object({
-    "text": z.string().min(1).max(2000)
+    "text": z.string().min(1).max(2000),
+"artifactIds": z.optional(z.array(z.uuid()).max(20))
     })
 
 export const reportProgressMutationResponseSchema = z.lazy(() => reportProgress200Schema)

@@ -2568,7 +2568,8 @@ type AskOperatorJSONBody struct {
 
 // ReportProgressJSONBody defines parameters for ReportProgress.
 type ReportProgressJSONBody struct {
-	Text string `json:"text"`
+	ArtifactIds *[]openapi_types.UUID `json:"artifactIds,omitempty"`
+	Text        string                `json:"text"`
 }
 
 // AskQuestionJSONBody defines parameters for AskQuestion.

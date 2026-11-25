@@ -1,4 +1,4 @@
-import { BlockCause, GroupOutputMode, IssueSignalLevel, OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { ArtifactKind, BlockCause, GroupOutputMode, IssueSignalLevel, OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * THE OUTPUT POLICY (fase 3, "emagrecer o grupo") — where what an issue says goes, by level and by the
@@ -46,6 +46,55 @@ export const ROUTING_BY_MODE: Record<GroupOutputMode, Record<IssueSignalLevel, O
 		[IssueSignalLevel.PROGRESS]: OutputRouting.GROUP,
 	},
 }
+
+/**
+ * WHETHER THE PRINTS A SIGNAL CITES GO TO THE GROUP (voz do grupo, 25/11) — apart from where its TEXT goes. Before
+ * fase 3 ~95% of the recorded images reached the group; on the first day after it, 14 of 46 did (the extra prints
+ * of a preview became "(+N no console)", and the prints of a step had no way out). The owner asked for them back:
+ * a preview, a step and a closing show every print they cite (up to `ARTIFACTS_SHOWN_MAX`), even when the step's
+ * text stays on the panel. `DECISIONS_ONLY` stays quiet. A decision, a question and a notice cite none.
+ */
+export const ARTIFACTS_TO_GROUP: Record<GroupOutputMode, Record<IssueSignalLevel, boolean>> = {
+	[GroupOutputMode.DECISIONS_ONLY]: {
+		[IssueSignalLevel.DECISION]: false,
+		[IssueSignalLevel.QUESTION]: false,
+		[IssueSignalLevel.FEEDBACK]: false,
+		[IssueSignalLevel.CLOSING]: false,
+		[IssueSignalLevel.BLOCK_NOTICE]: false,
+		[IssueSignalLevel.PROGRESS]: false,
+	},
+	[GroupOutputMode.DECISIONS_AND_LIVE]: {
+		[IssueSignalLevel.DECISION]: false,
+		[IssueSignalLevel.QUESTION]: false,
+		[IssueSignalLevel.FEEDBACK]: true,
+		[IssueSignalLevel.CLOSING]: true,
+		[IssueSignalLevel.BLOCK_NOTICE]: false,
+		[IssueSignalLevel.PROGRESS]: true,
+	},
+	[GroupOutputMode.EVERYTHING]: {
+		[IssueSignalLevel.DECISION]: false,
+		[IssueSignalLevel.QUESTION]: false,
+		[IssueSignalLevel.FEEDBACK]: true,
+		[IssueSignalLevel.CLOSING]: true,
+		[IssueSignalLevel.BLOCK_NOTICE]: false,
+		[IssueSignalLevel.PROGRESS]: true,
+	},
+}
+
+/**
+ * Which kinds of artifact go out as a print of their own — a file people look at. A `LINK` has no bytes: it would
+ * be a URL in a caption (none of the recorded links reached the group before fase 3 either).
+ */
+export const SHOWN_AS_PRINT: Record<ArtifactKind, boolean> = {
+	[ArtifactKind.IMAGE]: true,
+	[ArtifactKind.VIDEO]: true,
+	[ArtifactKind.FILE]: true,
+	[ArtifactKind.AUDIO]: true,
+	[ArtifactKind.LINK]: false,
+}
+
+/** The most prints one signal shows in the group — the preview's main one included. */
+export const ARTIFACTS_SHOWN_MAX = 6
 
 /**
  * How long a person's questions and feedback wait to go out TOGETHER (fase 3, item 2): the signals for the

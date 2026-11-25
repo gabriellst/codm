@@ -1,12 +1,16 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, CommandQueue, Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { IssueSignalLevel, OutputRouting } from '@codm/contracts-typescript/wire/enums'
+import { IssueSignalLevel, OutputRouting, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { IssueArtifactReader } from '../services/IssueArtifactReader'
+import { THREAD_MESSAGES } from '../i18n/messages'
+import { ARTIFACTS_SHOWN_MAX, ARTIFACTS_TO_GROUP, SHOWN_AS_PRINT } from '../utils/OutputPolicy'
+import { derivedId } from '../utils/derivedId'
 import { enqueueSignalDelivery, QUOTES_ORIGIN, recordIssueSignal } from '../utils/issueSignal'
 import type { ApplicationErrors } from '../errors'
 
@@ -19,7 +23,10 @@ export const DeliverIssueSignalInputSchema = z.object({
 	addresseeId: z.string().min(1).optional(),
 	/** The artifact a FEEDBACK previews — the group gets it with the message when it goes out alone. */
 	mainArtifactId: z.uuid().optional(),
-	/** Every artifact the signal cites (the main one included) — the others are counted, and stay on the console. */
+	/**
+	 * Every artifact the signal cites (the main one included). The ones beyond the main go to the group as prints of
+	 * their own when the mode shows this level's prints (`ARTIFACTS_TO_GROUP`), up to `ARTIFACTS_SHOWN_MAX`.
+	 */
 	artifactIds: z.array(z.uuid()).optional(),
 	/**
 	 * The person's message this signal is the reply to (a closing declared by a turn that was answering a steer
@@ -60,6 +67,7 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		private readonly session: CloudSession,
 		private readonly commands: CommandQueue,
 		private readonly consumed: ConsumedMessageRepository,
+		private readonly artifactFiles: IssueArtifactReader,
 	) {
 		super()
 	}
@@ -81,6 +89,15 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		// the wire, when the platform id of that message is known (a request typed elsewhere has none).
 		const quoted = answers ?? (QUOTES_ORIGIN[input.level] && origin?.threadId === thread.id.value ? origin : undefined)
 		const quotedMessageId = quoted ? await this.consumed.findPlatformId(quoted.entryId, tx) : undefined
+		// THE PRINTS SHOWN ON THEIR OWN (voz do grupo, 25/11): every cited artifact beyond the main one, when the
+		// group's mode shows this level's prints — read before the write transaction (no I/O under the lock).
+		const shown = ARTIFACTS_TO_GROUP[thread.outputMode][input.level]
+			? (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId)
+			: []
+		const room = ARTIFACTS_SHOWN_MAX - (input.mainArtifactId ? 1 : 0)
+		const prints = (await Promise.all([...new Set(shown)].slice(0, Math.max(room, 0)).map(id => this.artifactFiles.find(id)))).filter(
+			(file): file is NonNullable<typeof file> => file !== undefined && file.issueId === issue.id.value && SHOWN_AS_PRINT[file.kind],
+		)
 
 		return this.withTransaction(tx, async tx => {
 			// ALREADY SAID — the signal's entry committed with its delivery, so there is nothing left to do. Read in
@@ -103,8 +120,22 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 				},
 				{ language },
 			)
+			// Each print its own entry, linked to the issue (quoting it routes there), its id derived from the signal and
+			// the artifact — a redelivered signal stops at "already said" above and records none of them again.
+			const printEntries = prints.map(file =>
+				thread.recordEntry({
+					entryId: derivedId(input.signalId, file.artifactId),
+					kind: TranscriptKind.SYSTEM,
+					text: THREAD_MESSAGES.artifactCaption(language, { key: issue.key, name: file.name }),
+					issueId: issue.id.value,
+					level: input.level,
+					routing: OutputRouting.GROUP,
+					artifactId: file.artifactId,
+				}),
+			)
 			await this.threads.save(thread, tx)
 			await enqueueSignalDelivery(this.commands, thread, entry, routing, tx, { quotedMessageId })
+			for (const print of printEntries) await enqueueSignalDelivery(this.commands, thread, print, OutputRouting.GROUP, tx)
 			return { entryId: entry.entryId, routing }
 		})
 	}

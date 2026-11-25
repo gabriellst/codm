@@ -116,4 +116,21 @@ describe('RequestFeedback / ReportProgress', () => {
 		const [fact] = await spoken()
 		expect(fact?.payload).toEqual({ issueId, threadId, level: IssueSignalLevel.PROGRESS, text: 'Rodei os testes.', artifactIds: [] })
 	})
+	// Voz do grupo (25/11): a step may cite its prints — this issue's only — and they ride the fact to the group.
+	it("PROGRESS carries the prints it cites, and refuses an artifact that is not this issue's", async () => {
+		const { threadId, issueId } = await givenIssueOnThread()
+		const other = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId, key: 'outra-tarefa-2' })
+		const mine = await givenArtifact(testBed, threadId, { issueId, ref: screenshot() })
+		const theirs = await givenArtifact(testBed, threadId, { issueId: other.id.value, ref: screenshot() })
+		const report = (artifactIds: string[]) =>
+			testBed
+				.resolve(ReportProgress)
+				.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId, issueId, text: 'conferi no navegador', artifactIds })
+
+		await expect(report([theirs.id.value])).rejects.toMatchObject({ name: 'ARTIFACT_NOT_FOUND' })
+		await report([mine.id.value, mine.id.value])
+
+		const facts = (await spoken()).filter(fact => fact.payload.level === IssueSignalLevel.PROGRESS)
+		expect(facts.map(fact => fact.payload.artifactIds)).toEqual([[mine.id.value]])
+	})
 })

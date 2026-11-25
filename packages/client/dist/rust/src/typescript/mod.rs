@@ -14846,6 +14846,15 @@ pub mod types {
     ///    "text"
     ///  ],
     ///  "properties": {
+    ///    "artifactIds": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string",
+    ///        "format": "uuid",
+    ///        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///      },
+    ///      "maxItems": 20
+    ///    },
     ///    "text": {
     ///      "type": "string",
     ///      "maxLength": 2000,
@@ -14857,6 +14866,12 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ReportProgressBody {
+        #[serde(
+            rename = "artifactIds",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub artifact_ids: ::std::vec::Vec<::uuid::Uuid>,
         pub text: ReportProgressBodyText,
     }
     impl ::std::convert::From<&ReportProgressBody> for ReportProgressBody {

@@ -12,9 +12,9 @@ export class LibSqlIssueArtifactReader extends IssueArtifactReader {
 
 	async find(artifactId: string): Promise<IssueArtifactFile | undefined> {
 		const [row] = await this.driver.db
-			.select({ artifactId: artifacts.id, issueId: artifacts.issueId, kind: artifacts.kind, ref: artifacts.ref })
+			.select({ artifactId: artifacts.id, issueId: artifacts.issueId, kind: artifacts.kind, name: artifacts.name, ref: artifacts.ref })
 			.from(artifacts)
 			.where(eq(artifacts.id, artifactId))
-		return row ? { artifactId: row.artifactId, issueId: row.issueId ?? undefined, kind: row.kind, ref: row.ref } : undefined
+		return row ? { artifactId: row.artifactId, issueId: row.issueId ?? undefined, kind: row.kind, name: row.name, ref: row.ref } : undefined
 	}
 }

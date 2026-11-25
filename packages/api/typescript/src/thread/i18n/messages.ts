@@ -445,6 +445,8 @@ const PT_MESSAGES = {
 	 * código da pergunta e o link da issue no painel.
 	 */
 	issueSignal: (p: IssueSignalParams) => SIGNAL_PT[p.level](p),
+	/** A print a task shows on its own (voz do grupo, 25/11) — its caption names the task and the print. */
+	artifactCaption: (p: { key: string; name: string }) => `🖼️ ${p.key} — ${p.name}`,
 	/**
 	 * Um "sim" solto com várias perguntas abertas que a pessoa pode responder (fase 3, item 3): UMA pergunta de
 	 * volta, curta, com os códigos — nunca um palpite.
@@ -511,6 +513,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
+		artifactCaption: p => `🖼️ ${p.key} — ${p.name}`,
 		defaultApplied: p =>
 			`Nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
 		answerDisambiguation: p => `I have ${p.asks.length} open questions: ${alternatives(p.asks, 'and')}. Reply quoting the one you mean.`,
