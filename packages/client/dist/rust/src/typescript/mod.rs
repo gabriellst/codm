@@ -4316,6 +4316,11 @@ pub mod types {
     ///      "maxLength": 2000,
     ///      "minLength": 1
     ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 40,
+    ///      "minLength": 2
+    ///    },
     ///    "priority": {
     ///      "$ref": "#/components/schemas/IssuePriority"
     ///    },
@@ -4337,6 +4342,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ForkIssueBody {
         pub goal: ForkIssueBodyGoal,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub name: ::std::option::Option<ForkIssueBodyName>,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub priority: ::std::option::Option<
             ::codm_contracts_rust::wire::enums::IssuePriority,
@@ -4435,6 +4442,87 @@ pub mod types {
         }
     }
     impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyGoal {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`ForkIssueBodyName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 2
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ForkIssueBodyName(::std::string::String);
+    impl ::std::ops::Deref for ForkIssueBodyName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ForkIssueBodyName> for ::std::string::String {
+        fn from(value: ForkIssueBodyName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ForkIssueBodyName> for ForkIssueBodyName {
+        fn from(value: &ForkIssueBodyName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ForkIssueBodyName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 2usize {
+                return Err("shorter than 2 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ForkIssueBodyName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyName {
         fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
         where
             D: ::serde::Deserializer<'de>,

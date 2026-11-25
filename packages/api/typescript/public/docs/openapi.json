@@ -1624,6 +1624,11 @@
                     "minLength": 1,
                     "maxLength": 80
                   },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40
+                  },
                   "priority": {
                     "$ref": "#/components/schemas/IssuePriority"
                   },
@@ -1642,7 +1647,8 @@
                 "default": {
                   "value": {
                     "goal": "põe um toggle de dark mode nas configurações",
-                    "title": "Toggle de dark mode nas configurações"
+                    "title": "Toggle de dark mode nas configurações",
+                    "name": "dark mode"
                   },
                   "summary": "Example"
                 }

@@ -2533,6 +2533,7 @@ type CreateIssueJSONBody struct {
 // ForkIssueJSONBody defines parameters for ForkIssue.
 type ForkIssueJSONBody struct {
 	Goal           string          `json:"goal"`
+	Name           *string         `json:"name,omitempty"`
 	Priority       *IssuePriority  `json:"priority,omitempty"`
 	PriorityReason *PriorityReason `json:"priorityReason,omitempty"`
 	Title          *string         `json:"title,omitempty"`
