@@ -71,8 +71,8 @@ describe('DeliverIssueSignal — what an issue says goes where the group mode se
 
 		expect(out.routing).toBe(OutputRouting.GROUP)
 		const entry = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
-		expect(entry?.text).toContain('APP-12 — montei o layout')
-		expect(entry?.text).toContain(`/panel/g/rotated-${thread.id.value}#APP-12`)
+		// Voz do grupo (25/11): the key and the text — no panel link, even with one to give.
+		expect(entry?.text).toBe('APP-12 — montei o layout')
 		expect(await deliveries()).toBe(1)
 	})
 

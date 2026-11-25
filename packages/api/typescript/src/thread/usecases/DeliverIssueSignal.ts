@@ -5,7 +5,6 @@ import { IssueSignalLevel, OutputRouting } from '@codm/contracts-typescript/wire
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
-import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { enqueueSignalDelivery, QUOTES_ORIGIN, recordIssueSignal } from '../utils/issueSignal'
@@ -59,7 +58,6 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		private readonly threads: ThreadRepository,
 		private readonly issues: IssueRepository,
 		private readonly session: CloudSession,
-		private readonly panel: PanelPublisher,
 		private readonly commands: CommandQueue,
 		private readonly consumed: ConsumedMessageRepository,
 	) {
@@ -83,7 +81,6 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		// the wire, when the platform id of that message is known (a request typed elsewhere has none).
 		const quoted = answers ?? (QUOTES_ORIGIN[input.level] && origin?.threadId === thread.id.value ? origin : undefined)
 		const quotedMessageId = quoted ? await this.consumed.findPlatformId(quoted.entryId, tx) : undefined
-		const others = (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId).length
 
 		return this.withTransaction(tx, async tx => {
 			// ALREADY SAID — the signal's entry committed with its delivery, so there is nothing left to do. Read in
@@ -100,12 +97,11 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 					addresseeId: input.addresseeId,
 					requesterId,
 					artifactId: input.mainArtifactId,
-					moreArtifacts: others,
 					entryId: input.signalId,
 					quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
 					answersPerson: answers !== undefined,
 				},
-				{ language, panelLink: this.panel.linkOf(thread.id.value) },
+				{ language },
 			)
 			await this.threads.save(thread, tx)
 			await enqueueSignalDelivery(this.commands, thread, entry, routing, tx, { quotedMessageId })

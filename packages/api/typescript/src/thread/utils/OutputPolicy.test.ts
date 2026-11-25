@@ -27,10 +27,13 @@ describe('OutputPolicy — the tables are total and say what the owner decided',
 		expect(ROUTING_BY_MODE[GroupOutputMode.EVERYTHING][IssueSignalLevel.PROGRESS]).toBe(OutputRouting.GROUP)
 	})
 
-	it("a question waits for its person's digest (S5b), and only GROUP sends now", () => {
+	// Voz do grupo (25/11): no digest in any mode — a question and a preview go out as themselves.
+	it('no mode routes to a digest any more, and only GROUP sends now', () => {
 		expect(routings.filter(routing => SENDS_NOW[routing])).toEqual([OutputRouting.GROUP])
-		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.QUESTION)).toBe(OutputRouting.DIGEST)
-		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.FEEDBACK)).toBe(OutputRouting.DIGEST)
+		for (const mode of Object.values(GroupOutputMode))
+			expect(Object.values(ROUTING_BY_MODE[mode]).filter(routing => routing === OutputRouting.DIGEST)).toEqual([])
+		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.QUESTION)).toBe(OutputRouting.GROUP)
+		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.FEEDBACK)).toBe(OutputRouting.GROUP)
 		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.PROGRESS)).toBe(OutputRouting.PANEL)
 	})
 

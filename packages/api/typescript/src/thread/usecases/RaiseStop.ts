@@ -6,7 +6,6 @@ import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { StopAskSchema } from '@shared/objects'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
-import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { StopPolicyConfigRepository, type StopPolicy } from '../repositories/StopPolicyConfigRepository'
 import { causeAlreadyTold, LEVEL_OF_STOP } from '../utils/OutputPolicy'
@@ -14,7 +13,6 @@ import { StopAsk } from '../objects/StopAsk'
 import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import { enqueueSignalDelivery, recordIssueSignal } from '../utils/issueSignal'
-import { askCode } from '../utils/askAnswer'
 import type { ApplicationErrors } from '../errors'
 
 export const RaiseStopInputSchema = z.object({
@@ -104,7 +102,6 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 		private readonly policy: StopPolicyConfigRepository,
 		private readonly session: CloudSession,
 		private readonly commands: CommandQueue,
-		private readonly panel: PanelPublisher,
 	) {
 		super()
 	}
@@ -183,7 +180,6 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 						// The question the stop puts, or the provider's detail verbatim; empty is fine — the format of a
 						// decision falls back to the title, a notice simply has no body.
 						text: ask?.question ?? input.detail,
-						code: seq === undefined ? undefined : askCode(issue.key, seq),
 						options: ask?.options.map(option => option.label),
 						defaultLabel: ask?.defaultLabel(),
 						addresseeId: ask?.addresseeId,
@@ -194,7 +190,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 							others.map(other => other.kind),
 						),
 					},
-					{ language, panelLink: this.panel.linkOf(thread.id.value) },
+					{ language },
 				)
 				const stop = this.raise(thread, input, { title, ask, seq, askEntryId: notice.entry.entryId })
 				return this.commit(thread, stop, notice, tx)

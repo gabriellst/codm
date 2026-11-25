@@ -5,7 +5,6 @@ import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { IssueHold } from '@issue/services/IssueHold'
-import { PanelPublisher } from '@issue/services/PanelPublisher'
 import type { Stop } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
@@ -86,7 +85,6 @@ export class ApplyDueQuestionDefaults extends Handler<
 		private readonly hold: IssueHold,
 		private readonly connectivity: ChannelConnectivity,
 		private readonly session: CloudSession,
-		private readonly panel: PanelPublisher,
 		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
 	) {
@@ -142,12 +140,11 @@ export class ApplyDueQuestionDefaults extends Handler<
 					issue: { issueId: issue.id.value, key: issue.key, title: issue.title },
 					level: IssueSignalLevel.PROGRESS,
 					text: THREAD_MESSAGES.defaultApplied(language, {
-						seq: stop.seq ?? 0,
 						label: stop.ask?.default ? labelOfAnswer(stop.ask, { kind: AskAnswerKind.DEFAULT, default: stop.ask.default }) : '',
 						late: stop.dueAt !== undefined && now.getTime() - stop.dueAt.getTime() > LATE_DEFAULT_AFTER_MS,
 					}),
 				},
-				{ language, panelLink: this.panel.linkOf(current.id.value) },
+				{ language },
 			)
 			await this.threads.save(current, tx)
 			await enqueueSignalDelivery(this.commands, current, entry, routing, tx)

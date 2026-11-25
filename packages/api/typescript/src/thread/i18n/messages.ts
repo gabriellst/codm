@@ -103,9 +103,13 @@ function whenEn(at: Date, now: Date): string {
 
 /**
  * What an issue says to the group, already decided by the output policy (fase 3) — the structured parts the
- * format of each level picks from. `code` is the ask's (`APP-12 · D1`); `options` are the labels in order;
- * `defaultLabel` is what a question goes on with; `link` is the issue on the cloud panel (absent without a
- * cloud login). Every text the issue wrote (`text`, `options`) goes VERBATIM — it is the issue's voice.
+ * format of each level picks from. `options` are the labels in order; `defaultLabel` is what a question goes
+ * on with. Every text the issue wrote (`text`, `options`) goes VERBATIM — it is the issue's voice.
+ *
+ * NO CODE AND NO LINK (voz do grupo, 25/11): the group read `APP-12 · D1 —` prefixes and a panel link on every
+ * message as noise ("cheio de código"). The task is named by its key only — a readable slug since P2 — the ask
+ * codes are still ACCEPTED when typed (`parseAskCode`) but never printed, and the panel link lives in the
+ * bulletin alone.
  * `text` may be empty only on a decision (it then asks the title — a `PERMISSION_DENIED` with no detail), a
  * block notice (which then has no body) or a closing (an INFERRED completion said nothing: it reads
  * "concluída"); the formats never print the title twice.
@@ -113,15 +117,11 @@ function whenEn(at: Date, now: Date): string {
 export interface IssueSignalParams {
 	level: IssueSignalLevel
 	key: string
-	code?: string
 	title: string
 	text: string
 	options: readonly string[]
 	defaultLabel?: string
 	decider?: string
-	link?: string
-	/** A FEEDBACK's other artifacts — they stay on the console until the panel has a gallery (spec, pré-requisito). */
-	moreArtifacts?: number
 }
 
 /** The lines that appear only when their part exists — the format never renders an empty line or a hole. */
@@ -136,36 +136,34 @@ function numbered(options: readonly string[]): string {
 /** The format of each level — total over `IssueSignalLevel`, so a level added to the contract needs its words here. */
 const SIGNAL_PT: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 	[IssueSignalLevel.DECISION]: p =>
-		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Quem decide: ${p.decider}`, p.link),
-	[IssueSignalLevel.QUESTION]: p =>
 		lines(
-			`${p.code ?? p.key} — ${p.text || p.title}`,
+			`❓ ${p.key} — ${p.text || p.title}`,
 			numbered(p.options),
-			p.defaultLabel && `Sigo com ${p.defaultLabel} se ninguém disser o contrário em 15 min.`,
-			p.link,
+			p.decider && `Quem decide: ${p.decider}`,
+			p.options.length > 0 && 'Responda com o número ou citando esta mensagem.',
 		),
-	[IssueSignalLevel.FEEDBACK]: p =>
-		lines(`${p.key} · prévia — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} no console)` : ''}`, p.link),
-	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'concluída'}`, p.link),
-	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
-	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(`${p.key} — ${p.text || p.title}`, numbered(p.options), p.defaultLabel && `Se ninguém responder em 15 min: ${p.defaultLabel}.`),
+	[IssueSignalLevel.FEEDBACK]: p => `👀 ${p.key} — ${p.text}`,
+	[IssueSignalLevel.CLOSING]: p => `✅ ${p.key} — ${p.text || `${p.title}: concluída`}`,
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} parou — ${p.title}.`, p.text),
+	[IssueSignalLevel.PROGRESS]: p => `${p.key} — ${p.text}`,
 }
 
 const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 	[IssueSignalLevel.DECISION]: p =>
-		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Who decides: ${p.decider}`, p.link),
-	[IssueSignalLevel.QUESTION]: p =>
 		lines(
-			`${p.code ?? p.key} — ${p.text || p.title}`,
+			`❓ ${p.key} — ${p.text || p.title}`,
 			numbered(p.options),
-			p.defaultLabel && `I'll go on with ${p.defaultLabel} unless someone says otherwise within 15 min.`,
-			p.link,
+			p.decider && `Who decides: ${p.decider}`,
+			p.options.length > 0 && 'Reply with the number or by quoting this message.',
 		),
-	[IssueSignalLevel.FEEDBACK]: p =>
-		lines(`${p.key} · preview — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} on the console)` : ''}`, p.link),
-	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'done'}`, p.link),
-	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
-	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(`${p.key} — ${p.text || p.title}`, numbered(p.options), p.defaultLabel && `If nobody answers within 15 min: ${p.defaultLabel}.`),
+	[IssueSignalLevel.FEEDBACK]: p => `👀 ${p.key} — ${p.text}`,
+	[IssueSignalLevel.CLOSING]: p => `✅ ${p.key} — ${p.text || `${p.title}: done`}`,
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} stopped — ${p.title}.`, p.text),
+	[IssueSignalLevel.PROGRESS]: p => `${p.key} — ${p.text}`,
 }
 
 /**
@@ -188,9 +186,9 @@ function bullet(item: string): string {
 		.join('\n')
 }
 
-/** One ask a bare answer might be for — its code and its question (cut short in the message). */
+/** One ask a bare answer might be for — its task's key and its question (cut short in the message). */
 export interface PendingAskRef {
-	code: string
+	key: string
 	question: string
 }
 
@@ -201,13 +199,11 @@ function brief(question: string): string {
 }
 
 function alternatives(asks: readonly PendingAskRef[], or: string): string {
-	const each = asks.map(ask => `${ask.code} (${brief(ask.question)})`)
+	const each = asks.map(ask => `${ask.key} (${brief(ask.question)})`)
 	return each.length > 1 ? `${each.slice(0, -1).join(', ')} ${or} ${each[each.length - 1]}` : (each[0] ?? '')
 }
 
 interface DefaultAppliedParams {
-	/** The ask's number in its issue — the `2` of `D2`; the line already starts with the issue's key. */
-	seq: number
 	/** What it went on with, as people read it. */
 	label: string
 	/** The default applied well after the deadline — the daemon was off. */
@@ -374,7 +370,7 @@ function batchReceipt(p: BatchReceiptParams, heading: string, part: Record<Batch
 		const said = [...shown, ...(more > 0 ? [`+${more}`] : [])]
 		return `${part[kind](p.counts[kind])}${said.length > 0 ? ` (${said.join('; ')})` : ''}`
 	})
-	return lines(`${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`, p.link)
+	return `${heading} ${p.code}: ${p.total} → ${parts.join(', ')}.`
 }
 
 /**
@@ -458,9 +454,9 @@ const PT_MESSAGES = {
 	 * (a política decide: só o painel no modo padrão). Quando o prazo foi aplicado atrasado, diz por quê.
 	 */
 	defaultApplied: (p: DefaultAppliedParams) =>
-		`D${p.seq}: ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
+		`Ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
 	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
-		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
+		`Tenho ${p.asks.length} perguntas abertas: ${alternatives(p.asks, 'e')}. Responda citando a que for.`,
 	/** Perguntas e prévias para a mesma pessoa em 60 s, numa mensagem só (fase 3, item 2). */
 	signalDigest: (p: SignalDigestParams) => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} coisas:`, ...p.items.map(bullet), p.link),
 	/**
@@ -516,8 +512,8 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
 		defaultApplied: p =>
-			`D${p.seq}: nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
-		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
+			`Nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
+		answerDisambiguation: p => `I have ${p.asks.length} open questions: ${alternatives(p.asks, 'and')}. Reply quoting the one you mean.`,
 		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
 		approvalYes: () => 'Yes',
 		approvalNo: () => 'No',

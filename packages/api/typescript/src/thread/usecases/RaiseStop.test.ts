@@ -295,15 +295,18 @@ describe('RaiseStop — a política de saída (fase 3)', () => {
 		})
 
 		const [entry] = await groupEntries(thread.id.value)
-		expect(entry?.text).toContain('APP-12 · D1 — Posso publicar a prévia?')
+		expect(entry?.text).toContain('❓ APP-12 — Posso publicar a prévia?')
 		expect(entry?.text).toContain('1) Publica')
+		expect(entry?.text).toContain('Responda com o número ou citando esta mensagem.')
+		// The ask code is never printed (voz do grupo, 25/11) — it is still accepted when typed.
+		expect(entry?.text).not.toContain('D1')
 		expect(entry).toMatchObject({ issueId: issue.id.value, level: IssueSignalLevel.DECISION, routing: OutputRouting.GROUP, stopId })
 		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
 		expect(stop).toMatchObject({ kind: StopKind.DECISION_REQUESTED, seq: 1, askEntryId: entry?.entryId })
 		expect(await enqueuedDeliveries(testBed)).toBe(1)
 	})
 
-	it('uma pergunta diz com o que segue em 15 min; a segunda da issue é D2', async () => {
+	it('uma pergunta diz com o que segue em 15 min e sai sozinha; a segunda da issue é a D2', async () => {
 		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
 		const issue = await issueOn(thread.id.value)
 
@@ -319,13 +322,14 @@ describe('RaiseStop — a política de saída (fase 3)', () => {
 		}
 
 		const texts = (await groupEntries(thread.id.value)).map(e => e.text)
-		expect(texts[0]).toContain('APP-12 · D1 — Uso o tema claro?')
-		expect(texts[0]).toContain('Sigo com Tema claro se ninguém disser o contrário em 15 min.')
-		expect(texts[1]).toContain('APP-12 · D2')
-		// S5b: a pergunta espera o resumo da pessoa (60 s) — nada sai agora; UM flush agendado para a janela.
-		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.DIGEST)
-		expect(await enqueuedDeliveries(testBed)).toBe(0)
-		expect(await testBed.probe().count('scheduledCommands', { name: 'flush_signal_digest' })).toBe(1)
+		expect(texts[0]).toContain('APP-12 — Uso o tema claro?')
+		expect(texts[0]).toContain('Se ninguém responder em 15 min: Tema claro.')
+		const stops = await testBed.resolve(ThreadRepository).openStopsByIssue(issue.id.value)
+		expect(stops.map(stop => stop.seq).sort()).toEqual([1, 2])
+		// Voz do grupo (25/11): no digest — each question goes out as itself, now.
+		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.GROUP)
+		expect(await enqueuedDeliveries(testBed)).toBe(2)
+		expect(await testBed.probe().count('scheduledCommands', { name: 'flush_signal_digest' })).toBe(0)
 	})
 
 	it('uma pergunta com efeito declarado vira decisão — sem padrão, sem prazo', async () => {

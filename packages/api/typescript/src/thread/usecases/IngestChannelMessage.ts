@@ -39,7 +39,7 @@ import type { ApplicationErrors } from '../errors'
 import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import { answeredInGroupAs, mayAnswer, seenByTheGroup, YES_NO_RESOLUTION } from '../utils/answerRules'
-import { askCode, optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
+import { optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
 import { AnswerStop } from './AnswerStop'
 import { ResolveStop } from './ResolveStop'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
@@ -586,7 +586,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		const asks = await Promise.all(
 			stops.map(async stop => {
 				const issue = stop.issueId ? await this.issues.findById(stop.issueId, tx) : undefined
-				return { code: askCode(issue?.key ?? '', stop.seq), question: stop.ask?.question ?? stop.title }
+				return { key: issue?.key ?? '', question: stop.ask?.question ?? stop.title }
 			}),
 		)
 		const entry = thread.recordEntry({

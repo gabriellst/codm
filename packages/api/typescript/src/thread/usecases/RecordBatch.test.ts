@@ -125,7 +125,7 @@ describe('RecordBatch — one destination per item, one receipt per batch', () =
 		expect(batch?.items.filter(item => item.destination !== undefined)).toHaveLength(10)
 		const receipt = await testBed.resolve(ThreadRepository).findEntry(out.receiptEntryId)
 		expect(receipt?.text).toContain('Lote L-1: 10 → 1 tarefa nova, 9 recusados (motivo 2; motivo 3; motivo 4; +6).')
-		expect(receipt?.text).toContain(`/panel/g/rotated-${threadId}#L-1`)
+		expect(receipt?.text).not.toContain('/panel/')
 		expect(receipt).toMatchObject({ level: BATCH_RECEIPT_LEVEL, routing: OutputRouting.GROUP })
 		expect(await deliveries()).toBe(before + 1)
 

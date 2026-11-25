@@ -15,11 +15,15 @@ import { BlockCause, GroupOutputMode, IssueSignalLevel, OutputRouting, StopKind 
  * The matrix level × mode, as the owner decided it (18/11): `DECISIONS_AND_LIVE` is the default;
  * `DECISIONS_ONLY` keeps the questions in the group; `EVERYTHING` brings progress to the group and is the
  * way back for a group that wants every line.
+ *
+ * NO DIGEST IN ANY MODE (voz do grupo, 25/11): folding a person's questions and previews into one "Ana, 2 coisas:"
+ * message glued unrelated long texts together (measured: one digest of 1.8k chars on the first day). Each goes out
+ * as its own short message; `OutputRouting.DIGEST` and `FlushSignalDigest` stay only to drain what was queued.
  */
 export const ROUTING_BY_MODE: Record<GroupOutputMode, Record<IssueSignalLevel, OutputRouting>> = {
 	[GroupOutputMode.DECISIONS_ONLY]: {
 		[IssueSignalLevel.DECISION]: OutputRouting.GROUP,
-		[IssueSignalLevel.QUESTION]: OutputRouting.DIGEST,
+		[IssueSignalLevel.QUESTION]: OutputRouting.GROUP,
 		[IssueSignalLevel.FEEDBACK]: OutputRouting.PANEL,
 		[IssueSignalLevel.CLOSING]: OutputRouting.PANEL,
 		[IssueSignalLevel.BLOCK_NOTICE]: OutputRouting.GROUP,
@@ -27,16 +31,16 @@ export const ROUTING_BY_MODE: Record<GroupOutputMode, Record<IssueSignalLevel, O
 	},
 	[GroupOutputMode.DECISIONS_AND_LIVE]: {
 		[IssueSignalLevel.DECISION]: OutputRouting.GROUP,
-		[IssueSignalLevel.QUESTION]: OutputRouting.DIGEST,
-		[IssueSignalLevel.FEEDBACK]: OutputRouting.DIGEST,
+		[IssueSignalLevel.QUESTION]: OutputRouting.GROUP,
+		[IssueSignalLevel.FEEDBACK]: OutputRouting.GROUP,
 		[IssueSignalLevel.CLOSING]: OutputRouting.GROUP,
 		[IssueSignalLevel.BLOCK_NOTICE]: OutputRouting.GROUP,
 		[IssueSignalLevel.PROGRESS]: OutputRouting.PANEL,
 	},
 	[GroupOutputMode.EVERYTHING]: {
 		[IssueSignalLevel.DECISION]: OutputRouting.GROUP,
-		[IssueSignalLevel.QUESTION]: OutputRouting.DIGEST,
-		[IssueSignalLevel.FEEDBACK]: OutputRouting.DIGEST,
+		[IssueSignalLevel.QUESTION]: OutputRouting.GROUP,
+		[IssueSignalLevel.FEEDBACK]: OutputRouting.GROUP,
 		[IssueSignalLevel.CLOSING]: OutputRouting.GROUP,
 		[IssueSignalLevel.BLOCK_NOTICE]: OutputRouting.GROUP,
 		[IssueSignalLevel.PROGRESS]: OutputRouting.GROUP,
