@@ -589,6 +589,21 @@
                                 },
                                 "archived": {
                                   "type": "boolean"
+                                },
+                                "lifeState": {
+                                  "$ref": "#/components/schemas/IssueLifeState"
+                                },
+                                "paused": {
+                                  "type": "boolean"
+                                },
+                                "waitingForProviderUntil": {
+                                  "type": "string"
+                                },
+                                "retryingAt": {
+                                  "type": "string"
+                                },
+                                "escalatedAt": {
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -596,7 +611,9 @@
                                 "key",
                                 "title",
                                 "status",
-                                "archived"
+                                "archived",
+                                "lifeState",
+                                "paused"
                               ],
                               "additionalProperties": false
                             }
@@ -633,6 +650,21 @@
                           },
                           "archived": {
                             "type": "boolean"
+                          },
+                          "lifeState": {
+                            "$ref": "#/components/schemas/IssueLifeState"
+                          },
+                          "paused": {
+                            "type": "boolean"
+                          },
+                          "waitingForProviderUntil": {
+                            "type": "string"
+                          },
+                          "retryingAt": {
+                            "type": "string"
+                          },
+                          "escalatedAt": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -640,7 +672,9 @@
                           "key",
                           "title",
                           "status",
-                          "archived"
+                          "archived",
+                          "lifeState",
+                          "paused"
                         ],
                         "additionalProperties": false
                       }
@@ -10497,6 +10531,11 @@
                               },
                               "routing": {
                                 "$ref": "#/components/schemas/OutputRouting"
+                              },
+                              "artifactId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                               }
                             },
                             "required": [
@@ -10532,6 +10571,9 @@
                                 "type": "string"
                               },
                               "reminder": {
+                                "type": "boolean"
+                              },
+                              "failed": {
                                 "type": "boolean"
                               }
                             },

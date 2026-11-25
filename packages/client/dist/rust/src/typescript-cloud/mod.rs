@@ -2381,14 +2381,21 @@ pub mod types {
     ///      "items": {
     ///        "type": "object",
     ///        "required": [
+    ///          "artifactCount",
     ///          "issueId",
     ///          "key",
     ///          "lifeState",
+    ///          "openAsks",
     ///          "status",
     ///          "title",
     ///          "updatedAt"
     ///        ],
     ///        "properties": {
+    ///          "artifactCount": {
+    ///            "type": "integer",
+    ///            "maximum": 9007199254740991.0,
+    ///            "minimum": 0.0
+    ///          },
     ///          "escalatedAt": {
     ///            "type": "string"
     ///          },
@@ -2402,6 +2409,158 @@ pub mod types {
     ///          },
     ///          "lifeState": {
     ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
+    ///          "openAsks": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "code",
+    ///                    "kind",
+    ///                    "question",
+    ///                    "releaseRequired",
+    ///                    "reply"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "code": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "DECISION_REQUESTED"
+    ///                      ]
+    ///                    },
+    ///                    "question": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "releaseRequired": {
+    ///                      "type": "boolean"
+    ///                    },
+    ///                    "reply": {
+    ///                      "oneOf": [
+    ///                        {
+    ///                          "type": "object",
+    ///                          "required": [
+    ///                            "kind",
+    ///                            "options"
+    ///                          ],
+    ///                          "properties": {
+    ///                            "kind": {
+    ///                              "type": "string",
+    ///                              "enum": [
+    ///                                "OPTION"
+    ///                              ]
+    ///                            },
+    ///                            "options": {
+    ///                              "type": "array",
+    ///                              "items": {
+    ///                                "$ref": "#/components/schemas/AskOption"
+    ///                              },
+    ///                              "maxItems": 6,
+    ///                              "minItems": 1
+    ///                            }
+    ///                          },
+    ///                          "additionalProperties": false
+    ///                        },
+    ///                        {
+    ///                          "type": "object",
+    ///                          "required": [
+    ///                            "kind"
+    ///                          ],
+    ///                          "properties": {
+    ///                            "kind": {
+    ///                              "type": "string",
+    ///                              "enum": [
+    ///                                "TEXT"
+    ///                              ]
+    ///                            }
+    ///                          },
+    ///                          "additionalProperties": false
+    ///                        }
+    ///                      ]
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "code",
+    ///                    "defaultLabel",
+    ///                    "kind",
+    ///                    "question",
+    ///                    "reply"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "code": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "defaultLabel": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "dueAt": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "QUESTION_ASKED"
+    ///                      ]
+    ///                    },
+    ///                    "question": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "reply": {
+    ///                      "oneOf": [
+    ///                        {
+    ///                          "type": "object",
+    ///                          "required": [
+    ///                            "kind",
+    ///                            "options"
+    ///                          ],
+    ///                          "properties": {
+    ///                            "kind": {
+    ///                              "type": "string",
+    ///                              "enum": [
+    ///                                "OPTION"
+    ///                              ]
+    ///                            },
+    ///                            "options": {
+    ///                              "type": "array",
+    ///                              "items": {
+    ///                                "$ref": "#/components/schemas/AskOption"
+    ///                              },
+    ///                              "maxItems": 6,
+    ///                              "minItems": 1
+    ///                            }
+    ///                          },
+    ///                          "additionalProperties": false
+    ///                        },
+    ///                        {
+    ///                          "type": "object",
+    ///                          "required": [
+    ///                            "kind"
+    ///                          ],
+    ///                          "properties": {
+    ///                            "kind": {
+    ///                              "type": "string",
+    ///                              "enum": [
+    ///                                "TEXT"
+    ///                              ]
+    ///                            }
+    ///                          },
+    ///                          "additionalProperties": false
+    ///                        }
+    ///                      ]
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                }
+    ///              ]
+    ///            }
     ///          },
     ///          "retryingAt": {
     ///            "type": "string"
@@ -2485,14 +2644,21 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "artifactCount",
     ///    "issueId",
     ///    "key",
     ///    "lifeState",
+    ///    "openAsks",
     ///    "status",
     ///    "title",
     ///    "updatedAt"
     ///  ],
     ///  "properties": {
+    ///    "artifactCount": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "minimum": 0.0
+    ///    },
     ///    "escalatedAt": {
     ///      "type": "string"
     ///    },
@@ -2506,6 +2672,158 @@ pub mod types {
     ///    },
     ///    "lifeState": {
     ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "openAsks": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "oneOf": [
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "code",
+    ///              "kind",
+    ///              "question",
+    ///              "releaseRequired",
+    ///              "reply"
+    ///            ],
+    ///            "properties": {
+    ///              "code": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "DECISION_REQUESTED"
+    ///                ]
+    ///              },
+    ///              "question": {
+    ///                "type": "string"
+    ///              },
+    ///              "releaseRequired": {
+    ///                "type": "boolean"
+    ///              },
+    ///              "reply": {
+    ///                "oneOf": [
+    ///                  {
+    ///                    "type": "object",
+    ///                    "required": [
+    ///                      "kind",
+    ///                      "options"
+    ///                    ],
+    ///                    "properties": {
+    ///                      "kind": {
+    ///                        "type": "string",
+    ///                        "enum": [
+    ///                          "OPTION"
+    ///                        ]
+    ///                      },
+    ///                      "options": {
+    ///                        "type": "array",
+    ///                        "items": {
+    ///                          "$ref": "#/components/schemas/AskOption"
+    ///                        },
+    ///                        "maxItems": 6,
+    ///                        "minItems": 1
+    ///                      }
+    ///                    },
+    ///                    "additionalProperties": false
+    ///                  },
+    ///                  {
+    ///                    "type": "object",
+    ///                    "required": [
+    ///                      "kind"
+    ///                    ],
+    ///                    "properties": {
+    ///                      "kind": {
+    ///                        "type": "string",
+    ///                        "enum": [
+    ///                          "TEXT"
+    ///                        ]
+    ///                      }
+    ///                    },
+    ///                    "additionalProperties": false
+    ///                  }
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "code",
+    ///              "defaultLabel",
+    ///              "kind",
+    ///              "question",
+    ///              "reply"
+    ///            ],
+    ///            "properties": {
+    ///              "code": {
+    ///                "type": "string"
+    ///              },
+    ///              "defaultLabel": {
+    ///                "type": "string"
+    ///              },
+    ///              "dueAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "QUESTION_ASKED"
+    ///                ]
+    ///              },
+    ///              "question": {
+    ///                "type": "string"
+    ///              },
+    ///              "reply": {
+    ///                "oneOf": [
+    ///                  {
+    ///                    "type": "object",
+    ///                    "required": [
+    ///                      "kind",
+    ///                      "options"
+    ///                    ],
+    ///                    "properties": {
+    ///                      "kind": {
+    ///                        "type": "string",
+    ///                        "enum": [
+    ///                          "OPTION"
+    ///                        ]
+    ///                      },
+    ///                      "options": {
+    ///                        "type": "array",
+    ///                        "items": {
+    ///                          "$ref": "#/components/schemas/AskOption"
+    ///                        },
+    ///                        "maxItems": 6,
+    ///                        "minItems": 1
+    ///                      }
+    ///                    },
+    ///                    "additionalProperties": false
+    ///                  },
+    ///                  {
+    ///                    "type": "object",
+    ///                    "required": [
+    ///                      "kind"
+    ///                    ],
+    ///                    "properties": {
+    ///                      "kind": {
+    ///                        "type": "string",
+    ///                        "enum": [
+    ///                          "TEXT"
+    ///                        ]
+    ///                      }
+    ///                    },
+    ///                    "additionalProperties": false
+    ///                  }
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          }
+    ///        ]
+    ///      }
     ///    },
     ///    "retryingAt": {
     ///      "type": "string"
@@ -2530,6 +2848,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetPanelBoardResponseIssuesItem {
+        #[serde(rename = "artifactCount")]
+        pub artifact_count: i64,
         #[serde(
             rename = "escalatedAt",
             default,
@@ -2541,6 +2861,8 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
         pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        #[serde(rename = "openAsks")]
+        pub open_asks: ::std::vec::Vec<GetPanelBoardResponseIssuesItemOpenAsksItem>,
         #[serde(
             rename = "retryingAt",
             default,
@@ -2562,6 +2884,263 @@ pub mod types {
     for GetPanelBoardResponseIssuesItem {
         fn from(value: &GetPanelBoardResponseIssuesItem) -> Self {
             value.clone()
+        }
+    }
+    ///`GetPanelBoardResponseIssuesItemOpenAsksItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "kind",
+    ///        "question",
+    ///        "releaseRequired",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DECISION_REQUESTED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "releaseRequired": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "defaultLabel",
+    ///        "kind",
+    ///        "question",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "defaultLabel": {
+    ///          "type": "string"
+    ///        },
+    ///        "dueAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "QUESTION_ASKED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum GetPanelBoardResponseIssuesItemOpenAsksItem {
+        #[serde(rename = "DECISION_REQUESTED")]
+        DecisionRequested {
+            code: ::std::string::String,
+            question: ::std::string::String,
+            #[serde(rename = "releaseRequired")]
+            release_required: bool,
+            reply: GetPanelBoardResponseIssuesItemOpenAsksItemReply,
+        },
+        #[serde(rename = "QUESTION_ASKED")]
+        QuestionAsked {
+            code: ::std::string::String,
+            #[serde(rename = "defaultLabel")]
+            default_label: ::std::string::String,
+            #[serde(
+                rename = "dueAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            due_at: ::std::option::Option<::std::string::String>,
+            question: ::std::string::String,
+            reply: GetPanelBoardResponseIssuesItemOpenAsksItemReply,
+        },
+    }
+    impl ::std::convert::From<&Self> for GetPanelBoardResponseIssuesItemOpenAsksItem {
+        fn from(value: &GetPanelBoardResponseIssuesItemOpenAsksItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelBoardResponseIssuesItemOpenAsksItemReply`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "options"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "options": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/AskOption"
+    ///          },
+    ///          "maxItems": 6,
+    ///          "minItems": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", content = "options")]
+    pub enum GetPanelBoardResponseIssuesItemOpenAsksItemReply {
+        #[serde(rename = "OPTION")]
+        Option(::std::vec::Vec<AskOption>),
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for GetPanelBoardResponseIssuesItemOpenAsksItemReply {
+        fn from(value: &GetPanelBoardResponseIssuesItemOpenAsksItemReply) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::convert::From<::std::vec::Vec<AskOption>>
+    for GetPanelBoardResponseIssuesItemOpenAsksItemReply {
+        fn from(value: ::std::vec::Vec<AskOption>) -> Self {
+            Self::Option(value)
         }
     }
     ///`GetPanelIdentityResponse`
@@ -3140,6 +3719,11 @@ pub mod types {
     ///              "transcriptKind"
     ///            ],
     ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -3190,6 +3774,9 @@ pub mod types {
     ///              },
     ///              "deliveredAt": {
     ///                "type": "string"
+    ///              },
+    ///              "failed": {
+    ///                "type": "boolean"
     ///              },
     ///              "id": {
     ///                "type": "string"
@@ -4315,6 +4902,11 @@ pub mod types {
     ///        "transcriptKind"
     ///      ],
     ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -4365,6 +4957,9 @@ pub mod types {
     ///        },
     ///        "deliveredAt": {
     ///          "type": "string"
+    ///        },
+    ///        "failed": {
+    ///          "type": "boolean"
     ///        },
     ///        "id": {
     ///          "type": "string"
@@ -4875,6 +5470,12 @@ pub mod types {
         TurnStarted { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "MESSAGE")]
         Message {
+            #[serde(
+                rename = "artifactId",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            artifact_id: ::std::option::Option<::uuid::Uuid>,
             at: ::std::string::String,
             #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
             classification: ::std::option::Option<
@@ -4904,6 +5505,8 @@ pub mod types {
                 skip_serializing_if = "::std::option::Option::is_none"
             )]
             delivered_at: ::std::option::Option<::std::string::String>,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            failed: ::std::option::Option<bool>,
             id: ::std::string::String,
             #[serde(
                 rename = "readAt",
@@ -6944,6 +7547,11 @@ pub mod types {
     ///                    "transcriptKind"
     ///                  ],
     ///                  "properties": {
+    ///                    "artifactId": {
+    ///                      "type": "string",
+    ///                      "format": "uuid",
+    ///                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                    },
     ///                    "at": {
     ///                      "type": "string"
     ///                    },
@@ -6993,6 +7601,9 @@ pub mod types {
     ///                    },
     ///                    "deliveredAt": {
     ///                      "type": "string"
+    ///                    },
+    ///                    "failed": {
+    ///                      "type": "boolean"
     ///                    },
     ///                    "id": {
     ///                      "type": "string"
@@ -7781,6 +8392,11 @@ pub mod types {
     ///              "transcriptKind"
     ///            ],
     ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -7830,6 +8446,9 @@ pub mod types {
     ///              },
     ///              "deliveredAt": {
     ///                "type": "string"
+    ///              },
+    ///              "failed": {
+    ///                "type": "boolean"
     ///              },
     ///              "id": {
     ///                "type": "string"
@@ -8522,6 +9141,11 @@ pub mod types {
     ///        "transcriptKind"
     ///      ],
     ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -8571,6 +9195,9 @@ pub mod types {
     ///        },
     ///        "deliveredAt": {
     ///          "type": "string"
+    ///        },
+    ///        "failed": {
+    ///          "type": "boolean"
     ///        },
     ///        "id": {
     ///          "type": "string"
@@ -9065,6 +9692,12 @@ pub mod types {
         TurnStarted { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "MESSAGE")]
         Message {
+            #[serde(
+                rename = "artifactId",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            artifact_id: ::std::option::Option<::uuid::Uuid>,
             at: ::std::string::String,
             #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
             classification: ::std::option::Option<
@@ -9094,6 +9727,8 @@ pub mod types {
                 skip_serializing_if = "::std::option::Option::is_none"
             )]
             delivered_at: ::std::option::Option<::std::string::String>,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            failed: ::std::option::Option<bool>,
             id: ::std::string::String,
             #[serde(
                 rename = "readAt",

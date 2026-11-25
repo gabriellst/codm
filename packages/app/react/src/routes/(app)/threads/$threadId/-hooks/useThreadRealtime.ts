@@ -1,6 +1,7 @@
 import { useQueryClient, type QueryKey } from '@tanstack/react-query'
 import {
 	getIssueDetailQueryKey,
+	getIssueTimelineQueryKey,
 	getNeedsYouPanelQueryKey,
 	getSessionChatQueryKey,
 	getSessionIssuesQueryKey,
@@ -33,6 +34,13 @@ export const THREAD_REALTIME_EVENTS = [
 	'integration.artifact.recorded',
 ] as const satisfies readonly ServerEventName[]
 
+/**
+ * Every task timeline at once — the URL half of the SDK's own key, which TanStack matches as a prefix (a
+ * key built with an `undefined` id would not: `undefined` never matches the id). Used when a fact does not
+ * say which task it touched; only the timelines on screen refetch.
+ */
+export const anyIssueTimelineKey = (): QueryKey => [{ url: getIssueTimelineQueryKey(undefined)[0].url }]
+
 /** The SSE frame union narrowed to the names above — the SDK's own type, never a hand-written mirror. */
 export type ThreadRealtimeEvent = Extract<ListenEventsQueryResponse, { name: (typeof THREAD_REALTIME_EVENTS)[number] }>
 
@@ -54,14 +62,20 @@ export function threadInvalidations(event: ThreadRealtimeEvent, threadId: string
 		// transcript from before the write.
 		case 'integration.thread.message_ingested':
 		case 'integration.orchestrator.replied':
-			return [getSessionChatQueryKey(threadId)]
+			// The task conversation shows the messages routed to the task — which task is not on the fact.
+			return [getSessionChatQueryKey(threadId), anyIssueTimelineKey()]
 
 		// A stop raising OR resolving both change what the needs-you panel and the chat/issues tabs
 		// show — the panel must FILL on raise and CLEAR on resolve, so both facts invalidate the same
 		// three keys.
 		case 'integration.thread.stop_raised':
 		case 'integration.thread.stop_resolved':
-			return [getNeedsYouPanelQueryKey(threadId), getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId)]
+			return [
+				getNeedsYouPanelQueryKey(threadId),
+				getSessionChatQueryKey(threadId),
+				getSessionIssuesQueryKey(threadId),
+				event.payload.issueId ? getIssueTimelineQueryKey(event.payload.issueId) : anyIssueTimelineKey(),
+			]
 
 		// An issue's birth and death both show up in the conversation (the ack, then the composed
 		// result) and in the issues tab. `completed`/`archived` additionally stale the DETAIL page the
@@ -72,10 +86,15 @@ export function threadInvalidations(event: ThreadRealtimeEvent, threadId: string
 
 		case 'integration.issue.completed':
 		case 'integration.issue.archived':
-			return [getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId), getIssueDetailQueryKey(event.payload.issueId)]
+			return [
+				getSessionChatQueryKey(threadId),
+				getSessionIssuesQueryKey(threadId),
+				getIssueDetailQueryKey(event.payload.issueId),
+				getIssueTimelineQueryKey(event.payload.issueId),
+			]
 
 		case 'integration.artifact.recorded':
-			return [listArtifactsQueryKey(threadId)]
+			return [listArtifactsQueryKey(threadId), anyIssueTimelineKey()]
 
 		default: {
 			// Exhaustiveness: a name added to THREAD_REALTIME_EVENTS with no case here fails to compile.

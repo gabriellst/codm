@@ -2,33 +2,19 @@ import type { ComponentProps, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowUp } from '@tabler/icons-react'
 import { useForm } from '@tanstack/react-form'
-import { useQueryClient } from '@tanstack/react-query'
-import {
-	answerStopMutationRequestSchema,
-	getHomeDashboardQueryKey,
-	getIssueDetailQueryKey,
-	getIssueTimelineQueryKey,
-	getNeedsYouPanelQueryKey,
-	getSessionChatQueryKey,
-	useAnswerStop,
-	AskAnswerKindEnum,
-	StopKindEnum,
-} from '@codm/client-typescript/typescript'
+import { AskAnswerKindEnum, StopKindEnum } from '@codm/client-typescript/typescript'
 import type { GetNeedsYouPanelQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { Textarea } from '@codm/app-ui/textarea'
+import { answerTextSchema, useAnswerAsk } from '@/components/task/useAnswerAsk'
 import { useLocale } from '@/hooks'
 import { formatTimeOfDay } from '@/lib/format'
-import { pickUnionVariantField } from '@/lib/union'
 import { cn } from '@/lib/utils'
 
 type Ask = NonNullable<GetNeedsYouPanelQueryResponse['stops'][number]['ask']>
 type AskOf<K extends Ask['kind']> = Extract<Ask, { kind: K }>
 type Reply = Ask['reply']
 type ReplyOf<K extends Reply['kind']> = Extract<Reply, { kind: K }>
-
-/** The free-text answer, validated by the SDK's own TEXT member — never a hand-rolled rule. */
-const answerTextSchema = pickUnionVariantField(answerStopMutationRequestSchema, { kind: AskAnswerKindEnum.TEXT }, 'text')
 
 interface AnswerProps {
 	stopId: string
@@ -100,24 +86,6 @@ function QuestionNote({ ask, className, ...props }: ComponentProps<'p'> & { ask:
 	)
 }
 
-/** The mutation every answer goes through, with the reads it makes stale — on the HOOK, so it survives the card unmounting. */
-function useAnswer({ threadId, issueId }: Pick<AnswerProps, 'threadId' | 'issueId'>) {
-	const queryClient = useQueryClient()
-	return useAnswerStop({
-		mutation: {
-			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
-				queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
-				queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
-				if (issueId) {
-					queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(issueId) })
-					queryClient.invalidateQueries({ queryKey: getIssueTimelineQueryKey(issueId) })
-				}
-			},
-		},
-	})
-}
-
 function OptionAnswer({
 	reply,
 	stopId,
@@ -126,7 +94,7 @@ function OptionAnswer({
 	className,
 	...props
 }: ComponentProps<'div'> & AnswerProps & { reply: ReplyOf<typeof AskAnswerKindEnum.OPTION> }) {
-	const answer = useAnswer({ threadId, issueId })
+	const answer = useAnswerAsk({ threadId, issueId })
 	return (
 		<div className={cn('flex flex-wrap gap-2', className)} {...props}>
 			{reply.options.map(option => (
@@ -154,7 +122,7 @@ function TextAnswer({
 	...props
 }: ComponentProps<'form'> & AnswerProps & { reply: ReplyOf<typeof AskAnswerKindEnum.TEXT> }) {
 	const { t } = useTranslation()
-	const answer = useAnswer({ threadId, issueId })
+	const answer = useAnswerAsk({ threadId, issueId })
 	// The field validates against the SDK's own TEXT member; the body is that member, built on submit.
 	// No reset on success: an answered stop leaves the list, and this card (with its draft) unmounts with it.
 	const form = useForm({

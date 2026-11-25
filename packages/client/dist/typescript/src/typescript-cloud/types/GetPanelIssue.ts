@@ -141,17 +141,17 @@ export const AskKindEnum3 = {
 
 export type AskKindEnum3Key = (typeof AskKindEnum3)[keyof typeof AskKindEnum3];
 
-export const ReplyKindEnum3 = {
+export const ReplyKindEnum5 = {
     OPTION: "OPTION"
 } as const;
 
-export type ReplyKindEnum3Key = (typeof ReplyKindEnum3)[keyof typeof ReplyKindEnum3];
+export type ReplyKindEnum5Key = (typeof ReplyKindEnum5)[keyof typeof ReplyKindEnum5];
 
-export const ReplyKindEnum4 = {
+export const ReplyKindEnum6 = {
     TEXT: "TEXT"
 } as const;
 
-export type ReplyKindEnum4Key = (typeof ReplyKindEnum4)[keyof typeof ReplyKindEnum4];
+export type ReplyKindEnum6Key = (typeof ReplyKindEnum6)[keyof typeof ReplyKindEnum6];
 
 export const AskKindEnum4 = {
     QUESTION_ASKED: "QUESTION_ASKED"
@@ -274,6 +274,10 @@ export type GetPanelIssue200 = {
          * @type string | undefined
         */
         routing?: OutputRouting;
+        /**
+         * @type string | undefined, uuid
+        */
+        artifactId?: string;
     } | {
         /**
          * @type string
@@ -303,6 +307,10 @@ export type GetPanelIssue200 = {
          * @type boolean
         */
         reminder: boolean;
+        /**
+         * @type boolean | undefined
+        */
+        failed?: boolean;
     } | {
         /**
          * @type string
@@ -668,7 +676,7 @@ export type GetPanelIssue200 = {
                 /**
                  * @type string
                 */
-                kind: ReplyKindEnum3Key;
+                kind: ReplyKindEnum5Key;
                 /**
                  * @type array
                 */
@@ -677,7 +685,7 @@ export type GetPanelIssue200 = {
                 /**
                  * @type string
                 */
-                kind: ReplyKindEnum4Key;
+                kind: ReplyKindEnum6Key;
             });
             /**
              * @type boolean
@@ -700,7 +708,7 @@ export type GetPanelIssue200 = {
                 /**
                  * @type string
                 */
-                kind: ReplyKindEnum3Key;
+                kind: ReplyKindEnum5Key;
                 /**
                  * @type array
                 */
@@ -709,7 +717,7 @@ export type GetPanelIssue200 = {
                 /**
                  * @type string
                 */
-                kind: ReplyKindEnum4Key;
+                kind: ReplyKindEnum6Key;
             });
             /**
              * @type string

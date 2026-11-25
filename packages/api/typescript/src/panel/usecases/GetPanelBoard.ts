@@ -2,10 +2,15 @@ import { injectable } from 'tsyringe-neo'
 import { and, desc, eq } from 'drizzle-orm'
 import { Handler, PgDatabaseDriver, z, BaseError } from '@codm/core-typescript'
 import { panelBatches, panelDaemons, panelIssues } from '@codm/contracts/db/pg'
-import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus, IssueTimelineItemKind } from '@codm/contracts-typescript/wire/enums'
 import { BatchSchema, PanelHealthSchema } from '@shared/objects'
+import { AskViewSchema, type AskView } from '@shared/schemas'
 import type { ApplicationErrors } from '../errors'
+import { parseOpenStops } from '../utils/openStops'
 import { panelGroupByToken } from './panelGroupByToken'
+
+/** Only the kind of each stored timeline item — enough to count artifacts without re-validating the whole row. */
+const TimelineKindsSchema = z.array(z.object({ kind: z.string() }))
 
 export const GetPanelBoardInputSchema = z.object({ token: z.string().min(16).max(128) })
 export const GetPanelBoardOutputSchema = z.object({
@@ -29,6 +34,14 @@ export const GetPanelBoardOutputSchema = z.object({
 			/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
 			escalatedAt: z.string().optional(),
 			updatedAt: z.string(),
+			/**
+			 * The issue's open asks, in the order the daemon reported them — what a card in "Precisa de você"
+			 * says ("D1 · publico agora?", or the default a question goes on with). The same view the issue
+			 * page's `openStops` carry; read from the group's open stops the roster push stored; empty when none.
+			 */
+			openAsks: z.array(AskViewSchema),
+			/** How many artifacts the issue's stored timeline lists — "2 artefatos" on a card. */
+			artifactCount: z.number().int().min(0),
 		}),
 	),
 })
@@ -69,6 +82,17 @@ export class GetPanelBoard extends Handler<typeof GetPanelBoardInputSchema, type
 			const parsed = BatchSchema.safeParse(row.batch)
 			return parsed.success ? [parsed.data] : []
 		})
+		const asksByIssue = new Map<string, AskView[]>()
+		for (const stop of parseOpenStops(group.openStops ?? [])) {
+			if (!stop.ask) continue
+			const list = asksByIssue.get(stop.issueId) ?? []
+			list.push(stop.ask)
+			asksByIssue.set(stop.issueId, list)
+		}
+		const artifactCountOf = (timeline: unknown): number => {
+			const kinds = TimelineKindsSchema.safeParse(timeline)
+			return kinds.success ? kinds.data.filter(item => item.kind === IssueTimelineItemKind.ARTIFACT).length : 0
+		}
 		return {
 			group: { name: group.name },
 			daemonLastSeenAt: daemon?.lastSeenAt.toISOString(),
@@ -84,6 +108,8 @@ export class GetPanelBoard extends Handler<typeof GetPanelBoardInputSchema, type
 				retryingAt: issue.retryingAt?.toISOString(),
 				escalatedAt: issue.escalatedAt?.toISOString(),
 				updatedAt: issue.updatedAt.toISOString(),
+				openAsks: asksByIssue.get(issue.issueId) ?? [],
+				artifactCount: artifactCountOf(issue.timeline),
 			})),
 		}
 	}

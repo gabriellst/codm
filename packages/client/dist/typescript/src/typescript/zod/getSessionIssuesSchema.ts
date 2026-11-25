@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { z } from "zod/v4";
 
@@ -31,7 +32,14 @@ get "status"(){
                 return issueStatusSchema
               },
 "meta": z.optional(z.string()),
-"archived": z.boolean()
+"archived": z.boolean(),
+get "lifeState"(){
+                return issueLifeStateSchema
+              },
+"paused": z.boolean(),
+"waitingForProviderUntil": z.optional(z.string()),
+"retryingAt": z.optional(z.string()),
+"escalatedAt": z.optional(z.string())
     }))
     })),
 "archived": z.array(z.object({
@@ -42,7 +50,14 @@ get "status"(){
                 return issueStatusSchema
               },
 "meta": z.optional(z.string()),
-"archived": z.boolean()
+"archived": z.boolean(),
+get "lifeState"(){
+                return issueLifeStateSchema
+              },
+"paused": z.boolean(),
+"waitingForProviderUntil": z.optional(z.string()),
+"retryingAt": z.optional(z.string()),
+"escalatedAt": z.optional(z.string())
     }))
     })
 

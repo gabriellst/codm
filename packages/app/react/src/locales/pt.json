@@ -1019,5 +1019,55 @@
 		"too_small_array": "Precisa ter pelo menos {{minimum}} item(s)",
 		"too_small_number": "Precisa ser pelo menos {{minimum}}",
 		"too_small_string": "Precisa ter pelo menos {{minimum}} caractere(s)"
+	},
+	"task": {
+		"answerInGroup": "ou responda no grupo citando {{code}}",
+		"fromGroup": "No grupo",
+		"whisper": "Sussurro",
+		"steer": "Orientação",
+		"conversation": "Conversa",
+		"conversationEmpty": "Nada aconteceu nesta tarefa ainda.",
+		"artifacts": "Artefatos",
+		"artifactsCount": "Artefatos · {{count}}",
+		"artifactsEmpty": "Nenhum artefato ainda.",
+		"session": "Sessão",
+		"expand": "Expandir",
+		"collapse": "Recolher",
+		"details": "Detalhes",
+		"requestedBy": "Pedida por",
+		"agent": "Agente",
+		"attempts": "Tentativas",
+		"noRetries": "nenhuma falha",
+		"retries_one": "{{count}} nova tentativa",
+		"retries_other": "{{count}} novas tentativas",
+		"batch": "Lote",
+		"batchItem": "{{code}} · item {{n}}",
+		"createdAt": "Criada",
+		"unknown": "—",
+		"metaRequestedBy": "pedida por {{name}}",
+		"openAsks_one": "{{count}} decisão aberta",
+		"openAsks_other": "{{count}} decisões abertas",
+		"columns": {
+			"queued": "Na fila",
+			"working": "Fazendo",
+			"needsYou": "Precisa de você",
+			"waiting": "Esperando",
+			"stalled": "Parada",
+			"done": "Concluída"
+		},
+		"cardMeta": {
+			"retryAt": "nova tentativa às {{time}}",
+			"backAt": "volta às {{time}}",
+			"escalated": "escalada pelo supervisor",
+			"paused": "pausada",
+			"artifacts_one": "{{count}} artefato",
+			"artifacts_other": "{{count}} artefatos",
+			"askCode": "{{code}} · {{question}}"
+		},
+		"board": {
+			"summary": "{{needsYou}} precisam de você · {{working}} em andamento · {{waiting}} esperando · {{stalled}} paradas · {{queued}} na fila",
+			"showDone": "Concluídas · {{count}}",
+			"hideDone": "Esconder concluídas"
+		}
 	}
 }

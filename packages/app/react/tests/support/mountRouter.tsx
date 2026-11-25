@@ -6,6 +6,7 @@ import {
 	createRootRoute,
 	createRoute,
 	createRouter,
+	type AnyRoute,
 	type AnyRouter,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
@@ -107,9 +108,45 @@ export interface MountedRouter {
 	unmount(): void
 }
 
+/**
+ * The route tree that reproduces a FILE ROUTE id (`/(app)/threads/$threadId/issues/`) with `ui` at its leaf, so
+ * a component that reads `getRouteApi(id).useSearch()` resolves — the same shape the Storybook `connected`
+ * decorator builds. `(group)` segments are pathless layouts; `params` fill the `$name` segments of the URL.
+ */
+function treeAtRoute(ui: ReactNode, routeId: string, params: Record<string, string>) {
+	const rootRoute = createRootRoute()
+	const segments = routeId.split('/').filter(Boolean)
+	const isGroup = (seg: string) => seg.startsWith('(') && seg.endsWith(')')
+	const built: AnyRoute[] = []
+	let parent: AnyRoute = rootRoute
+	const leaf = { component: () => <>{ui}</>, validateSearch: (search: Record<string, unknown>) => search }
+	segments.forEach((seg, i) => {
+		const isLast = i === segments.length - 1
+		const captured = parent
+		const getParentRoute = () => captured
+		const path = isLast && routeId.endsWith('/') ? `${seg}/` : seg
+		const created: AnyRoute = isGroup(seg)
+			? isLast
+				? createRoute({ getParentRoute, id: seg, ...leaf })
+				: createRoute({ getParentRoute, id: seg })
+			: isLast
+				? createRoute({ getParentRoute, path, ...leaf })
+				: createRoute({ getParentRoute, path })
+		built.push(created)
+		parent = created
+	})
+	let subtree = built[built.length - 1] as AnyRoute
+	for (let i = built.length - 2; i >= 0; i--) subtree = (built[i] as AnyRoute).addChildren([subtree])
+	const url = `/${segments
+		.filter(seg => !isGroup(seg))
+		.map(seg => (seg.startsWith('$') ? (params[seg.slice(1)] ?? seg) : seg))
+		.join('/')}`
+	return { routeTree: rootRoute.addChildren([subtree]), url }
+}
+
 export async function mountRouter(
 	ui: ReactNode,
-	options?: { path?: string; extraPaths?: string[] },
+	options?: { path?: string; extraPaths?: string[]; routeId?: string; params?: Record<string, string> },
 ): Promise<MountedRouter> {
 	instrumentFetchOnce()
 	netLog = []
@@ -117,14 +154,20 @@ export async function mountRouter(
 	const host = document.createElement('div')
 	document.body.appendChild(host)
 
-	const rootRoute = createRootRoute({ component: () => <>{ui}</> })
-	const children = (options?.extraPaths ?? ['/dashboard', '/onboarding']).map(path =>
-		createRoute({ getParentRoute: () => rootRoute, path, component: () => null }),
-	)
-	const router = createRouter({
-		routeTree: rootRoute.addChildren(children),
-		history: createMemoryHistory({ initialEntries: [options?.path ?? '/'] }),
-	})
+	let router: AnyRouter
+	if (options?.routeId) {
+		const { routeTree, url } = treeAtRoute(ui, options.routeId, options.params ?? {})
+		router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [options.path ?? url] }) })
+	} else {
+		const rootRoute = createRootRoute({ component: () => <>{ui}</> })
+		const children = (options?.extraPaths ?? ['/dashboard', '/onboarding']).map(path =>
+			createRoute({ getParentRoute: () => rootRoute, path, component: () => null }),
+		)
+		router = createRouter({
+			routeTree: rootRoute.addChildren(children),
+			history: createMemoryHistory({ initialEntries: [options?.path ?? '/'] }),
+		})
+	}
 
 	// A LINHA que este helper existe para ninguém esquecer:
 	await router.load()

@@ -2,7 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { batchItems, batches, events } from '@codm/contracts/db'
+import { eq } from 'drizzle-orm'
+import { agentMailbox, batchItems, batches, events } from '@codm/contracts/db'
 import {
 	AskAnswerKind,
 	BatchStatus,
@@ -87,6 +88,51 @@ describe('GetIssueTimeline', () => {
 		expect(steer?.kind === IssueTimelineItemKind.STEER && steer.text).toBe('tira o rodapé')
 		const resolved = items[3]
 		expect(resolved?.kind === IssueTimelineItemKind.STOP_RESOLVED && resolved.resolution).toBe(StopResolution.APPROVE)
+	})
+
+	it('a message names the artifact it delivered, and a steer the queue gave up on reads as failed', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value })
+		const threads = testBed.resolve(ThreadRepository)
+		const artifactId = crypto.randomUUID()
+
+		thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'prévia', issueId: issue.id.value, artifactId })
+		thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'sem arquivo', issueId: issue.id.value })
+		await threads.save(thread)
+
+		const mailbox = testBed.resolve(MailboxRepository)
+		for (const [dedupKey, text] of [
+			['timeline-steer-ok', 'segue assim'],
+			['timeline-steer-dead', 'não chegou'],
+		] as const)
+			await mailbox.enqueue({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issue.id.value,
+				kind: MailboxItemKind.STEER,
+				claimClass: MailboxClaimClass.STEER,
+				posture: PermissionPosture.AUTO,
+				payload: { threadId: thread.id.value, key: issue.key, title: issue.title, text },
+				dedupKey,
+			})
+		// Poisoned: the dispatcher's give-up marks the row dead — set directly, the dispatcher is not under test.
+		await testBed
+			.resolve(LibSqlDatabaseDriver)
+			.db.update(agentMailbox)
+			.set({ deadAt: new Date() })
+			.where(eq(agentMailbox.dedupKey, 'timeline-steer-dead'))
+
+		const { items } = await testBed.resolve(GetIssueTimeline).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
+		const messages = items.filter(item => item.kind === IssueTimelineItemKind.MESSAGE)
+		expect(messages.map(item => (item.kind === IssueTimelineItemKind.MESSAGE ? [item.text, item.artifactId] : null))).toEqual([
+			['prévia', artifactId],
+			['sem arquivo', undefined],
+		])
+		const steers = items.filter(item => item.kind === IssueTimelineItemKind.STEER)
+		expect(steers.map(item => (item.kind === IssueTimelineItemKind.STEER ? [item.text, item.failed] : null))).toEqual([
+			['segue assim', false],
+			['não chegou', true],
+		])
 	})
 
 	it('fase 3 — a message carries its level and routing; an ask its code, question and options; its answer what was answered, never who', async () => {

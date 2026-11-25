@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { askOptionSchema } from "./askOptionSchema.ts";
 import { batchSchema } from "./batchSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
@@ -40,7 +41,36 @@ get "lifeState"(){
 "waitingForProviderUntil": z.optional(z.string()),
 "retryingAt": z.optional(z.string()),
 "escalatedAt": z.optional(z.string()),
-"updatedAt": z.string()
+"updatedAt": z.string(),
+"openAsks": z.array(z.union([z.object({
+    "kind": z.enum(["DECISION_REQUESTED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
+              }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"releaseRequired": z.boolean()
+    }), z.object({
+    "kind": z.enum(["QUESTION_ASKED"]),
+"code": z.string(),
+"question": z.string(),
+"reply": z.union([z.object({
+    "kind": z.enum(["OPTION"]),
+get "options"(){
+                return z.array(askOptionSchema).min(1).max(6)
+              }
+    }), z.object({
+    "kind": z.enum(["TEXT"])
+    })]),
+"defaultLabel": z.string(),
+"dueAt": z.optional(z.string())
+    })])),
+"artifactCount": z.int().min(0).max(9007199254740991)
     }))
     })
 

@@ -134,6 +134,7 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			classification: (entry.classification ?? undefined) as ClassificationMethod | undefined,
 			level: entry.level ?? undefined,
 			routing: entry.routing ?? undefined,
+			artifactId: entry.artifactId ?? undefined,
 		})
 	}
 	for (const steer of steers) {
@@ -147,6 +148,8 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			readAt: steer.consumedAt?.toISOString(),
 			// Nudges are `NUDGED` items now (filtered above); the flag stays on the wire for the frozen shape.
 			reminder: false,
+			// The queue gave up on it (poisoned) — the same reading `GetIssueDetail.steers[].failed` makes.
+			failed: steer.deadAt !== null,
 		})
 	}
 	for (const file of files) {

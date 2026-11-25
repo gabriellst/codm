@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 
 export type GetSessionIssuesPathParams = {
@@ -75,6 +76,26 @@ export type GetSessionIssues200 = {
              * @type boolean
             */
             archived: boolean;
+            /**
+             * @type string
+            */
+            lifeState: IssueLifeState;
+            /**
+             * @type boolean
+            */
+            paused: boolean;
+            /**
+             * @type string | undefined
+            */
+            waitingForProviderUntil?: string;
+            /**
+             * @type string | undefined
+            */
+            retryingAt?: string;
+            /**
+             * @type string | undefined
+            */
+            escalatedAt?: string;
         }[];
     }[];
     /**
@@ -105,6 +126,26 @@ export type GetSessionIssues200 = {
          * @type boolean
         */
         archived: boolean;
+        /**
+         * @type string
+        */
+        lifeState: IssueLifeState;
+        /**
+         * @type boolean
+        */
+        paused: boolean;
+        /**
+         * @type string | undefined
+        */
+        waitingForProviderUntil?: string;
+        /**
+         * @type string | undefined
+        */
+        retryingAt?: string;
+        /**
+         * @type string | undefined
+        */
+        escalatedAt?: string;
     }[];
 };
 

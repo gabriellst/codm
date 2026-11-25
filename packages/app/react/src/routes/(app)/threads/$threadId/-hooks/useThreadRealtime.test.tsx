@@ -1,15 +1,22 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { QueryClient, QueryClientProvider, type QueryKey } from '@tanstack/react-query'
+import { partialMatchKey, QueryClient, QueryClientProvider, type QueryKey } from '@tanstack/react-query'
 import {
 	getIssueDetailQueryKey,
+	getIssueTimelineQueryKey,
 	getNeedsYouPanelQueryKey,
 	getSessionChatQueryKey,
 	getSessionIssuesQueryKey,
 	listArtifactsQueryKey,
 } from '@codm/client-typescript/typescript'
-import { THREAD_REALTIME_EVENTS, threadInvalidations, useThreadRealtime, type ThreadRealtimeEvent } from './useThreadRealtime'
+import {
+	anyIssueTimelineKey,
+	THREAD_REALTIME_EVENTS,
+	threadInvalidations,
+	useThreadRealtime,
+	type ThreadRealtimeEvent,
+} from './useThreadRealtime'
 
 /**
  * AC-F2.1 — WHEN THE SSE FRAME ARRIVES, THE RIGHT QUERY GOES STALE.
@@ -87,7 +94,7 @@ describe('useThreadRealtime — the wiring', () => {
 
 		arrive(wireFact('integration.thread.message_ingested', { threadId: THREAD }))
 
-		expect(invalidated).toEqual([getSessionChatQueryKey(THREAD)])
+		expect(invalidated).toEqual([getSessionChatQueryKey(THREAD), anyIssueTimelineKey()])
 	})
 
 	it('a stop being resolved clears the needs-you panel and stales the chat + issues', () => {
@@ -95,7 +102,12 @@ describe('useThreadRealtime — the wiring', () => {
 
 		arrive(wireFact('integration.thread.stop_resolved', { threadId: THREAD, issueId: ISSUE }))
 
-		expect(invalidated).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
+		expect(invalidated).toEqual([
+			getNeedsYouPanelQueryKey(THREAD),
+			getSessionChatQueryKey(THREAD),
+			getSessionIssuesQueryKey(THREAD),
+			getIssueTimelineQueryKey(ISSUE),
+		])
 	})
 
 	it('the orchestrator replying invalidates the chat — the reply is written BEFORE the frame is sent', () => {
@@ -103,7 +115,7 @@ describe('useThreadRealtime — the wiring', () => {
 
 		arrive(wireFact('integration.orchestrator.replied', { threadId: THREAD, text: 'pronto' }))
 
-		expect(invalidated).toEqual([getSessionChatQueryKey(THREAD)])
+		expect(invalidated).toEqual([getSessionChatQueryKey(THREAD), anyIssueTimelineKey()])
 	})
 
 	/**
@@ -134,13 +146,23 @@ describe('threadInvalidations — the map', () => {
 	it('an issue completing stales the conversation, the issue list AND the detail page', () => {
 		const keys = threadInvalidations(wireFact('integration.issue.completed', { threadId: THREAD, issueId: ISSUE }), THREAD)
 
-		expect(keys).toEqual([getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD), getIssueDetailQueryKey(ISSUE)])
+		expect(keys).toEqual([
+			getSessionChatQueryKey(THREAD),
+			getSessionIssuesQueryKey(THREAD),
+			getIssueDetailQueryKey(ISSUE),
+			getIssueTimelineQueryKey(ISSUE),
+		])
 	})
 
 	it('a stop being raised stales the needs-you panel', () => {
 		const keys = threadInvalidations(wireFact('integration.thread.stop_raised', { threadId: THREAD, issueId: ISSUE }), THREAD)
 
-		expect(keys).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
+		expect(keys).toEqual([
+			getNeedsYouPanelQueryKey(THREAD),
+			getSessionChatQueryKey(THREAD),
+			getSessionIssuesQueryKey(THREAD),
+			getIssueTimelineQueryKey(ISSUE),
+		])
 	})
 
 	/** The half the enricher never wired (see G-C in the plan): before B5 nothing invalidated the panel
@@ -148,13 +170,27 @@ describe('threadInvalidations — the map', () => {
 	it('a stop being resolved stales the SAME three keys — the panel must clear, not just fill', () => {
 		const keys = threadInvalidations(wireFact('integration.thread.stop_resolved', { threadId: THREAD, issueId: ISSUE }), THREAD)
 
-		expect(keys).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
+		expect(keys).toEqual([
+			getNeedsYouPanelQueryKey(THREAD),
+			getSessionChatQueryKey(THREAD),
+			getSessionIssuesQueryKey(THREAD),
+			getIssueTimelineQueryKey(ISSUE),
+		])
 	})
 
-	it('an artifact stales only the artifacts list', () => {
+	it('an artifact stales the artifacts list and the task conversations on screen', () => {
 		const keys = threadInvalidations(wireFact('integration.artifact.recorded', { threadId: THREAD, artifactId: 'a1' }), THREAD)
 
-		expect(keys).toEqual([listArtifactsQueryKey(THREAD)])
+		expect(keys).toEqual([listArtifactsQueryKey(THREAD), anyIssueTimelineKey()])
+	})
+
+	/** P1 — the task conversation is the timeline: a fact that says which task stales that one timeline; one
+	 *  that does not stales every timeline on screen, by the URL prefix of the SDK's own key. */
+	it('a stop raised without a task stales every task timeline by the key prefix, and the prefix matches a real key', () => {
+		const keys = threadInvalidations(wireFact('integration.thread.stop_raised', { threadId: THREAD }), THREAD)
+
+		expect(keys[keys.length - 1]).toEqual(anyIssueTimelineKey())
+		expect(partialMatchKey(getIssueTimelineQueryKey(ISSUE), anyIssueTimelineKey())).toBe(true)
 	})
 
 	/**

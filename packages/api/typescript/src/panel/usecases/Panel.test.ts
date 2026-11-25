@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import {
+	ArtifactKind,
 	BatchItemDestinationKind,
 	BatchStatus,
 	IssueLifeState,
@@ -168,6 +169,22 @@ describe('panel — sync, public reads, rotation', () => {
 		const detail = await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })
 		expect(detail.issue).toMatchObject({ retryingAt, escalatedAt })
 		expect(detail.timeline).toEqual(timeline)
+	})
+
+	it('a card counts the artifacts its timeline lists, and has no open asks without a roster', async () => {
+		const artifact = (id: string): IssueTimelineItem => ({
+			kind: IssueTimelineItemKind.ARTIFACT,
+			id,
+			at: '2026-11-13T10:01:00.000Z',
+			artifactId: `019e4d24-6524-7041-9e1c-8108180cde4${id.slice(-1)}`,
+			artifactKind: ArtifactKind.LINK,
+			name: 'Prévia',
+		})
+		const token = await tokenOf(OWNER, GROUP)
+		await sync(OWNER, [{ threadId: GROUP, name: 'Grupo' }], [issue({ timeline: [TURN, artifact('art-1'), artifact('art-2')] })])
+		const [card] = (await testBed.resolve(GetPanelBoard).execute({ token })).issues
+		expect(card?.artifactCount).toBe(2)
+		expect(card?.openAsks).toEqual([])
 	})
 
 	it('a late retry never overwrites a newer snapshot', async () => {

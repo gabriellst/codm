@@ -6,8 +6,11 @@ import {
 	assignSlugs,
 	buildManifest,
 	parseJsonRpcLines,
+	keepUntouchedDims,
+	parseOnly,
 	type ScreenInput,
 	type ScreensManifest,
+	selectScreens,
 	serializeTokensJson,
 	slugify,
 	withMeasuredDims,
@@ -171,5 +174,40 @@ describe('serializeTokensJson', () => {
 	it('preserva o shape TokensJson (type/value) por variável', () => {
 		const json = JSON.parse(serializeTokensJson(tokens)) as TokensJson
 		expect(json.variables.alpha).toEqual({ type: 'number', value: 8 })
+	})
+})
+
+describe('--only', () => {
+	it('reads the slugs of --only=a,b, ignoring blanks; absent means every screen', () => {
+		expect(parseOnly(['--only=screen-01-detalhe-da-tarefa, screen-tarefas-da-conversa,'])).toEqual(
+			new Set(['screen-01-detalhe-da-tarefa', 'screen-tarefas-da-conversa']),
+		)
+		expect(parseOnly(['--specs'])).toBeUndefined()
+		expect(parseOnly(['--only='])).toEqual(new Set())
+	})
+
+	it('narrows the screens a run touches to the named slugs, keeping their order', () => {
+		const screens = [{ slug: 'a' }, { slug: 'b' }, { slug: 'c' }]
+		expect(selectScreens(screens, new Set(['c', 'a']))).toEqual([{ slug: 'a' }, { slug: 'c' }])
+		expect(selectScreens(screens, undefined)).toEqual(screens)
+	})
+})
+
+describe('keepUntouchedDims', () => {
+	const screen = (slug: string, height: number) => ({ id: slug, slug, area: 'A', name: slug, width: 1440, height })
+	const existing: ScreensManifest = { generatedFrom: 'x', screens: [screen('a', 900), screen('b', 931)] }
+	// Rebuilt from discovery: an auto-layout frame has no own height (0 here) until the targets stage measures it.
+	const rebuilt: ScreensManifest = { generatedFrom: 'x', screens: [screen('a', 0), screen('b', 0)] }
+
+	it('keeps the measured dims of the screens --only does not touch, and leaves the touched ones to be measured', () => {
+		const kept = keepUntouchedDims(rebuilt, existing, new Set(['a']))
+		expect(kept.screens.map(s => [s.slug, s.height])).toEqual([
+			['a', 0],
+			['b', 931],
+		])
+	})
+
+	it('is a no-op on a full run', () => {
+		expect(keepUntouchedDims(rebuilt, existing, undefined)).toBe(rebuilt)
 	})
 })
