@@ -14,7 +14,7 @@ export interface IssueBoardRow {
 }
 
 /**
- * THE BOARD OF ONE GROUP, as another context may read it (fase 3, item 4 — `relatorio`): each live issue's
+ * THE BOARD OF ONE GROUP, as another context may read it (fase 3, item 4 — `boletim`): each live issue's
  * key, title, status and life state, plus those completed in the last `since`. The life state's rule
  * (`lifeStateOf`, `issue/utils`) is this context's — a surface other contexts may not import — so this
  * service is the door to it.

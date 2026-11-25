@@ -57,7 +57,7 @@ const SECTION_ORDER: readonly BulletinSection[] = [
 ]
 
 /**
- * THE GROUP'S BULLETIN (fase 3, item 4) — the answer to `relatorio`, composed from the board with no model:
+ * THE GROUP'S BULLETIN (fase 3, item 4) — the answer to `boletim`, composed from the board with no model:
  * Esperando decisão (with the codes of the open asks and who decides), Paradas (paused, waiting for the
  * provider — with when — or blocked: stopped saying nothing, a CLI login…), Fazendo, Concluídas nas últimas
  * 24 h. One line per issue (key + title), at most `BULLETIN_SECTION_MAX` per section, the group's panel link

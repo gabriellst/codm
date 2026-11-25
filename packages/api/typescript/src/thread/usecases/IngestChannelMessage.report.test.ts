@@ -24,14 +24,14 @@ import { BULLETIN_SECTION_MAX } from '../services/BoardBulletin'
 import { IngestChannelMessage } from './IngestChannelMessage'
 
 /**
- * RELATÓRIO COMO CONSULTA (fase 3, item 4) — `relatorio` (the whole message) is answered with the group's
+ * BOLETIM COMO CONSULTA (fase 3, item 4; revisado 25/11) — `boletim` (the whole message) is answered with the group's
  * bulletin by rule: NO orchestrator turn (no THREAD item), sections from the board, the panel link only with a
  * cloud login, and `thread.bulletin_sent` to count it. A sentence that mentions a report is not the command.
  *
  * Falsifier: drop the command dispatch from `IngestChannelMessage` and every test here finds a THREAD item
  * queued and no bulletin.
  */
-describe('IngestChannelMessage — "relatorio" answered by the board, no model turn', () => {
+describe('IngestChannelMessage — "boletim" answered by the board, no model turn', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 
@@ -109,12 +109,12 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 		await givenIssue(testBed, { threadId, key: 'APP-16', title: 'Logo', status: IssueStatus.COMPLETED })
 		await givenIssue(testBed, { threadId, key: 'APP-9', title: 'Antiga', completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) })
 
-		const out = await say('Relatório?')
+		const out = await say('Boletim?')
 
 		expect(out.invocable).toBe(false)
 		expect(await threadTurn()).toBe(false)
 		const [text] = await bulletins()
-		expect(text).toContain('📋 Relatório')
+		expect(text).toContain('📋 Boletim')
 		expect(text).toContain('*Esperando decisão* (1)')
 		expect(text).toContain('• APP-12 · Página nova — APP-12 · D1 · decide: Member A')
 		expect(text).toContain('*Paradas* (2)')
@@ -135,11 +135,11 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 
 	it('no cloud login → no link; with one → the group panel link closes the bulletin', async () => {
 		await scene()
-		await say('relatorio')
+		await say('boletim')
 		expect((await bulletins())[0]).not.toContain('/panel/')
 
 		await testBed.resolve(PanelPublisher).rotate(threadId)
-		await say('relatorio')
+		await say('boletim')
 		expect((await bulletins())[1]).toContain(`/panel/g/rotated-${threadId}`)
 	})
 
@@ -153,7 +153,7 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 		await scene()
 		for (let i = 1; i <= BULLETIN_SECTION_MAX + 2; i += 1) await givenIssue(testBed, { threadId, key: `APP-${i}`, title: `T${i}` })
 
-		await say('relatorio')
+		await say('boletim')
 
 		const text = (await bulletins())[0] ?? ''
 		expect(text).toContain(`*Paradas* (${BULLETIN_SECTION_MAX + 2})`)
@@ -172,19 +172,33 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 		expect(await testBed.resolve(DomainEventRepository).findByType(BulletinSentEvent)).toHaveLength(0)
 	})
 
+	// Revisão 25/11 (spec 2026-11-17 item 4): the group wants the report the orchestrator writes — by stage, what
+	// is live and what is missing — not the board. "relatorio" wakes it again, as before fase 3.
+	it.each(['relatorio', 'Relatório?', 'report'])('"%s" goes to the orchestrator — its report, not the board', async text => {
+		await scene()
+		await givenIssue(testBed, { threadId, key: 'APP-13', title: 'Banner' })
+
+		const out = await say(text)
+
+		expect(out.invocable).toBe(true)
+		expect(await threadTurn()).toBe(true)
+		expect(await bulletins()).toHaveLength(0)
+		expect(await testBed.resolve(DomainEventRepository).findByType(BulletinSentEvent)).toHaveLength(0)
+	})
+
 	it('someone who may not command the agent gets no bulletin', async () => {
 		await scene()
 
-		await say('relatorio', MUTED)
+		await say('boletim', MUTED)
 
 		expect(await bulletins()).toHaveLength(0)
 		expect(await deliveries()).toBe(0)
 	})
 
-	it('an unaddressed "relatorio" in a gated group is conversation, not the command', async () => {
+	it('an unaddressed "boletim" in a gated group is conversation, not the command', async () => {
 		await scene()
 
-		await say('relatorio', MEMBER, true)
+		await say('boletim', MEMBER, true)
 
 		expect(await bulletins()).toHaveLength(0)
 	})
@@ -224,7 +238,7 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 			dedupKey: 'work:app-21',
 		})
 
-		await say('relatorio')
+		await say('boletim')
 
 		const text = (await bulletins())[0] ?? ''
 		expect(text).toContain('*Esperando decisão* (1)')
@@ -245,7 +259,7 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 			})(),
 		)
 
-		const out = await say('relatorio')
+		const out = await say('boletim')
 
 		expect(out.invocable).toBe(true)
 		expect(await threadTurn()).toBe(true)

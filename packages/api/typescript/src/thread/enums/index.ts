@@ -10,7 +10,7 @@ export * from './PanelActionEcho'
 export * from './BareAnswer'
 export * from './ReplyAnswerWay'
 export * from './AnswerGate'
-// Relatório como consulta (fase 3, item 4) — a command about the whole conversation, and the board's sections.
+// Boletim como consulta (fase 3, item 4) — a command about the whole conversation, and the board's sections.
 export * from './ThreadCommand'
 // O supervisor (fase 5, item 3) — what became of its retry of a task.
 export * from './SupervisorRetryOutcome'

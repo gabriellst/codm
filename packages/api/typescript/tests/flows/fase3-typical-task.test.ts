@@ -103,7 +103,7 @@ class ScriptedRunner extends AgentRunner {
  * ACEITE DA FASE 3 (spec 2026-11-17, "Critério de aceite"): a typical task — request → preview → approval →
  * live — puts in the group AT MOST the receipt, the feedback, the decision and the closing; progress never goes
  * to the group under the default mode; a level-2 question goes on by itself 15 min after the group saw it; and
- * `relatorio` is answered without a model turn.
+ * `boletim` is answered without a model turn (revisão 25/11: `relatorio` is the orchestrator's again).
  *
  * Integration mode, everything real except the model: the request enters through `IngestChannelMessage`, the
  * mailbox dispatcher runs the turns on a scripted runner whose "tool calls" are the use cases behind the MCP
@@ -432,10 +432,10 @@ describe('Flow (integration): fase 3 — a typical task in the group', () => {
 		expect(orchestratorWakes()).toBe(1)
 	})
 
-	it('"relatorio" is answered from the board — no orchestrator turn, one message', async () => {
+	it('"boletim" is answered from the board — no orchestrator turn, one message', async () => {
 		const threadId = await scene()
 
-		const out = await say(threadId, `${GIVEN_MENTION_TAG} relatorio`)
+		const out = await say(threadId, `${GIVEN_MENTION_TAG} boletim`)
 		expect(await testBed.resolve(DomainEventRepository).findByType(BulletinSentEvent)).toHaveLength(1)
 		await settle()
 
@@ -443,6 +443,6 @@ describe('Flow (integration): fase 3 — a typical task in the group', () => {
 		expect(orchestratorWakes()).toBe(0)
 		expect(await testBed.resolve(MailboxRepository).hasPending(MailboxTargetKind.THREAD, threadId)).toBe(false)
 		expect(await mailboxItems()).toBe(0)
-		expect(groupMessages()).toEqual([expect.stringContaining('Relatório')])
+		expect(groupMessages()).toEqual([expect.stringContaining('Boletim')])
 	})
 })
