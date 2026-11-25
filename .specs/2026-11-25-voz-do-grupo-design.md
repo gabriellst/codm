@@ -37,20 +37,20 @@ A mensagem começa pelo **assunto em palavras**, não pela chave. Os códigos de
 
 | Nível | Hoje | Proposto |
 |---|---|---|
-| Decisão | `❓ APP-7 · D1 — O vídeo está ok para publicar?` + opções + link | `❓ video-na-landing — posso publicar?` + opções numeradas + `Responda com o número ou citando esta mensagem.` |
-| Pergunta | `APP-7 · D2 — …` + opções + `Sigo com X se ninguém disser o contrário em 15 min.` + link | `Pergunta — Vídeo na página inicial: …` + opções + `Se ninguém responder em 15 min: X.` |
-| Prévia | `APP-7 · prévia — … (+2 no console)` + link | `👀 Prévia — Vídeo na página inicial` + texto; os prints vão como imagem (os que sobram não são citados) |
-| Fechamento | `✅ APP-7 · <título inteiro> — <texto>` + link | `✅ Pronto — Vídeo na página inicial` + texto |
-| Bloqueio | `⚠️ APP-7 — <título>.` + texto + link | `⚠️ Parei — Vídeo na página inicial: <motivo>` |
+| Decisão | `❓ APP-7 · D1 — O vídeo está ok para publicar?` + opções + link | `❓ video-na-landing-19 — posso publicar?` + opções numeradas + `Responda com o número ou citando esta mensagem.` |
+| Pergunta | `APP-7 · D2 — …` + opções + `Sigo com X se ninguém disser o contrário em 15 min.` + link | `video-na-landing-19 — <pergunta>` + opções + `Se ninguém responder em 15 min: X.` |
+| Prévia | `APP-7 · prévia — … (+2 no console)` + link | `👀 video-na-landing-19 — <texto>` com o print principal; cada outro print citado vai sozinho, `🖼️ video-na-landing-19 — <nome do print>` (§4b) |
+| Fechamento | `✅ APP-7 · <título inteiro> — <texto>` + link | `✅ video-na-landing-19 — <texto>`; sem texto, `✅ video-na-landing-19 — <título>: concluída` |
+| Bloqueio | `⚠️ APP-7 — <título>.` + texto + link | `⚠️ video-na-landing-19 parou — <título>.` + motivo |
 | Resumo por pessoa | `operator, 2 coisas:` + itens com chave + link | **sai do padrão**: cada item vai como a sua própria mensagem curta (no grupo A, em um dia, juntou duas coisas sem relação num texto de mais de 1.800 caracteres) |
-| "Para qual?" | `Para qual? APP-7 · D1 ou APP-9 · D1 — responda citando a pergunta.` | `Tenho duas perguntas abertas: a do vídeo na página inicial e a do aviso do app. Responda citando a que for.` |
+| "Para qual?" | `Para qual? APP-7 · D1 ou APP-9 · D1 — responda citando a pergunta.` | `Tenho 2 perguntas abertas: video-na-landing-19 (posso publicar?) e aviso-do-app-20 (…). Responda citando a que for.` |
 
 **O nome da tarefa é um slug curto e legível, não um código (decisão do grupo, 25/11).** Entre `APP-7` e o slug antigo, o grupo prefere o slug, porque ele diz do que se trata. O slug antigo era feio porque vinha do título cru do pedido (`pedido-do-operador-17-11-21-14-abra-o-ch`, cortado em 40 caracteres). A correção:
 - `ForkIssue` / `DeclareIssueOpen` recebem um **nome** de 2 a 4 palavras (≤ 24 caracteres, ex.: "vídeo na landing"), declarado pelo orquestrador além do título.
-- A chave nova é `uniqueSlugKey(nome)`, única por workspace (`video-na-landing`, colisão → `video-na-landing-2`). A sequência `PREFIXO-n` deixa de ser a chave visível.
+- **Entregue (P2):** a chave é `<slug do nome>-<n>` (`video-na-landing-19`), com `n` do mesmo contador por workspace que dava `BDA-19`. O número fica porque a chave nasce no `agent` e a linha da tarefa só aparece depois, pelo outbox: num lote, duas tarefas com o mesmo nome achariam o nome livre e a segunda nunca materializaria (índice único por conversa). Com o contador, a chave é única por construção, sem leitura extra.
 - `slugify` passa a tirar os acentos em vez de trocá-los por hífen (hoje `conversação` → `conversac-a-o`, um defeito).
 - As chaves `APP-n` que já existem continuam valendo e continuam aceitas quando alguém digitar.
-- As mensagens nomeiam a tarefa pelo slug: `❓ video-na-landing — posso publicar?`.
+- As mensagens nomeiam a tarefa pela chave: `❓ video-na-landing-19 — posso publicar?`. A chave citada no texto e as palavras de controle ("pare", "continue", "agora") acham a tarefa por consulta às chaves da conversa, sem diferenciar maiúsculas, e não pelo formato `PREFIXO-n`.
 
 Isso muda o contrato do `ForkIssue` (campo novo), então vai como passo próprio, depois dos formatos.
 
@@ -72,7 +72,7 @@ O dono decidiu que **não se corta o turno**: a mensagem fica na fila e a pessoa
 - **Orquestrador respondendo outra mensagem.** Cada mensagem é um turno, e elas não andam juntas. Aviso: `Ainda estou respondendo a mensagem anterior — respondo uma de cada vez. A sua ficou na fila e já vem.`
 - **Recado para uma tarefa em turno** (por citação ou chave). Os recados vão juntos no próximo turno dela. Aviso: `Recebi — <chave> está no meio de um passo e lê isso assim que terminar.`
 
-Um aviso por turno em curso (dedupe pelo item em curso), citando a mensagem nova, nos mesmos ramos do 👀, nunca no caminho de resposta a uma pergunta. "agora" continua cortando como antes.
+Um aviso por item à frente (dedupe pelo id dele), citando a mensagem nova, nos mesmos ramos do 👀, nunca no caminho de resposta a uma pergunta. "agora" continua cortando como antes e não avisa. **O que é "ocupado" (entregue, `BUSY_BEHIND`):** para a conversa, qualquer mensagem anterior ainda na fila (em curso, na triagem ou esperando) — a segunda de duas mensagens seguidas também é avisada; para a tarefa, só um passo em curso (trabalho na fila ainda não começou).
 
 ### 4b. Artefatos de volta à conversa (pedido do dono, 25/11)
 
