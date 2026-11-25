@@ -5,7 +5,7 @@ import type { Transaction } from '@codm/core-typescript'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
-import { issuePrefixOf } from '@workspace/objects'
+import { defaultIssueName, issueKeyOf } from '../utils/issueKey'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueSequence } from '../services/IssueSequence'
 import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
@@ -69,8 +69,8 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the workspace this run is scoped to is no longer bound')
 
 		const key = await this.withTransaction(tx, async tx => {
-			// Same short key as `ForkIssue` — `<PREFIX>-<n>`, drawn in this transaction.
-			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
+			// The same key as `ForkIssue` — `<slug do nome>-<n>`, named by the title's first words, drawn in this transaction.
+			const key = issueKeyOf(defaultIssueName(input.title), await this.sequences.next(workspace.id.value, tx))
 			await this.attributes.insertIfNew(
 				IssueAttributes.born({ issueId, ownerId: input.ownerId, threadId: input.threadId, ...ISSUE_ATTRIBUTE_DEFAULTS }),
 				tx,

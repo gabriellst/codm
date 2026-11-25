@@ -129,43 +129,50 @@ describe('ForkIssue — thread + provider resolved from the repository, not the 
 	})
 
 	/**
-	 * THE SHORT KEY AND THE TITLE (fase 0, item 4). Keys were a slug of the goal's first 40 characters;
-	 * now they are `<PREFIX>-<n>`, numbered per WORKSPACE — two groups on the same repository share the
-	 * sequence — and the card title is the orchestrator's short title when it gives one.
+	 * THE KEY IS THE NAME (voz do grupo, 25/11): `<slug do nome>-<n>`, the number drawn per WORKSPACE — two groups
+	 * on the same repository share the sequence, so a key is unique by construction even when two tasks of one
+	 * batch share a name. No name ⇒ the first words of the title (or the goal). The card title is the
+	 * orchestrator's short title when it gives one.
 	 *
-	 * Falsifier: revert to `uniqueSlugKey` and the keys stop matching `^[A-Z0-9]+-\d+$`; scope the counter
-	 * by thread and the second group's issue restarts at 1.
+	 * Falsifier: go back to `<PREFIX>-<n>` and the keys stop carrying the name; scope the counter by thread and the
+	 * second group's task restarts at 1; drop the number and the two "rodapé" tasks collide.
 	 */
-	it('keys are <PREFIX>-<n>, numbered per workspace across groups; the short title is used when given', async () => {
+	it('keys are the name + a number drawn per workspace across groups; the short title is used when given', async () => {
 		const first = await givenThread(testBed, { ownerId })
 		const useCase = testBed.resolve(ForkIssue)
-		const fork = (threadId: string, goal: string, title?: string) =>
+		const fork = (threadId: string, goal: string, opts: { title?: string; name?: string } = {}) =>
 			useCase.execute({
 				ownerId,
 				threadId,
 				goal,
-				title,
-				originEntryId: testId('fork-issue', `entry-${goal}`),
+				...opts,
+				originEntryId: testId('fork-issue', `entry-${goal}-${opts.name ?? ''}`),
 				posture: PermissionPosture.AUTO,
 			})
 
-		const one = await fork(first.id.value, 'Pedido no grupo (12/11, de quem tem libera): põe um toggle de dark mode', 'Toggle de dark mode')
-		const two = await fork(first.id.value, 'corrige o rodapé')
+		const one = await fork(first.id.value, 'Pedido no grupo (12/11, de quem tem libera): põe um toggle de dark mode', {
+			title: 'Toggle de dark mode',
+			name: 'Modo escuro',
+		})
+		const two = await fork(first.id.value, 'corrige o rodapé da página de preços', { name: 'rodapé' })
+		const twin = await fork(first.id.value, 'o rodapé de novo', { name: 'rodapé' })
+		const unnamed = await fork(first.id.value, 'ajusta o cabeçalho do site inteiro', { title: 'Cabeçalho do site inteiro' })
 
-		expect(one.key).toMatch(/^[A-Z0-9]+-1$/)
-		const prefix = one.key.split('-')[0]
-		expect(two.key).toBe(`${prefix}-2`)
+		expect(one.key).toBe('modo-escuro-1')
+		expect(two.key).toBe('rodape-2')
+		expect(twin.key).toBe('rodape-3')
+		expect(unnamed.key).toBe('cabecalho-do-site-4')
 
 		// A SECOND GROUP on the SAME workspace continues the sequence; a group on another workspace starts at 1.
 		const sameRepo = await givenThread(testBed, { ownerId, workspaceId: first.workspaceId })
 		const otherRepo = await givenThread(testBed, { ownerId })
-		expect((await fork(sameRepo.id.value, 'ajusta o cabeçalho')).key).toBe(`${prefix}-3`)
-		expect((await fork(otherRepo.id.value, 'outro projeto')).key).toMatch(/^[A-Z0-9]+-1$/)
+		expect((await fork(sameRepo.id.value, 'ajusta o menu', { name: 'menu novo' })).key).toBe('menu-novo-5')
+		expect((await fork(otherRepo.id.value, 'outro projeto', { name: 'outro projeto' })).key).toBe('outro-projeto-1')
 
 		const events = await testBed.resolve(DomainEventRepository).findByType(IssueForkedEvent)
 		const titles = events.map(event => event.payload.title)
 		expect(titles).toContain('Toggle de dark mode')
-		expect(titles).toContain('corrige o rodapé')
+		expect(titles).toContain('corrige o rodapé da página de preços')
 	})
 })
 

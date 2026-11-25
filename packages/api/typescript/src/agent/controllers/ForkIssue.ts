@@ -25,7 +25,7 @@ export const ForkIssueControllerInputSchema = z
 		params: z.object({ threadId: z.uuid() }),
 		// The use case's own fields, DERIVED (CTRL-C04) — `goal`, the card `title` and, since fase 4, the task's
 		// priority, why, and kind of work. Everything else the use case takes is injected, never the model's.
-		body: ForkIssueInputSchema.pick({ goal: true, title: true, priority: true, priorityReason: true, workKind: true }),
+		body: ForkIssueInputSchema.pick({ goal: true, title: true, name: true, priority: true, priorityReason: true, workKind: true }),
 	})
 	.example([
 		{
@@ -40,7 +40,7 @@ export const ForkIssueControllerInputSchema = z
 				},
 			},
 			params: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae' },
-			body: { goal: 'põe um toggle de dark mode nas configurações', title: 'Toggle de dark mode nas configurações' },
+			body: { goal: 'põe um toggle de dark mode nas configurações', title: 'Toggle de dark mode nas configurações', name: 'dark mode' },
 		},
 	])
 
@@ -123,12 +123,13 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 			threadId,
 			goal: request.body.goal,
 			title: request.body.title,
+			name: request.body.name,
 			// What the orchestrator declares about the task (fase 4) — recorded by the use case since S0c.
 			priority: request.body.priority,
 			priorityReason: request.body.priorityReason,
 			workKind: request.body.workKind,
 			originEntryId: identity.entryId,
-			// From the run token, never from `body` — the body is `{ goal, title? }` and nothing else (Decision 6).
+			// From the run token, never from `body` — the body is `{ goal, title?, name?, … }` and nothing else (Decision 6).
 			posture: identity.posture,
 		})
 		return { status: HttpStatusCode.CREATED, data }

@@ -450,6 +450,43 @@ describe('IngestChannelMessage gate matrix', () => {
 				expect(item.targetId).toBe(issue.id.value)
 			})
 
+			// Voz do grupo (25/11): the key is the task's name (`video-na-landing-19`) — found by looking the dashed
+			// words up among the conversation's tasks, in any case, never by the key's shape.
+			it('naming a running issue by its name-key routes there, in any case — and "agora" after it still cuts', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'video-na-landing-19' })
+				const ingest = (text: string) =>
+					testBed.resolve(IngestChannelMessage).execute({
+						threadId: thread.id.value,
+						senderExternalId: 'stranger-42',
+						text: `${GIVEN_MENTION_TAG} ${text}`,
+						receivedAt: new Date(),
+					})
+
+				await ingest('na Video-na-Landing-19 usa o azul')
+				const item = await queued()
+				expect(item.targetKind).toBe(MailboxTargetKind.ISSUE)
+				expect(item.targetId).toBe(issue.id.value)
+
+				await ingest('video-na-landing-19 agora tira o rodapé')
+				const facts = await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)
+				expect(facts.map(fact => fact.payload.issueId)).toEqual([issue.id.value])
+			})
+
+			it('a dashed word that names no task is not a route', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				await givenIssue(testBed, { threadId: thread.id.value, key: 'video-na-landing-19' })
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: `${GIVEN_MENTION_TAG} manda o e-mail pro bem-estar`,
+					receivedAt: new Date(),
+				})
+
+				expect((await queued()).targetKind).toBe(MailboxTargetKind.THREAD)
+			})
+
 			it('a finished issue is not routed — the orchestrator decides whether to reopen it', async () => {
 				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-9', status: IssueStatus.COMPLETED })

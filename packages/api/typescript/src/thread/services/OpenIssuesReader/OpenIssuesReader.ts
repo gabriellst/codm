@@ -73,6 +73,9 @@ export abstract class OpenIssuesReader {
 	 */
 	abstract steerableIssue(threadId: string, issueId: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
 
-	/** The same question by the issue's KEY (`APP-12`) — what a person types when they name a task. */
+	/**
+	 * The same question by the issue's KEY (`video-na-landing-19`, `APP-12`) — what a person types when they name a
+	 * task. Compared WITHOUT case: people type `bda-15` and `Video-na-landing-19`.
+	 */
 	abstract steerableIssueByKey(threadId: string, key: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
 }

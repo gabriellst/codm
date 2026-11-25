@@ -6,8 +6,14 @@ import type { Stop } from '../../entities/Thread'
 import { answeredInGroupAs } from '../../utils/answerRules'
 import { parseAskCode } from '../../utils/askAnswer'
 
-/** A short issue key a person types in a message (`APP-12`, `BDA-142`) — the format `ForkIssue` mints. */
-const ISSUE_KEY_IN_TEXT = /\b([A-Z][A-Z0-9]{1,5}-\d{1,6})\b/g
+/**
+ * The words of a message that COULD be a task key: every key has a dash by construction (`issueKeyOf` ends it in
+ * `-<n>`; the older `APP-12` and the long slugs too). Which of them IS a key is decided by looking it up among the
+ * conversation's tasks, never by its shape — `video-na-landing-19` and `BDA-15` take the same path.
+ */
+const DASHED_WORD = /[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+/gu
+/** The most dashed words one message is checked for (a pasted URL is full of them). */
+const KEY_CANDIDATES_MAX = 8
 
 export type RuleRouteVia = 'REPLY_QUOTE' | 'KEY_IN_TEXT'
 
@@ -109,9 +115,14 @@ export class RuleRouter {
 			const issue = await this.issues.steerableIssue(input.threadId, input.quotedIssueId, tx)
 			return issue ? { issue, via: 'REPLY_QUOTE' } : undefined
 		}
-		const keys = [...new Set([...input.text.matchAll(ISSUE_KEY_IN_TEXT)].map(match => match[1] ?? ''))].filter(Boolean)
-		if (keys.length !== 1) return undefined
-		const issue = await this.issues.steerableIssueByKey(input.threadId, keys[0] ?? '', tx)
-		return issue ? { issue, via: 'KEY_IN_TEXT' } : undefined
+		const candidates = [...new Set([...input.text.matchAll(DASHED_WORD)].map(match => match[0].toLowerCase()))].slice(0, KEY_CANDIDATES_MAX)
+		const named = new Map<string, SteerableIssueRef>()
+		for (const candidate of candidates) {
+			const issue = await this.issues.steerableIssueByKey(input.threadId, candidate, tx)
+			if (issue) named.set(issue.issueId, issue)
+		}
+		// Exactly ONE task named — two is ambiguous, and the orchestrator decides.
+		const [issue, ...others] = [...named.values()]
+		return issue && others.length === 0 ? { issue, via: 'KEY_IN_TEXT' } : undefined
 	}
 }
