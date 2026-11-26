@@ -2,7 +2,6 @@ package triage
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -63,18 +62,51 @@ func jsonErr(w http.ResponseWriter, code int, msg string) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
+func jsonErrScope(w http.ResponseWriter, code int, msg, scope string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg, "scope": scope})
+}
+
+// resolveSendScope authenticates POST /send and POST /send/media against
+// scopes.json (or GLOBAL_API_KEY → the whatsapp scope). It writes the error
+// response itself and returns nil when the request must stop.
+func resolveSendScope(cfg *Config, w http.ResponseWriter, r *http.Request) *Scope {
+	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok {
+		tok = ""
+	}
+	var (
+		sc  *Scope
+		err error
+	)
+	if cfg.Scopes != nil {
+		sc, err = cfg.Scopes.Resolve(tok)
+	} else if cfg.APIKey == "" {
+		err = ErrNoAuth
+	} else {
+		// Tests may set APIKey without a store; treat it as the whatsapp scope with no chats.
+		store := NewScopeStore("", cfg.APIKey)
+		sc, err = store.Resolve(tok)
+	}
+	if errors.Is(err, ErrNoAuth) {
+		jsonErr(w, http.StatusServiceUnavailable, "send disabled: no scopes or GLOBAL_API_KEY configured")
+		return nil
+	}
+	if err != nil || sc == nil {
+		jsonErr(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return nil
+	}
+	return sc
+}
+
 func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonErr(w, http.StatusMethodNotAllowed, "POST only")
 		return
 	}
-	if s.cfg.APIKey == "" {
-		jsonErr(w, http.StatusServiceUnavailable, "send disabled: GLOBAL_API_KEY not configured")
-		return
-	}
-	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok || subtle.ConstantTimeCompare([]byte(strings.TrimSpace(tok)), []byte(s.cfg.APIKey)) != 1 {
-		jsonErr(w, http.StatusUnauthorized, "missing or invalid bearer token")
+	sc := resolveSendScope(s.cfg, w, r)
+	if sc == nil {
 		return
 	}
 	var req sendRequest
@@ -92,8 +124,9 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(req.ChatJID, "@") {
 		req.ChatJID = normalizeJID(req.ChatJID)
 	}
-	if !s.cfg.SendAllowed(req.ChatJID) {
-		jsonErr(w, http.StatusForbidden, "chat_jid is not on ALLOWLIST_JIDS or SEND_ALLOWLIST_JIDS")
+	if !sc.Allows(req.ChatJID) {
+		slog.Warn("triage: send rejected, chat not in scope", "chat", req.ChatJID, "scope", sc.Name)
+		jsonErrScope(w, http.StatusForbidden, `chat_jid is not in scope "`+sc.Name+`"`, sc.Name)
 		return
 	}
 	chID := s.pairing.ChannelID()
@@ -115,11 +148,11 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if errors.As(err, &appErr) {
 			code = http.StatusConflict
 		}
-		slog.Error("triage: send failed", "chat", req.ChatJID, "error", err)
+		slog.Error("triage: send failed", "chat", req.ChatJID, "scope", sc.Name, "error", err)
 		jsonErr(w, code, err.Error())
 		return
 	}
-	slog.Info("triage: sent", "chat", req.ChatJID, "messageId", out.MessageID)
+	slog.Info("triage: sent", "chat", req.ChatJID, "scope", sc.Name, "messageId", out.MessageID)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "messageId": out.MessageID, "timestamp": out.Timestamp})
 }

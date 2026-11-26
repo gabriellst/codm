@@ -16,10 +16,7 @@ import (
 type Config struct {
 	WebhookURL    string
 	WebhookSecret string
-	Allowlist     map[string]bool // normalized (see normalizeJID); "*" = everyone
-	// SendAllowlist: extra chats POST /send may target (SEND_ALLOWLIST_JIDS).
-	// It never affects webhook forwarding; "*" is ignored here on purpose.
-	SendAllowlist map[string]bool
+	Allowlist     map[string]bool // normalized (see normalizeJID); "*" = everyone. Webhook only.
 	ForwardFromMe bool
 	OwnerID       string
 	AutoPair      bool
@@ -27,7 +24,9 @@ type Config struct {
 	PairPhone     string
 	BindHost      string
 	DataDir       string
-	APIKey        string
+	APIKey        string // GLOBAL_API_KEY; maps to the "whatsapp" send scope only
+	ScopesFile    string
+	Scopes        *ScopeStore
 }
 
 func LoadConfig() *Config {
@@ -43,11 +42,14 @@ func LoadConfig() *Config {
 	if apiKey == "" {
 		apiKey = os.Getenv("GLOBAL_API_KEY")
 	}
+	scopesFile := strings.TrimSpace(os.Getenv("SCOPES_FILE"))
+	if scopesFile == "" {
+		scopesFile = filepath.Join(dataDir, "scopes.json")
+	}
 	return &Config{
 		WebhookURL:    strings.TrimSpace(os.Getenv("WEBHOOK_URL")),
 		WebhookSecret: os.Getenv("WEBHOOK_SECRET"),
 		Allowlist:     parseAllowlist(os.Getenv("ALLOWLIST_JIDS")),
-		SendAllowlist: parseAllowlist(os.Getenv("SEND_ALLOWLIST_JIDS") + "," + os.Getenv("OWNER_SEND_JIDS")),
 		ForwardFromMe: truthy(env("FORWARD_FROM_ME", "false")),
 		OwnerID:       env("TRIAGE_OWNER_ID", "box-owner"),
 		AutoPair:      truthy(env("AUTO_PAIR", "true")),
@@ -56,6 +58,8 @@ func LoadConfig() *Config {
 		BindHost:      env("BIND_HOST", "127.0.0.1"),
 		DataDir:       dataDir,
 		APIKey:        apiKey,
+		ScopesFile:    scopesFile,
+		Scopes:        NewScopeStore(scopesFile, apiKey),
 	}
 }
 
@@ -77,13 +81,16 @@ func (c *Config) Allowed(jids ...string) bool {
 	return false
 }
 
-// SendAllowed reports whether POST /send may target jid: anything on
-// ALLOWLIST_JIDS (unchanged behaviour) plus the send-only SEND_ALLOWLIST_JIDS.
-func (c *Config) SendAllowed(jid string) bool {
-	if c.Allowed(jid) {
-		return true
+// receivedAllowed reports whether GET /media/received may list a chat.
+// GLOBAL_API_KEY is scoped to the whatsapp contact list; if that scope is
+// missing, fall back to ALLOWLIST_JIDS (webhook list).
+func (c *Config) receivedAllowed(jid string) bool {
+	if c.Scopes != nil {
+		if sc := c.Scopes.Lookup("whatsapp"); sc != nil {
+			return sc.Allows(jid)
+		}
 	}
-	return jid != "" && c.SendAllowlist[normalizeJID(jid)]
+	return c.Allowed(jid)
 }
 
 func parseAllowlist(raw string) map[string]bool {

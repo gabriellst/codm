@@ -2,6 +2,7 @@ package triage
 
 import (
 	"log/slog"
+	"os"
 
 	"go.uber.org/fx"
 
@@ -45,10 +46,13 @@ var Options = fx.Options(
 			slog.Warn("triage: WEBHOOK_URL is not set — inbound messages are only logged")
 		}
 		if len(cfg.Allowlist) == 0 {
-			slog.Warn("triage: ALLOWLIST_JIDS is empty — nothing will be forwarded and /send rejects every chat")
+			slog.Warn("triage: ALLOWLIST_JIDS is empty — nothing will be forwarded")
 		}
-		if len(cfg.SendAllowlist) > 0 {
-			slog.Info("triage: SEND_ALLOWLIST_JIDS active (send-only, no webhook)", "chats", len(cfg.SendAllowlist))
+		if os.Getenv("SEND_ALLOWLIST_JIDS") != "" || os.Getenv("OWNER_SEND_JIDS") != "" {
+			slog.Warn("triage: SEND_ALLOWLIST_JIDS and OWNER_SEND_JIDS are ignored; send access is granted only via scopes.json")
+		}
+		if cfg.Scopes != nil {
+			slog.Info("triage: send scopes loaded", "file", cfg.ScopesFile, "scopes", cfg.Scopes.Summary())
 		}
 		return nil
 	}),

@@ -194,7 +194,12 @@ func TestPrepareExactlyOneSource(t *testing.T) {
 }
 
 func TestMediaEndpointValidation(t *testing.T) {
-	cfg := &Config{APIKey: "k", Allowlist: map[string]bool{"1@g.us": true}, SendAllowlist: map[string]bool{}}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "scopes.json")
+	writeScopes(t, path, []scopeFileEntry{
+		{Name: "whatsapp", Key: "scope-k", JIDs: []string{"1@g.us"}},
+	})
+	cfg := &Config{APIKey: "k", Allowlist: map[string]bool{"1@g.us": true}, Scopes: NewScopeStore(path, "k")}
 	e := &MediaEndpoint{cfg: cfg, prep: newMediaPrep(cfg)}
 	do := func(method, auth, body string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, "/send/media", strings.NewReader(body))

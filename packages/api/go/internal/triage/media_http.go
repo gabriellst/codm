@@ -78,7 +78,8 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, http.StatusMethodNotAllowed, "POST only")
 		return
 	}
-	if !authorize(e.cfg, w, r) {
+	sc := resolveSendScope(e.cfg, w, r)
+	if sc == nil {
 		return
 	}
 	var req mediaRequest
@@ -105,8 +106,9 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(req.ChatJID, "@") {
 		req.ChatJID = normalizeJID(req.ChatJID)
 	}
-	if !e.cfg.SendAllowed(req.ChatJID) {
-		jsonErr(w, http.StatusForbidden, "chat_jid is not on ALLOWLIST_JIDS or SEND_ALLOWLIST_JIDS")
+	if !sc.Allows(req.ChatJID) {
+		slog.Warn("triage: media send rejected, chat not in scope", "chat", req.ChatJID, "scope", sc.Name)
+		jsonErrScope(w, http.StatusForbidden, `chat_jid is not in scope "`+sc.Name+`"`, sc.Name)
 		return
 	}
 	chID, err := uuid.Parse(e.pairing.ChannelID())
@@ -185,7 +187,7 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 	if res.Timestamp == 0 {
 		res.Timestamp = time.Now().Unix()
 	}
-	slog.Info("triage: media sent", "chat", req.ChatJID, "type", pm.Kind, "bytes", len(pm.Data), "messageId", res.MessageID)
+	slog.Info("triage: media sent", "chat", req.ChatJID, "scope", sc.Name, "type", pm.Kind, "bytes", len(pm.Data), "messageId", res.MessageID)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok": true, "messageId": res.MessageID, "timestamp": res.Timestamp,
@@ -281,7 +283,7 @@ func (e *MediaEndpoint) ServeReceived(w http.ResponseWriter, r *http.Request) {
 		if rows.Scan(&id, &remote, &sender, &mtype, &content, &at, &dir) != nil {
 			continue
 		}
-		if !e.cfg.SendAllowed(remote) {
+		if !e.cfg.receivedAllowed(remote) {
 			continue
 		}
 		if m, ok := e.parseReceived(id, remote, sender, mtype, content, at); ok {
