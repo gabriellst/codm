@@ -49,6 +49,8 @@ func (c *WhatsmeowChannel) buildMessage(ctx context.Context, params gateway.Send
 		return c.buildTextMessage(gateway.SendTextContent{Text: ""})
 	case gateway.SendMediaContent:
 		return c.buildMediaMessage(ctx, params.MessageType, content)
+	case gateway.SendRichMediaContent:
+		return c.buildRichMediaMessage(ctx, content)
 	default:
 		return nil, fmt.Errorf("unsupported content type: %T", params.Content)
 	}

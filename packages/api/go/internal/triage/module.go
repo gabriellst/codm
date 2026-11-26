@@ -19,6 +19,7 @@ var Options = fx.Options(
 	fx.Provide(NewPairing),
 	fx.Provide(NewQRHandler),
 	fx.Provide(NewSendEndpoint),
+	fx.Provide(NewMediaEndpoint),
 
 	// Upstream builds the integration mediator EGRESS-ONLY because the TS
 	// daemon owns ingress on that lane. This box deployment runs no TS daemon,

@@ -459,6 +459,9 @@ func (c *WhatsmeowChannel) buildPersistContent(params gateway.SendMessageParams)
 	case gateway.SendStatusContent:
 		return MarshalContent(WhatsAppTextContent{Text: content.Content})
 
+	case gateway.SendRichMediaContent:
+		return persistRichMedia(content)
+
 	case gateway.SendMediaContent:
 		switch params.MessageType {
 		case msgenums.MessageTypeImage:

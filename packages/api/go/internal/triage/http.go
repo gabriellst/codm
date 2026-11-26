@@ -126,9 +126,11 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // StartServer replaces core.StartHTTPServer: same router, but bound to
 // BIND_HOST (default 127.0.0.1) and with /send + /triage/status in front.
-func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config.Config, cfg *Config, send *SendEndpoint, p *Pairing) error {
+func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config.Config, cfg *Config, send *SendEndpoint, media *MediaEndpoint, p *Pairing) error {
 	mux := http.NewServeMux()
 	mux.Handle("/send", send)
+	mux.HandleFunc("/send/media", media.ServeSend)
+	mux.HandleFunc("/media/received", media.ServeReceived)
 	mux.HandleFunc("/triage/status", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(p.Snapshot())

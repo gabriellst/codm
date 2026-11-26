@@ -182,6 +182,27 @@ type SendMediaContent struct {
 	FileName  string
 }
 
+// SendRichMediaContent is the box-bridge send payload for fully prepared media
+// (bytes already read/converted by the caller): voice notes (PTT), thumbnails,
+// stickers, quoted replies. Kind is one of image|video|audio|voice|document|sticker.
+type SendRichMediaContent struct {
+	Kind      string
+	Data      []byte
+	Mimetype  string
+	Caption   string
+	FileName  string
+	Thumbnail []byte // JPEG
+	Width     uint32
+	Height    uint32
+	Seconds   uint32
+	Waveform  []byte // 64 samples 0..100 (voice notes)
+	PTT       bool
+	Animated  bool
+
+	QuotedMessageID   string
+	QuotedParticipant string
+}
+
 // InternalTextContent represents an internal (non-platform) text message.
 type InternalTextContent struct {
 	Text string `json:"text"`
