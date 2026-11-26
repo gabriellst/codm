@@ -1,0 +1,14 @@
+{
+	"name": "whatsapp-mcp-spike",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "bun server.ts",
+		"seed": "bun seed.ts",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.30.0",
+		"zod": "^4.0.0"
+	}
+}
