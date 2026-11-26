@@ -203,11 +203,12 @@ type receivedMedia struct {
 	Seconds   uint32 `json:"seconds,omitempty"`
 	FileName  string `json:"fileName,omitempty"`
 	Caption   string `json:"caption,omitempty"`
+	FromMe    bool   `json:"fromMe"` // sent by the owner from their phone
 	Path      string `json:"path"`
 	Timestamp int64  `json:"timestamp"` // unix seconds
 }
 
-// ServeReceived lists inbound media already saved under <data>/media.
+// ServeReceived lists inbound media (including the owner's own phone sends) already saved under <data>/media.
 //
 //	GET /media/received?message_id=ID
 //	GET /media/received?chat_jid=JID&type=audio&limit=20&since=<unix seconds>
@@ -220,7 +221,9 @@ func (e *MediaEndpoint) ServeReceived(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	where := []string{"direction = 'RECEIVED'", "message_type IN ('IMAGE','VIDEO','AUDIO','DOCUMENT','STICKER')", "content LIKE '%\"mediaPath\"%'"}
+	// No direction filter: media the owner sends from their own phone is stored
+	// as SENT but still carries a downloaded mediaPath; bridge sends have none.
+	where := []string{"message_type IN ('IMAGE','VIDEO','AUDIO','DOCUMENT','STICKER')", "content LIKE '%\"mediaPath\"%'"}
 	var args []any
 	if id := strings.TrimSpace(q.Get("message_id")); id != "" {
 		where = append(where, "platform_message_id = ?")
@@ -264,7 +267,7 @@ func (e *MediaEndpoint) ServeReceived(w http.ResponseWriter, r *http.Request) {
 		limit = n
 	}
 	rows, err := e.db.QueryContext(r.Context(),
-		`SELECT platform_message_id, remote_id, sender_remote_id, message_type, content, occurred_at
+		`SELECT platform_message_id, remote_id, sender_remote_id, message_type, content, occurred_at, direction
 		   FROM gateway_messages WHERE `+strings.Join(where, " AND ")+` ORDER BY occurred_at DESC LIMIT 500`, args...)
 	if err != nil {
 		jsonErr(w, http.StatusInternalServerError, "query failed")
@@ -273,15 +276,16 @@ func (e *MediaEndpoint) ServeReceived(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 	out := []receivedMedia{}
 	for rows.Next() && len(out) < limit {
-		var id, remote, sender, mtype, content string
+		var id, remote, sender, mtype, content, dir string
 		var at int64
-		if rows.Scan(&id, &remote, &sender, &mtype, &content, &at) != nil {
+		if rows.Scan(&id, &remote, &sender, &mtype, &content, &at, &dir) != nil {
 			continue
 		}
 		if !e.cfg.SendAllowed(remote) {
 			continue
 		}
 		if m, ok := e.parseReceived(id, remote, sender, mtype, content, at); ok {
+			m.FromMe = dir == "SENT"
 			out = append(out, m)
 		}
 	}
