@@ -27,11 +27,12 @@ import (
 type WebhookForwarder struct {
 	cfg    *Config
 	pool   pool.ChannelPool
+	sent   *SentLog
 	client *http.Client
 }
 
-func NewWebhookForwarder(cfg *Config, p pool.ChannelPool) *WebhookForwarder {
-	return &WebhookForwarder{cfg: cfg, pool: p, client: &http.Client{Timeout: 15 * time.Second}}
+func NewWebhookForwarder(cfg *Config, p pool.ChannelPool, sent *SentLog) *WebhookForwarder {
+	return &WebhookForwarder{cfg: cfg, pool: p, sent: sent, client: &http.Client{Timeout: 15 * time.Second}}
 }
 
 var _ mediator.IntegrationEventHandler = (*WebhookForwarder)(nil)
@@ -63,6 +64,16 @@ func (w *WebhookForwarder) Handle(ctx context.Context, event types.IntegrationEv
 	}
 	p := e.Payload
 	if p.FromMe && !w.cfg.ForwardFromMe {
+		return nil
+	}
+	// Echo of a message we ourselves sent via POST /send — never forward,
+	// or FORWARD_FROM_ME would feed the bot its own replies.
+	wait := time.Duration(0)
+	if p.FromMe {
+		wait = 500 * time.Millisecond
+	}
+	if w.sent.OwnSend(ctx, p.MessageID, wait) {
+		slog.Info("triage: skipping echo of our own /send", "messageId", p.MessageID, "chat", p.RemoteID)
 		return nil
 	}
 

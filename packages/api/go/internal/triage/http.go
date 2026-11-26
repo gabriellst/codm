@@ -50,10 +50,11 @@ type SendEndpoint struct {
 	cfg     *Config
 	pairing *Pairing
 	send    *usecases.SendTextHandler
+	sent    *SentLog
 }
 
-func NewSendEndpoint(cfg *Config, p *Pairing, s *usecases.SendTextHandler) *SendEndpoint {
-	return &SendEndpoint{cfg: cfg, pairing: p, send: s}
+func NewSendEndpoint(cfg *Config, p *Pairing, s *usecases.SendTextHandler, sent *SentLog) *SendEndpoint {
+	return &SendEndpoint{cfg: cfg, pairing: p, send: s, sent: sent}
 }
 
 func jsonErr(w http.ResponseWriter, code int, msg string) {
@@ -100,9 +101,14 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, http.StatusServiceUnavailable, "channel not ready")
 		return
 	}
+	s.sent.BeginSend()
 	out, err := s.send.Execute(r.Context(), usecases.SendTextInput{
 		ChannelID: chID, RemoteID: req.ChatJID, Text: req.Text, QuotedMessageID: req.ReplyToMessageID,
 	})
+	if err == nil {
+		s.sent.Remember(r.Context(), out.MessageID)
+	}
+	s.sent.EndSend()
 	if err != nil {
 		var appErr *coreerrors.AppError
 		code := http.StatusBadGateway

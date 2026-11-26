@@ -14,6 +14,7 @@ import (
 // their own module scope and its children).
 var Options = fx.Options(
 	fx.Provide(LoadConfig),
+	fx.Provide(NewSentLog),
 	fx.Provide(NewWebhookForwarder),
 	fx.Provide(NewPairing),
 	fx.Provide(NewQRHandler),
