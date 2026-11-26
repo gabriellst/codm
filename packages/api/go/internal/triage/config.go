@@ -17,6 +17,9 @@ type Config struct {
 	WebhookURL    string
 	WebhookSecret string
 	Allowlist     map[string]bool // normalized (see normalizeJID); "*" = everyone
+	// SendAllowlist: extra chats POST /send may target (SEND_ALLOWLIST_JIDS).
+	// It never affects webhook forwarding; "*" is ignored here on purpose.
+	SendAllowlist map[string]bool
 	ForwardFromMe bool
 	OwnerID       string
 	AutoPair      bool
@@ -44,6 +47,7 @@ func LoadConfig() *Config {
 		WebhookURL:    strings.TrimSpace(os.Getenv("WEBHOOK_URL")),
 		WebhookSecret: os.Getenv("WEBHOOK_SECRET"),
 		Allowlist:     parseAllowlist(os.Getenv("ALLOWLIST_JIDS")),
+		SendAllowlist: parseAllowlist(os.Getenv("SEND_ALLOWLIST_JIDS")),
 		ForwardFromMe: truthy(env("FORWARD_FROM_ME", "false")),
 		OwnerID:       env("TRIAGE_OWNER_ID", "box-owner"),
 		AutoPair:      truthy(env("AUTO_PAIR", "true")),
@@ -71,6 +75,15 @@ func (c *Config) Allowed(jids ...string) bool {
 		}
 	}
 	return false
+}
+
+// SendAllowed reports whether POST /send may target jid: anything on
+// ALLOWLIST_JIDS (unchanged behaviour) plus the send-only SEND_ALLOWLIST_JIDS.
+func (c *Config) SendAllowed(jid string) bool {
+	if c.Allowed(jid) {
+		return true
+	}
+	return jid != "" && c.SendAllowlist[normalizeJID(jid)]
 }
 
 func parseAllowlist(raw string) map[string]bool {

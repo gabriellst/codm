@@ -92,8 +92,8 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(req.ChatJID, "@") {
 		req.ChatJID = normalizeJID(req.ChatJID)
 	}
-	if !s.cfg.Allowed(req.ChatJID) {
-		jsonErr(w, http.StatusForbidden, "chat_jid is not on ALLOWLIST_JIDS")
+	if !s.cfg.SendAllowed(req.ChatJID) {
+		jsonErr(w, http.StatusForbidden, "chat_jid is not on ALLOWLIST_JIDS or SEND_ALLOWLIST_JIDS")
 		return
 	}
 	chID := s.pairing.ChannelID()

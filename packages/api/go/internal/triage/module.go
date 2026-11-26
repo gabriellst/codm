@@ -46,6 +46,9 @@ var Options = fx.Options(
 		if len(cfg.Allowlist) == 0 {
 			slog.Warn("triage: ALLOWLIST_JIDS is empty — nothing will be forwarded and /send rejects every chat")
 		}
+		if len(cfg.SendAllowlist) > 0 {
+			slog.Info("triage: SEND_ALLOWLIST_JIDS active (send-only, no webhook)", "chats", len(cfg.SendAllowlist))
+		}
 		return nil
 	}),
 	fx.Invoke(StartServer),
