@@ -118,6 +118,8 @@ func (w *WebhookForwarder) Handle(ctx context.Context, event types.IntegrationEv
 	req.Header.Set("X-Codm-Timestamp", ts)
 	if w.cfg.WebhookSecret != "" {
 		req.Header.Set("X-Codm-Signature", "sha256="+Sign(w.cfg.WebhookSecret, ts, buf))
+		// GitHub-style: HMAC over the raw body only (no timestamp prefix).
+		req.Header.Set("X-Hub-Signature-256", "sha256="+SignBody(w.cfg.WebhookSecret, buf))
 	}
 	resp, err := w.client.Do(req)
 	if err != nil {
@@ -170,4 +172,11 @@ func findText(m map[string]any, depth int) string {
 		}
 	}
 	return ""
+}
+
+// SignBody = hex(HMAC-SHA256(secret, body)) — GitHub X-Hub-Signature-256.
+func SignBody(secret string, body []byte) string {
+	m := hmac.New(sha256.New, []byte(secret))
+	m.Write(body)
+	return hex.EncodeToString(m.Sum(nil))
 }
