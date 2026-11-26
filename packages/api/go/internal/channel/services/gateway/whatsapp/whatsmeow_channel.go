@@ -1167,3 +1167,11 @@ func contactDisplayName(ctx context.Context, client *whatsmeow.Client, jid types
 		return contact.FirstName
 	}
 }
+
+// PairPhone requests an 8-character "link with phone number" pairing code.
+// Must be called while a QR pairing round is active (after GetQRChannel).
+// Used by the box triage entrypoint (internal/triage) as the headless
+// alternative to scanning qr.png.
+func (c *WhatsmeowChannel) PairPhone(ctx context.Context, phone string) (string, error) {
+	return c.client.PairPhone(ctx, phone, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
+}
