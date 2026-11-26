@@ -47,7 +47,7 @@ func LoadConfig() *Config {
 		WebhookURL:    strings.TrimSpace(os.Getenv("WEBHOOK_URL")),
 		WebhookSecret: os.Getenv("WEBHOOK_SECRET"),
 		Allowlist:     parseAllowlist(os.Getenv("ALLOWLIST_JIDS")),
-		SendAllowlist: parseAllowlist(os.Getenv("SEND_ALLOWLIST_JIDS")),
+		SendAllowlist: parseAllowlist(os.Getenv("SEND_ALLOWLIST_JIDS") + "," + os.Getenv("OWNER_SEND_JIDS")),
 		ForwardFromMe: truthy(env("FORWARD_FROM_ME", "false")),
 		OwnerID:       env("TRIAGE_OWNER_ID", "box-owner"),
 		AutoPair:      truthy(env("AUTO_PAIR", "true")),
