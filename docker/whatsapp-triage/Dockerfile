@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# (No RUN --mount=type=cache: Railway requires service-specific cache ids.)
 # =============================================================================
 # whatsapp-triage — the standalone WhatsApp bridge (whatsmeow + SQLite).
 # Build from the REPO ROOT:
@@ -19,10 +20,9 @@ COPY packages/contracts/generated/go ./packages/contracts/generated/go
 COPY packages/api/go/go.mod packages/api/go/go.sum ./packages/api/go/
 COPY packages/api/go/core/go.mod packages/api/go/core/go.sum ./packages/api/go/core/
 WORKDIR /src/packages/api/go
-RUN --mount=type=cache,target=/root/go/pkg/mod go mod download
+RUN go mod download
 COPY packages/api/go ./
-RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags="-s -w" -o /out/whatsapp-triage ./cmd/whatsapp-triage
+RUN go build -ldflags="-s -w" -o /out/whatsapp-triage ./cmd/whatsapp-triage
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates tzdata ffmpeg curl
