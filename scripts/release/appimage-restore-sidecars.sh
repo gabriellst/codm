@@ -17,14 +17,17 @@
 #      do offset do AppImage), então o lançador continua o que o Tauri escolheu;
 #   4. confere: extrai o AppImage novo e exige que cada sidecar seja byte-a-byte o original e que NADA mais
 #      tenha mudado (diff de árvore contra o que o Tauri empacotou);
-#   5. reassina com a chave do updater e VERIFICA a assinatura contra a pubkey do tauri.conf.json (minisign).
+#   5. reassina com a chave do updater e VERIFICA a assinatura contra a pubkey do tauri.conf.json
+#      (./verify-updater-signature.ts — o runner Ubuntu 22.04 não tem o pacote minisign).
 # Qualquer divergência sai com erro: um AppImage meio-consertado nunca vira release.
 #
 # Uso: appimage-restore-sidecars.sh <bundle_dir> <tauri_dir>
 #   bundle_dir: …/src-tauri/target/release/bundle   tauri_dir: packages/app/tauri
 # Env: TAURI_SIGNING_PRIVATE_KEY (obrigatória), TAURI_SIGNING_PRIVATE_KEY_PASSWORD (pode ser vazia).
-# Requer: jq, rustc, cmp, diff, readelf, mksquashfs/unsquashfs (squashfs-tools), minisign, bun.
+# Requer: jq, rustc, cmp, diff, readelf, mksquashfs/unsquashfs (squashfs-tools), bun.
 set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
 
 bundle_dir=$(cd "$1" && pwd)
 tauri_dir=$(cd "$2" && pwd)
@@ -96,7 +99,5 @@ rm -f "$appimage.sig"
 # Reassina com a chave do updater e verifica contra a pubkey publicada no tauri.conf.json.
 (cd "$tauri_dir" && bun x tauri signer sign --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" "$appimage")
 [ -s "$appimage.sig" ] || { echo "::error::tauri signer não gerou $appimage.sig"; exit 1; }
-jq -r '.plugins.updater.pubkey' "$conf" | base64 -d > "$work/updater.pub"
-base64 -d < "$appimage.sig" > "$work/appimage.minisig"
-minisign -Vm "$appimage" -x "$work/appimage.minisig" -p "$work/updater.pub"
+bun "$here/verify-updater-signature.ts" "$appimage" "$appimage.sig" "$conf"
 echo "AppImage consertado ($restored sidecar(s) recolocado(s)) e reassinado: $(basename "$appimage")"

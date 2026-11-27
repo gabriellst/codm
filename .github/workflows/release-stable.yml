@@ -142,7 +142,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
             libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf \
-            squashfs-tools minisign jq
+            squashfs-tools jq
 
       # Runner descartável: Rust pela action, cache de cargo em toda perna. O veto histórico à
       # `Swatinem/rust-cache` era sobre runner PERSISTENTE (a poda de `~/.cargo/bin` apagou o
