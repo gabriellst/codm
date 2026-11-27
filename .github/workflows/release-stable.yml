@@ -141,7 +141,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
-            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
+            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf \
+            squashfs-tools minisign jq
 
       # Runner descartável: Rust pela action, cache de cargo em toda perna. O veto histórico à
       # `Swatinem/rust-cache` era sobre runner PERSISTENTE (a poda de `~/.cargo/bin` apagou o
@@ -354,6 +355,19 @@ jobs:
           TAURI_BUNDLER_DMG_IGNORE_CI: ${{ runner.os == 'macOS' && 'true' || '' }}
 
         run: cd packages/app/tauri && bun x tauri build --verbose --bundles ${{ matrix.bundles }}
+
+      # O AppImage sai com o daemon QUEBRADO: o linuxdeploy grava `RUNPATH` com patchelf em todo ELF de
+      # usr/bin, e o binário `bun --compile` do daemon morre no carregamento (SIGSEGV) — medido em 27/11/2026
+      # na VPS com o AppImage da v0.13.1; o mesmo daemon dentro do .deb sobe normal. Como o AppImage é o único
+      # formato que o updater do Tauri troca no Linux, sem este passo o Linux não tem auto-update. O script
+      # recoloca os sidecars originais, regera o squashfs atrás do MESMO runtime, confere byte a byte e
+      # reassina (verificando contra a pubkey do tauri.conf.json). Ver scripts/release/appimage-restore-sidecars.sh.
+      - name: AppImage com os sidecars intactos (Linux)
+        if: runner.os == 'Linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        run: bash scripts/release/appimage-restore-sidecars.sh "$BUNDLE_DIR" packages/app/tauri
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa

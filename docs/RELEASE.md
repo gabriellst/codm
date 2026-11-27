@@ -101,6 +101,14 @@ avançam, e o cliente daquela plataforma nunca saberia.
 - **AppImage é o formato do updater.** O `.deb` existe para quem prefere o gerenciador de pacotes,
   mas **não se auto-atualiza** (o plugin só sabe substituir AppImage): quem instala pelo `.deb`
   atualiza baixando o `.deb` novo. Diga isso na página de download.
+- **O AppImage sai do Tauri com o daemon quebrado, e a release conserta.** O linuxdeploy do bundler
+  grava `RUNPATH $ORIGIN/../lib` (patchelf) em todo ELF de `usr/bin`; o daemon `bun --compile` ganha
+  um segmento LOAD e morre no carregamento (SIGSEGV em `_dl_check_map_versions`) — medido em
+  27/11/2026 com o AppImage da v0.13.1, enquanto o mesmo daemon no `.deb` subia normal (e carregava o
+  libsql do `daemon-runtime` sem `NODE_PATH`). O passo "AppImage com os sidecars intactos (Linux)" dos
+  dois workflows roda `scripts/release/appimage-restore-sidecars.sh`: recoloca os sidecars originais,
+  regera o squashfs atrás do mesmo runtime, confere byte a byte e reassina com a chave do updater,
+  verificando a assinatura contra a pubkey do `tauri.conf.json`.
 - AppImage precisa de FUSE 2 em algumas distros (`sudo apt install libfuse2` no Ubuntu 22.04+; ou
   rode com `--appimage-extract-and-run`). Marque como executável (`chmod +x`) — o browser não faz.
 - **Keyring**: o shell guarda a sessão via `keyring` com `sync-secret-service`, que exige um
