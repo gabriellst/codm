@@ -39,14 +39,101 @@ func NewReadAPI(cfg *Config, store *sqlite.SqliteStore) *ReadAPI {
 }
 
 func (a *ReadAPI) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /read/messages", a.messages)
-	mux.HandleFunc("GET /read/bridge-sent", a.bridgeSent)
-	mux.HandleFunc("GET /read/remotes", a.remotes)
-	mux.HandleFunc("GET /read/contacts", a.contacts)
-	mux.HandleFunc("GET /read/lid-map", a.lidMap)
-	mux.HandleFunc("GET /read/revisions", a.revisions)
-	mux.HandleFunc("GET /media/file/{id}", a.mediaByID)
-	mux.HandleFunc("GET /media/file", a.mediaByPath)
+	mux.HandleFunc("GET /read/messages", a.ownChats(a.messages))
+	mux.HandleFunc("GET /read/bridge-sent", a.readAllOnly(a.bridgeSent))
+	mux.HandleFunc("GET /read/remotes", a.readAllOnly(a.remotes))
+	mux.HandleFunc("GET /read/contacts", a.readAllOnly(a.contacts))
+	mux.HandleFunc("GET /read/lid-map", a.readAllOnly(a.lidMap))
+	mux.HandleFunc("GET /read/revisions", a.ownChats(a.revisions))
+	mux.HandleFunc("GET /media/file/{id}", a.ownMedia(a.mediaByID))
+	mux.HandleFunc("GET /media/file", a.readAllOnly(a.mediaByPath))
+}
+
+// Read access. Scopes named in READ_ALL_SCOPES (default "whatsapp,bk-bots-supervisor";
+// GLOBAL_API_KEY resolves to "whatsapp") read every chat — the triage routine,
+// transcription and the BK Bots Supervisor's stop-word scan need that. Any other
+// scope reads ONLY its own jids: /read/messages and /read/revisions are pinned to
+// them, /media/file/{id} checks the message's chat, everything else is 403.
+func readAllScopes() map[string]bool {
+	v, ok := os.LookupEnv("READ_ALL_SCOPES")
+	if !ok {
+		v = "whatsapp,bk-bots-supervisor"
+	}
+	out := map[string]bool{}
+	for _, n := range strings.Split(v, ",") {
+		if n = strings.TrimSpace(n); n != "" {
+			out[n] = true
+		}
+	}
+	return out
+}
+
+// restrictedScope returns the caller's scope when it may only read its own chats.
+func restrictedScope(r *http.Request) *Scope {
+	sc := scopeFromRequest(r)
+	if sc == nil || readAllScopes()[sc.Name] {
+		return nil
+	}
+	return sc
+}
+
+func (a *ReadAPI) readAllOnly(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if sc := restrictedScope(r); sc != nil {
+			jsonErrScope(w, http.StatusForbidden, "this scope may only read its own chats", sc.Name)
+			return
+		}
+		h(w, r)
+	}
+}
+
+// ownChats pins remote_id to the scope's jids (or refuses jids outside it).
+func (a *ReadAPI) ownChats(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sc := restrictedScope(r)
+		if sc == nil {
+			h(w, r)
+			return
+		}
+		q := r.URL.Query()
+		if asked := multi(q, "remote_id"); len(asked) > 0 {
+			for _, j := range asked {
+				if !sc.Allows(j) {
+					jsonErrScope(w, http.StatusForbidden, "remote_id outside this scope", sc.Name)
+					return
+				}
+			}
+		} else {
+			own := sc.JIDs()
+			if len(own) == 0 {
+				jsonErrScope(w, http.StatusForbidden, "scope has no chats", sc.Name)
+				return
+			}
+			q["remote_id"] = own
+		}
+		r2 := r.Clone(r.Context())
+		r2.URL.RawQuery = q.Encode()
+		h(w, r2)
+	}
+}
+
+func (a *ReadAPI) ownMedia(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sc := restrictedScope(r)
+		if sc == nil {
+			h(w, r)
+			return
+		}
+		id := r.PathValue("id")
+		var remote string
+		err := a.db.QueryRowContext(r.Context(),
+			`SELECT remote_id FROM gateway_messages WHERE id = ? OR platform_message_id = ? LIMIT 1`, id, id).Scan(&remote)
+		if err != nil || !sc.Allows(remote) {
+			jsonErrScope(w, http.StatusForbidden, "message outside this scope", sc.Name)
+			return
+		}
+		h(w, r)
+	}
 }
 
 // multi collects a query param given repeated and/or comma-separated.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +33,19 @@ func (s *Scope) Allows(jid string) bool {
 		return false
 	}
 	return s.jids[normalizeJID(jid)]
+}
+
+// JIDs returns the scope's normalized chat list (sorted).
+func (s *Scope) JIDs() []string {
+	if s == nil {
+		return nil
+	}
+	out := make([]string, 0, len(s.jids))
+	for j := range s.jids {
+		out = append(out, j)
+	}
+	sort.Strings(out)
+	return out
 }
 
 type scopeFile struct {
@@ -214,6 +228,18 @@ func (s *ScopeStore) whatsappLocked() *Scope {
 		return &cp
 	}
 	return &Scope{Name: "whatsapp", jids: map[string]bool{}}
+}
+
+// ForceReload re-reads the file even when mtime/size look unchanged.
+func (s *ScopeStore) ForceReload() error {
+	if s == nil {
+		return os.ErrNotExist
+	}
+	s.mu.Lock()
+	s.mtime = time.Time{}
+	s.size = -1
+	s.mu.Unlock()
+	return s.reload()
 }
 
 // Summary is names and chat counts only — never keys. For startup logs.

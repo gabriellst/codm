@@ -1,6 +1,7 @@
 package triage
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net"
@@ -83,8 +84,16 @@ func (g *Gate) Wrap(next http.Handler) http.Handler {
 			jsonErr(w, http.StatusTooManyRequests, "rate limit exceeded")
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), scopeCtxKey{}, sc)))
 	})
+}
+
+type scopeCtxKey struct{}
+
+// scopeFromRequest is the scope the Gate authenticated (nil outside the Gate).
+func scopeFromRequest(r *http.Request) *Scope {
+	sc, _ := r.Context().Value(scopeCtxKey{}).(*Scope)
+	return sc
 }
 
 // clientIP prefers the first X-Forwarded-For hop (Railway's edge sets it).
