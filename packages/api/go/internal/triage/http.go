@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"go.uber.org/fx"
 
@@ -173,7 +175,8 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // StartServer replaces core.StartHTTPServer: same router, but bound to
 // BIND_HOST (default 127.0.0.1) and with /send + /triage/status in front.
-func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config.Config, cfg *Config, send *SendEndpoint, media *MediaEndpoint, p *Pairing) error {
+// Every route sits behind the Gate (Bearer + per-key rate limit).
+func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config.Config, cfg *Config, send *SendEndpoint, media *MediaEndpoint, read *ReadAPI, gate *Gate, p *Pairing) error {
 	mux := http.NewServeMux()
 	mux.Handle("/send", send)
 	mux.HandleFunc("/send/media", media.ServeSend)
@@ -182,13 +185,19 @@ func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(p.Snapshot())
 	})
+	read.Register(mux)
 	mux.Handle("/", middleware.CORS(coreCfg.AllowedOrigins, router.Handler()))
 
-	ln, err := net.Listen("tcp", net.JoinHostPort(cfg.BindHost, coreCfg.Port))
+	// $PORT (set by Railway and similar hosts) wins over CHANNEL_PORT.
+	port := coreCfg.Port
+	if v := strings.TrimSpace(os.Getenv("PORT")); v != "" {
+		port = v
+	}
+	ln, err := net.Listen("tcp", net.JoinHostPort(cfg.BindHost, port))
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Handler: mux}
+	srv := &http.Server{Handler: gate.Wrap(mux), ReadHeaderTimeout: 10 * time.Second}
 	runCtx, cancel := context.WithCancel(context.Background())
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {

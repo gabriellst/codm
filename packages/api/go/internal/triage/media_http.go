@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -83,11 +84,33 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req mediaRequest
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&req); err != nil {
-		jsonErr(w, http.StatusBadRequest, "invalid JSON body: "+err.Error())
-		return
+	upload := ""
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		// Remote callers (bridge not on their machine) upload the file itself:
+		// part "meta" = the JSON fields (no path/url), part "file" = the bytes.
+		upTmp, err := os.MkdirTemp("", "codm-upload-*")
+		if err != nil {
+			jsonErr(w, http.StatusInternalServerError, "cannot create temp dir")
+			return
+		}
+		defer os.RemoveAll(upTmp)
+		upload, err = readMultipartMedia(w, r, upTmp, &req)
+		if err != nil {
+			var me *mediaError
+			if errors.As(err, &me) {
+				jsonErr(w, me.Status, me.Msg)
+			} else {
+				jsonErr(w, http.StatusBadRequest, "invalid multipart body: "+err.Error())
+			}
+			return
+		}
+	} else {
+		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&req); err != nil {
+			jsonErr(w, http.StatusBadRequest, "invalid JSON body: "+err.Error())
+			return
+		}
 	}
 	req.ChatJID = strings.TrimSpace(req.ChatJID)
 	kind, ok := parseKind(req.Type)
@@ -95,8 +118,14 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, http.StatusBadRequest, "chat_jid and type (image|video|audio|voice|document|sticker) are required")
 		return
 	}
-	if (req.Path == "") == (req.URL == "") {
-		jsonErr(w, http.StatusBadRequest, "provide exactly one of path or url")
+	sources := 0
+	for _, v := range []string{req.Path, req.URL, upload} {
+		if v != "" {
+			sources++
+		}
+	}
+	if sources != 1 {
+		jsonErr(w, http.StatusBadRequest, "provide exactly one of path, url or a multipart file")
 		return
 	}
 	if len(req.Caption) > 1024 {
@@ -126,7 +155,16 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 6*time.Minute)
 	defer cancel()
-	pm, err := e.prep.Prepare(ctx, kind, req.Path, req.URL, req.Filename, req.Mimetype, tmp)
+	var pm *PreparedMedia
+	if upload != "" {
+		name := req.Filename
+		if name == "" {
+			name = filepath.Base(upload)
+		}
+		pm, err = e.prep.PrepareFile(ctx, kind, upload, name, req.Mimetype, tmp)
+	} else {
+		pm, err = e.prep.Prepare(ctx, kind, req.Path, req.URL, req.Filename, req.Mimetype, tmp)
+	}
 	if err != nil {
 		var me *mediaError
 		if errors.As(err, &me) {
@@ -336,4 +374,62 @@ func (e *MediaEndpoint) parseReceived(id, remote, sender, mtype, content string,
 			Path: d.MediaPath, Timestamp: at / 1000}, true
 	}
 	return receivedMedia{}, false
+}
+
+// readMultipartMedia parses a multipart /send/media request into req and
+// writes the "file" part under dir, returning its path. Size is capped at
+// maxMediaBytes; the stored name is a sanitized basename.
+func readMultipartMedia(w http.ResponseWriter, r *http.Request, dir string, req *mediaRequest) (string, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxMediaBytes+(2<<20))
+	mr, err := r.MultipartReader()
+	if err != nil {
+		return "", err
+	}
+	var saved string
+	for {
+		part, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		switch part.FormName() {
+		case "meta":
+			dec := json.NewDecoder(io.LimitReader(part, 1<<20))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(req); err != nil {
+				return "", badMedia("invalid meta JSON: %v", err)
+			}
+		case "file":
+			if saved != "" {
+				return "", badMedia("only one file part is allowed")
+			}
+			name := filepath.Base(filepath.Clean("/" + part.FileName()))
+			if name == "/" || name == "." || name == "" {
+				name = "upload.bin"
+			}
+			saved = filepath.Join(dir, name)
+			f, err := os.OpenFile(saved, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
+			if err != nil {
+				return "", err
+			}
+			n, err := io.Copy(f, io.LimitReader(part, maxMediaBytes+1))
+			_ = f.Close()
+			if err != nil {
+				return "", err
+			}
+			if n == 0 {
+				return "", badMedia("file is empty")
+			}
+			if n > maxMediaBytes {
+				return "", &mediaError{Status: http.StatusRequestEntityTooLarge, Msg: "file too large"}
+			}
+		}
+		_ = part.Close()
+	}
+	if saved == "" {
+		return "", badMedia("multipart body needs a \"file\" part")
+	}
+	return saved, nil
 }

@@ -327,6 +327,12 @@ func (m *mediaPrep) Prepare(ctx context.Context, kind MediaKind, localPath, rawU
 			name = base
 		}
 	}
+	return m.PrepareFile(ctx, kind, src, name, mimetype, tmp)
+}
+
+// PrepareFile converts an already-validated local file (a checked path, a URL
+// download, or a multipart upload in a private temp dir).
+func (m *mediaPrep) PrepareFile(ctx context.Context, kind MediaKind, src, name, mimetype, tmp string) (*PreparedMedia, error) {
 	if kind != KindDocument && !m.hasFFmpeg() {
 		return nil, &mediaError{Status: http.StatusServiceUnavailable, Msg: "ffmpeg/ffprobe not installed on the box"}
 	}
