@@ -890,6 +890,12 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 		go c.applyHistorySyncBatch(c.stopCtx, hs)
 	}
 
+	// Edits (protocolMessage MESSAGE_EDIT) are dropped by the mapper as "protocol";
+	// store them directly: update the original row and keep every revision.
+	if msg, ok := evt.(*events.Message); ok && c.handleEdit(msg) {
+		return
+	}
+
 	// Map to domain events and persist as a batch. nil locator: the mapper must not download media on this
 	// synchronous dispatch goroutine; enqueueInboundMedia fetches the attachment afterwards and records it as
 	// mediaPath.

@@ -170,3 +170,30 @@ func TestGateRequiresBearerOnEveryRouteAndRateLimits(t *testing.T) {
 		t.Fatalf("refill: %d", c)
 	}
 }
+
+func TestReadMessagesUpdatedSinceIncludesEdits(t *testing.T) {
+	a, h, _ := newReadFixture(t)
+	if _, err := a.db.Exec(`UPDATE gateway_messages SET content = '{"text":"editado"}', edited_at = 5000, version = 2 WHERE id = 'm1'`); err != nil {
+		t.Fatal(err)
+	}
+	// observed_at: m1 1001, m2 2001, m3 3001, m4 4001; m1 edited at 5000
+	code, out := getJSON(t, h, "/read/messages?updated_since=3500&limit=1")
+	if code != 200 || out["count"].(float64) != 1 || out["next_cursor"] == nil {
+		t.Fatalf("page1: %d %v", code, out)
+	}
+	got := []string{out["messages"].([]any)[0].(map[string]any)["platform_message_id"].(string)}
+	_, out2 := getJSON(t, h, "/read/messages?updated_since=3500&limit=1&cursor="+out["next_cursor"].(string))
+	for _, m := range out2["messages"].([]any) {
+		got = append(got, m.(map[string]any)["platform_message_id"].(string))
+	}
+	if len(got) != 2 || got[0] != "P1" || got[1] != "P4" {
+		t.Fatalf("updated_since rows: %v", got)
+	}
+	m1 := out["messages"].([]any)[0].(map[string]any)
+	if m1["edited_at"].(float64) != 5000 || m1["version"].(float64) != 2 || m1["content"] != `{"text":"editado"}` {
+		t.Fatalf("edit fields: %v", m1)
+	}
+	if code, _ := getJSON(t, h, "/read/messages?updated_since=x"); code != 400 {
+		t.Fatalf("bad updated_since: %d", code)
+	}
+}

@@ -8,6 +8,8 @@ import (
 
 	"go.uber.org/fx"
 
+	"template/api-go/internal/channel/services/gateway/whatsapp"
+
 	"template/core-go/config"
 	"template/core-go/db/sqlite"
 	"template/core-go/services/mediator"
@@ -38,6 +40,15 @@ var Options = fx.Options(
 		fx.ParamTags(`group:"controllers"`),
 		fx.ResultTags(`group:"controllers"`),
 	)),
+
+	// Message edits: additive, idempotent schema (edited_at/version + gateway_message_revisions).
+	fx.Invoke(func(store *sqlite.SqliteStore) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := whatsapp.EnsureEditSchema(ctx, store.DB()); err != nil {
+			slog.Warn("triage: message-edit schema not ensured (edits retry lazily)", "error", err)
+		}
+	}),
 
 	fx.Invoke(func(ext mediator.ExternalMediator, wh *WebhookForwarder, qr *QRHandler, cfg *Config) error {
 		if err := ext.Register(wh); err != nil {

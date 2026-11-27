@@ -26,6 +26,7 @@ import (
 //	GET /read/remotes      gateway_remotes
 //	GET /read/contacts     whatsmeow_contacts
 //	GET /read/lid-map      whatsmeow_lid_map
+//	GET /read/revisions    gateway_message_revisions (every stored edit)
 //	GET /media/file/{id}   bytes of a message's downloaded media (platform_message_id or gateway id)
 //	GET /media/file?path=  bytes of a file under <data dir>/media (the stored mediaPath)
 type ReadAPI struct {
@@ -43,6 +44,7 @@ func (a *ReadAPI) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /read/remotes", a.remotes)
 	mux.HandleFunc("GET /read/contacts", a.contacts)
 	mux.HandleFunc("GET /read/lid-map", a.lidMap)
+	mux.HandleFunc("GET /read/revisions", a.revisions)
 	mux.HandleFunc("GET /media/file/{id}", a.mediaByID)
 	mux.HandleFunc("GET /media/file", a.mediaByPath)
 }
@@ -138,6 +140,7 @@ func (a *ReadAPI) query(ctx context.Context, w http.ResponseWriter, q string, ar
 //	type        message_type (TEXT, AUDIO, REACTION, ...)
 //	contains    case-insensitive substring of content (JSON text)
 //	id          gateway id or platform_message_id (repeatable)
+//	updated_since  observed_at > v OR edited_at > v (unix ms): new AND edited messages
 //	limit       1..2000 (default 500)
 //	cursor      next_cursor from the previous page
 //
@@ -168,6 +171,13 @@ func (a *ReadAPI) messages(w http.ResponseWriter, r *http.Request) {
 				args = append(args, id)
 			}
 		}
+	}
+	if n, ok, err := intParam(q, "updated_since"); err != nil {
+		jsonErr(w, http.StatusBadRequest, "updated_since must be unix milliseconds")
+		return
+	} else if ok {
+		where = append(where, "(COALESCE(observed_at,0) > ? OR COALESCE(edited_at,0) > ?)")
+		args = append(args, n, n)
 	}
 	for _, p := range []struct{ key, op string }{{"since", ">="}, {"after", ">"}, {"until", "<"}} {
 		n, ok, err := intParam(q, p.key)
@@ -225,7 +235,7 @@ func (a *ReadAPI) messages(w http.ResponseWriter, r *http.Request) {
 	args = append(args, limit)
 	rows, ok := a.query(r.Context(), w,
 		`SELECT id, remote_id, direction, platform_message_id, message_type, content, occurred_at,
-		        sender_remote_id, COALESCE(observed_at,0) AS observed_at, edited_at, deleted_at
+		        sender_remote_id, COALESCE(observed_at,0) AS observed_at, edited_at, deleted_at, version
 		   FROM gateway_messages WHERE `+strings.Join(where, " AND ")+`
 		  ORDER BY occurred_at, COALESCE(observed_at,0), id LIMIT ?`, args...)
 	if !ok {
@@ -443,4 +453,39 @@ func (a *ReadAPI) mediaByID(w http.ResponseWriter, r *http.Request) {
 // GET /media/file?path=<absolute mediaPath under the data dir's media/>
 func (a *ReadAPI) mediaByPath(w http.ResponseWriter, r *http.Request) {
 	a.serveFile(w, r, strings.TrimSpace(r.URL.Query().Get("path")), "", "")
+}
+
+// GET /read/revisions[?message_id=..][&remote_id=..][&since=<edited_at ms>][&limit=]
+func (a *ReadAPI) revisions(w http.ResponseWriter, r *http.Request) {
+	qs := r.URL.Query()
+	where := []string{"1=1"}
+	var args []any
+	for _, col := range []string{"message_id", "remote_id"} {
+		if ids := multi(qs, col); len(ids) > 0 {
+			where = append(where, col+" IN ("+placeholders(len(ids))+")")
+			for _, id := range ids {
+				args = append(args, id)
+			}
+		}
+	}
+	if n, ok, err := intParam(qs, "since"); err != nil {
+		jsonErr(w, http.StatusBadRequest, "since must be unix milliseconds")
+		return
+	} else if ok {
+		where = append(where, "edited_at > ?")
+		args = append(args, n)
+	}
+	limit := int64(500)
+	if n, ok, err := intParam(qs, "limit"); err != nil || (ok && (n < 1 || n > 2000)) {
+		jsonErr(w, http.StatusBadRequest, "limit must be 1..2000")
+		return
+	} else if ok {
+		limit = n
+	}
+	args = append(args, limit)
+	rows, ok := a.query(r.Context(), w, `SELECT message_id, remote_id, version, content, edited_at, found_original
+		FROM gateway_message_revisions WHERE `+strings.Join(where, " AND ")+` ORDER BY edited_at, id LIMIT ?`, args...)
+	if ok {
+		writeJSON(w, map[string]any{"revisions": rows, "count": len(rows)})
+	}
 }
