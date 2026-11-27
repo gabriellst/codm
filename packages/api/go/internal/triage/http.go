@@ -186,6 +186,7 @@ func StartServer(lc fx.Lifecycle, router *httprouter.HttpRouter, coreCfg *config
 		_ = json.NewEncoder(w).Encode(p.Snapshot())
 	})
 	read.Register(mux)
+	registerAdmin(mux, cfg, read.db, p)
 	mux.Handle("/", middleware.CORS(coreCfg.AllowedOrigins, router.Handler()))
 
 	// $PORT (set by Railway and similar hosts) wins over CHANNEL_PORT.

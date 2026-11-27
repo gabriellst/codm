@@ -21,6 +21,9 @@ import (
 )
 
 func main() {
+	// `whatsapp-triage bootstrap-receive`: migration upload receiver, run by
+	// the entrypoint guard only while codm.db does not exist.
+	bootstrap := len(os.Args) > 1 && os.Args[1] == "bootstrap-receive"
 	level := slog.LevelInfo
 	if os.Getenv("LOG_LEVEL") == "debug" {
 		level = slog.LevelDebug
@@ -28,6 +31,10 @@ func main() {
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 		Level: level, TimeFormat: time.DateTime, NoColor: true,
 	})))
+
+	if bootstrap {
+		os.Exit(triage.RunBootstrapReceiver())
+	}
 
 	cfg, err := config.Load(channel.ConfigService)
 	if err != nil {

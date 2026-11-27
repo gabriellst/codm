@@ -31,3 +31,23 @@ Per-key token bucket (`RATE_LIMIT_PER_MINUTE`=240, `RATE_LIMIT_BURST`=60) and pe
 ## Remote media sends
 `POST /send/media` also accepts `multipart/form-data`: part `meta` = the usual JSON (without `path`/`url`),
 part `file` = the bytes (≤ 64 MB).
+
+## Migration upload over HTTPS (bootstrap receiver)
+
+While `$CODM_DATA_DIR/codm.db` does not exist and `BOOTSTRAP_UPLOAD_TOKEN` is
+set, the entrypoint guard runs `whatsapp-triage bootstrap-receive` on `$PORT`
+instead of the bridge. All routes need `Authorization: Bearer $BOOTSTRAP_UPLOAD_TOKEN`:
+
+| Route | What it does |
+|---|---|
+| `PUT /bootstrap/media` | tar / tar.gz / tar.zst extracted under the data dir (no traversal, no links, never `codm.db*`, `.bridge-ready`, `incoming/`, `keys*`). Repeatable (incremental presync). `scopes.json` may ride along. |
+| `PUT /bootstrap/db` | body = codm.db, header `X-Sha256`. Written to `incoming/`, sha256 + `quick_check` + whatsmeow device row verified, atomic rename to `codm.db`, `.bridge-ready` written; the receiver exits and the guard starts the bridge. |
+| `GET /bootstrap/status` | counts of what arrived. |
+
+`BOOTSTRAP_MAX_BYTES` (default 4 GiB) caps each body; `BOOTSTRAP_AUTH_FAIL_PER_MINUTE`
+(default 10) throttles failed auth and rejected DBs per IP. With codm.db present
+the receiver never starts. Remove `BOOTSTRAP_UPLOAD_TOKEN` after the cutover.
+
+Admin routes on the running bridge (GLOBAL_API_KEY only), used by rollback:
+`POST /admin/stop-bridge` (disconnect without logout, remove `.bridge-ready` so
+restarts stay down) and `GET /admin/db-snapshot` (VACUUM INTO, `X-Sha256` header).

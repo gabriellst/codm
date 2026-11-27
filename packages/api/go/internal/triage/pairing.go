@@ -38,6 +38,7 @@ type Pairing struct {
 	lastQRAt   time.Time
 	pairing    bool
 	roundsUsed int
+	stopped    bool // POST /admin/stop-bridge: disconnected on purpose, never reconnect/pair
 }
 
 func NewPairing(cfg *Config, p pool.ChannelPool, r *usecases.GetOrCreateChannelHandler, c *usecases.ConnectChannelHandler) *Pairing {
@@ -102,7 +103,7 @@ func (p *Pairing) Run(ctx context.Context) {
 	for {
 		st := p.refresh()
 		p.mu.RLock()
-		canPair := p.cfg.AutoPair && p.roundsUsed < p.cfg.PairRounds
+		canPair := p.cfg.AutoPair && p.roundsUsed < p.cfg.PairRounds && !p.stopped
 		p.mu.RUnlock()
 		if (st == "unpaired" || st == "disconnected") && canPair {
 			p.round(ctx)
@@ -118,6 +119,10 @@ func (p *Pairing) refresh() string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.pairing {
+		return p.state
+	}
+	if p.stopped {
+		p.state = "stopped"
 		return p.state
 	}
 	id, err := uuid.Parse(p.channelID)
@@ -279,4 +284,23 @@ func sleep(ctx context.Context, d time.Duration) bool {
 	case <-t.C:
 		return true
 	}
+}
+
+// StopBridge disconnects the WhatsApp socket WITHOUT logging out (the device
+// keys stay valid in codm.db) and keeps it down for the life of the process,
+// so a rollback can snapshot a DB that no longer changes.
+func (p *Pairing) StopBridge() error {
+	p.mu.Lock()
+	p.stopped = true
+	p.state = "stopped"
+	id := p.channelID
+	p.mu.Unlock()
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+	if ch, ok := p.pool.Get(uid); ok {
+		return ch.Disconnect()
+	}
+	return nil
 }
