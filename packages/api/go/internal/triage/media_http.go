@@ -137,9 +137,17 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ch, err := e.repo.Find(ctx, chID.String())
+	// Prepare (ffmpeg, downloads) ran under the request context; the send itself must not die with it.
+	sendCtx, sendCancel := sendContext(r)
+	defer sendCancel()
+	if !awaitChannelConnected(sendCtx, e.pool, chID.String()) {
+		slog.Warn("triage: media send refused, channel still disconnected after waiting", "chat", req.ChatJID)
+		respondUnavailable(w, "channel is reconnecting; retry shortly")
+		return
+	}
+	ch, err := e.repo.Find(sendCtx, chID.String())
 	if err != nil || ch == nil || ch.Status != msgenums.ChannelStatusConnected {
-		jsonErr(w, http.StatusConflict, "channel is not connected")
+		respondUnavailable(w, "channel is not connected")
 		return
 	}
 	gw, ok := e.pool.Get(chID)
@@ -170,11 +178,16 @@ func (e *MediaEndpoint) ServeSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	e.sent.BeginSend()
-	res, err := gw.SendMessage(ctx, gateway.SendMessageParams{To: req.ChatJID, MessageType: msgType, Content: content})
+	res, err := gw.SendMessage(sendCtx, gateway.SendMessageParams{To: req.ChatJID, MessageType: msgType, Content: content})
 	if err == nil {
-		e.sent.Remember(ctx, res.MessageID)
+		e.sent.Remember(sendCtx, res.MessageID)
 	}
 	e.sent.EndSend()
+	if err != nil && errors.Is(err, whatsapp.ErrSendTransient) {
+		slog.Error("triage: media send failed (whatsapp unavailable)", "chat", req.ChatJID, "type", pm.Kind, "error", err)
+		respondUnavailable(w, err.Error())
+		return
+	}
 	if err != nil {
 		code := http.StatusBadGateway
 		if errors.Is(err, whatsapp.ErrInvalidRemoteID) {

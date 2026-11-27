@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/fx"
 
+	"template/api-go/internal/channel/services/pool"
 	"template/api-go/internal/channel/usecases"
 	"template/core-go/config"
 	coreerrors "template/core-go/errors"
@@ -49,11 +50,12 @@ type SendEndpoint struct {
 	cfg     *Config
 	pairing *Pairing
 	send    *usecases.SendTextHandler
+	pool    pool.ChannelPool
 	sent    *SentLog
 }
 
-func NewSendEndpoint(cfg *Config, p *Pairing, s *usecases.SendTextHandler, sent *SentLog) *SendEndpoint {
-	return &SendEndpoint{cfg: cfg, pairing: p, send: s, sent: sent}
+func NewSendEndpoint(cfg *Config, p *Pairing, s *usecases.SendTextHandler, pl pool.ChannelPool, sent *SentLog) *SendEndpoint {
+	return &SendEndpoint{cfg: cfg, pairing: p, send: s, pool: pl, sent: sent}
 }
 
 func jsonErr(w http.ResponseWriter, code int, msg string) {
@@ -134,14 +136,26 @@ func (s *SendEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, http.StatusServiceUnavailable, "channel not ready")
 		return
 	}
+	ctx, cancel := sendContext(r)
+	defer cancel()
+	if !awaitChannelConnected(ctx, s.pool, chID) {
+		slog.Warn("triage: send refused, channel still disconnected after waiting", "chat", req.ChatJID, "scope", sc.Name)
+		respondUnavailable(w, "channel is reconnecting; retry shortly")
+		return
+	}
 	s.sent.BeginSend()
-	out, err := s.send.Execute(r.Context(), usecases.SendTextInput{
+	out, err := s.send.Execute(ctx, usecases.SendTextInput{
 		ChannelID: chID, RemoteID: req.ChatJID, Text: req.Text, QuotedMessageID: req.ReplyToMessageID,
 	})
 	if err == nil {
-		s.sent.Remember(r.Context(), out.MessageID)
+		s.sent.Remember(ctx, out.MessageID)
 	}
 	s.sent.EndSend()
+	if err != nil && isUnavailable(err) {
+		slog.Error("triage: send failed (whatsapp unavailable)", "chat", req.ChatJID, "scope", sc.Name, "error", err)
+		respondUnavailable(w, err.Error())
+		return
+	}
 	if err != nil {
 		var appErr *coreerrors.AppError
 		code := http.StatusBadGateway

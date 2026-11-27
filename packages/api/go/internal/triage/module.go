@@ -1,8 +1,10 @@
 package triage
 
 import (
+	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"go.uber.org/fx"
 
@@ -48,6 +50,7 @@ var Options = fx.Options(
 		if len(cfg.Allowlist) == 0 {
 			slog.Warn("triage: ALLOWLIST_JIDS is empty — nothing will be forwarded")
 		}
+		slog.Info("triage: webhook filter", "denylist", len(cfg.Denylist), "skipArchived", cfg.SkipArchived, "debounceSeconds", int(cfg.DebounceQuiet.Seconds()))
 		if os.Getenv("SEND_ALLOWLIST_JIDS") != "" || os.Getenv("OWNER_SEND_JIDS") != "" {
 			slog.Warn("triage: SEND_ALLOWLIST_JIDS and OWNER_SEND_JIDS are ignored; send access is granted only via scopes.json")
 		}
@@ -55,6 +58,26 @@ var Options = fx.Options(
 			slog.Info("triage: send scopes loaded", "file", cfg.ScopesFile, "scopes", cfg.Scopes.Summary())
 		}
 		return nil
+	}),
+	// Optional debounce (WEBHOOK_DEBOUNCE_SECONDS > 0): re-arm buffered chats on
+	// start, flush what is left on shutdown (undeliverable rows stay durable).
+	fx.Invoke(func(lc fx.Lifecycle, wh *WebhookForwarder, cfg *Config) {
+		if wh.batcher == nil {
+			return
+		}
+		lc.Append(fx.Hook{
+			OnStart: func(context.Context) error {
+				slog.Info("triage: webhook debounce ON", "quietSeconds", int(cfg.DebounceQuiet.Seconds()), "maxWaitSeconds", int(cfg.DebounceMaxWait.Seconds()))
+				return wh.batcher.Start()
+			},
+			OnStop: func(ctx context.Context) error {
+				stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+				defer cancel()
+				wh.batcher.Stop(stopCtx)
+				slog.Info("triage: debounce stopped", "stillBuffered", wh.batcher.Pending())
+				return nil
+			},
+		})
 	}),
 	fx.Invoke(StartServer),
 )

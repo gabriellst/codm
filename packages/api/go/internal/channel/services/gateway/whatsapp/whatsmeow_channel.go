@@ -63,6 +63,9 @@ type WhatsmeowChannel struct {
 	stopCtx       context.Context
 	stopCancel    context.CancelFunc
 	avatarLimiter *rate.Limiter
+	// mediaJobs feeds the inbound-media worker pool (media_worker.go); started lazily by mediaOnce.
+	mediaJobs chan mediaJob
+	mediaOnce sync.Once
 	// evictor requests this channel's own removal from the pool when whatsmeow
 	// tells us (events.LoggedOut) that the session was permanently invalidated —
 	// see handleEvent below and gateway.PoolEvictor's docblock. nil in contexts
@@ -329,7 +332,12 @@ func (c *WhatsmeowChannel) SendMessage(ctx context.Context, params gateway.SendM
 		return gateway.SendMessageResult{}, err
 	}
 
-	resp, err := c.client.SendMessage(ctx, jid, msg)
+	// One ID for every attempt: if the first attempt reached WhatsApp before the connection dropped, the
+	// retry carries the same ID and is deduplicated instead of delivered twice. See retrySend.
+	extra := whatsmeow.SendRequestExtra{ID: c.client.GenerateMessageID()}
+	resp, err := retrySend(ctx, func(actx context.Context) (whatsmeow.SendResponse, error) {
+		return c.client.SendMessage(actx, jid, msg, extra)
+	}, c.AwaitConnected)
 	if err != nil {
 		return gateway.SendMessageResult{}, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -819,68 +827,15 @@ func (c *WhatsmeowChannel) ResolvePhoneJID(ctx context.Context, jid string) stri
 	return phoneJID.String()
 }
 
-// maxInboundMediaBytes caps what LocateMedia is willing to download inline.
+// maxInboundMediaBytes caps what the inbound media workers are willing to download.
 // WhatsApp media tops out around 64MB for documents; anything larger is skipped
 // and the message flows without a mediaPath.
 const maxInboundMediaBytes = 64 << 20
 
-// inboundMediaTimeout bounds the inline download. handleEvent runs on the
-// whatsmeow dispatch goroutine, so a hung CDN fetch must not stall the event
-// stream indefinitely — on timeout the message flows without a mediaPath.
+// inboundMediaTimeout bounds one download. Downloads run on the worker pool
+// (media_worker.go), never on the whatsmeow dispatch goroutine — on timeout the
+// message simply keeps no mediaPath.
 const inboundMediaTimeout = 45 * time.Second
-
-// LocateMedia implements mapper.MediaLocator: it downloads + decrypts the
-// attachment of a media message at receive time (the CDN link expires and is
-// useless without the in-proto media key) and persists it content-addressed in
-// the shared media dir. Returns "" for non-media messages and on any failure.
-func (c *WhatsmeowChannel) LocateMedia(msg *waE2E.Message) string {
-	if c.mediaStore == nil {
-		return ""
-	}
-	dl, mimetype, size := downloadableMedia(msg)
-	if dl == nil {
-		return ""
-	}
-	if size > maxInboundMediaBytes {
-		slog.Warn("inbound media skipped: too large", "instanceId", c.instanceID, "bytes", size)
-		return ""
-	}
-	ctx, cancel := context.WithTimeout(c.stopCtx, inboundMediaTimeout)
-	defer cancel()
-	data, err := c.client.Download(ctx, dl)
-	if err != nil {
-		slog.Warn("inbound media download failed", "instanceId", c.instanceID, "mimetype", mimetype, "error", err)
-		return ""
-	}
-	path, err := c.mediaStore.Save(data, mimetype)
-	if err != nil {
-		slog.Warn("inbound media save failed", "instanceId", c.instanceID, "mimetype", mimetype, "error", err)
-		return ""
-	}
-	return path
-}
-
-// downloadableMedia returns the downloadable part of a media message plus its
-// declared mimetype and size. nil for non-media messages.
-func downloadableMedia(msg *waE2E.Message) (whatsmeow.DownloadableMessage, string, uint64) {
-	if msg == nil {
-		return nil, "", 0
-	}
-	switch {
-	case msg.ImageMessage != nil:
-		return msg.ImageMessage, msg.ImageMessage.GetMimetype(), msg.ImageMessage.GetFileLength()
-	case msg.VideoMessage != nil:
-		return msg.VideoMessage, msg.VideoMessage.GetMimetype(), msg.VideoMessage.GetFileLength()
-	case msg.AudioMessage != nil:
-		return msg.AudioMessage, msg.AudioMessage.GetMimetype(), msg.AudioMessage.GetFileLength()
-	case msg.DocumentMessage != nil:
-		return msg.DocumentMessage, msg.DocumentMessage.GetMimetype(), msg.DocumentMessage.GetFileLength()
-	case msg.StickerMessage != nil:
-		return msg.StickerMessage, msg.StickerMessage.GetMimetype(), msg.StickerMessage.GetFileLength()
-	default:
-		return nil, "", 0
-	}
-}
 
 // handleEvent receives raw whatsmeow events, updates internal status,
 // maps them to domain events via MapEvent, and publishes them to the mediator.
@@ -935,8 +890,10 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 		go c.applyHistorySyncBatch(c.stopCtx, hs)
 	}
 
-	// Map to domain events and persist as a batch
-	domainEvents := mapperpkg.MapEvent(c.instanceID, c.ownerID, c.device, c, evt)
+	// Map to domain events and persist as a batch. nil locator: the mapper must not download media on this
+	// synchronous dispatch goroutine; enqueueInboundMedia fetches the attachment afterwards and records it as
+	// mediaPath.
+	domainEvents := mapperpkg.MapEvent(c.instanceID, c.ownerID, c.device, nil, evt)
 	if len(domainEvents) > 0 {
 		slog.Info("channel domain events mapped",
 			"instanceId", c.instanceID,
@@ -954,6 +911,8 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 				"count", len(domainEvents),
 				"error", err,
 			)
+		} else if msg, ok := evt.(*events.Message); ok {
+			c.enqueueInboundMedia(c.stopCtx, msg)
 		}
 	}
 }

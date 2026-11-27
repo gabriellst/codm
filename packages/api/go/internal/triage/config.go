@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -18,15 +19,31 @@ type Config struct {
 	WebhookSecret string
 	Allowlist     map[string]bool // normalized (see normalizeJID); "*" = everyone. Webhook only.
 	ForwardFromMe bool
-	OwnerID       string
-	AutoPair      bool
-	PairRounds    int
-	PairPhone     string
-	BindHost      string
-	DataDir       string
-	APIKey        string // GLOBAL_API_KEY; maps to the "whatsapp" send scope only
-	ScopesFile    string
-	Scopes        *ScopeStore
+	// Denylist: chats never forwarded (DENYLIST_JIDS). Matches the chat JID and
+	// its LID/PN aliases, never the sender. Webhook only — /send is untouched.
+	Denylist map[string]bool
+	// SkipArchived drops messages of chats archived on the phone
+	// (SKIP_ARCHIVED_CHATS, default false), read live from whatsmeow's
+	// whatsmeow_chat_settings. ArchiveRecheck re-checks a skipped chat once
+	// after this delay so a message that un-archives its chat is not lost
+	// (ARCHIVE_RECHECK_SECONDS, default 20, 0 = off).
+	SkipArchived   bool
+	ArchiveRecheck time.Duration
+	// DebounceQuiet > 0 (WEBHOOK_DEBOUNCE_SECONDS) buffers a chat's messages and
+	// sends ONE batch webhook after that much quiet, at most DebounceMaxWait
+	// (WEBHOOK_DEBOUNCE_MAX_WAIT_SECONDS, default 900) after the first message.
+	// 0 (default) = one webhook per message, exactly the previous behaviour.
+	DebounceQuiet   time.Duration
+	DebounceMaxWait time.Duration
+	OwnerID         string
+	AutoPair        bool
+	PairRounds      int
+	PairPhone       string
+	BindHost        string
+	DataDir         string
+	APIKey          string // GLOBAL_API_KEY; maps to the "whatsapp" send scope only
+	ScopesFile      string
+	Scopes          *ScopeStore
 }
 
 func LoadConfig() *Config {
@@ -47,19 +64,24 @@ func LoadConfig() *Config {
 		scopesFile = filepath.Join(dataDir, "scopes.json")
 	}
 	return &Config{
-		WebhookURL:    strings.TrimSpace(os.Getenv("WEBHOOK_URL")),
-		WebhookSecret: os.Getenv("WEBHOOK_SECRET"),
-		Allowlist:     parseAllowlist(os.Getenv("ALLOWLIST_JIDS")),
-		ForwardFromMe: truthy(env("FORWARD_FROM_ME", "false")),
-		OwnerID:       env("TRIAGE_OWNER_ID", "box-owner"),
-		AutoPair:      truthy(env("AUTO_PAIR", "true")),
-		PairRounds:    rounds,
-		PairPhone:     digits(os.Getenv("PAIR_PHONE")),
-		BindHost:      env("BIND_HOST", "127.0.0.1"),
-		DataDir:       dataDir,
-		APIKey:        apiKey,
-		ScopesFile:    scopesFile,
-		Scopes:        NewScopeStore(scopesFile, apiKey),
+		WebhookURL:      strings.TrimSpace(os.Getenv("WEBHOOK_URL")),
+		WebhookSecret:   os.Getenv("WEBHOOK_SECRET"),
+		Allowlist:       parseAllowlist(os.Getenv("ALLOWLIST_JIDS")),
+		ForwardFromMe:   truthy(env("FORWARD_FROM_ME", "false")),
+		Denylist:        parseAllowlist(os.Getenv("DENYLIST_JIDS")),
+		SkipArchived:    truthy(env("SKIP_ARCHIVED_CHATS", "false")),
+		ArchiveRecheck:  envSeconds("ARCHIVE_RECHECK_SECONDS", 20),
+		DebounceQuiet:   envSeconds("WEBHOOK_DEBOUNCE_SECONDS", 0),
+		DebounceMaxWait: envSeconds("WEBHOOK_DEBOUNCE_MAX_WAIT_SECONDS", 900),
+		OwnerID:         env("TRIAGE_OWNER_ID", "box-owner"),
+		AutoPair:        truthy(env("AUTO_PAIR", "true")),
+		PairRounds:      rounds,
+		PairPhone:       digits(os.Getenv("PAIR_PHONE")),
+		BindHost:        env("BIND_HOST", "127.0.0.1"),
+		DataDir:         dataDir,
+		APIKey:          apiKey,
+		ScopesFile:      scopesFile,
+		Scopes:          NewScopeStore(scopesFile, apiKey),
 	}
 }
 
@@ -152,4 +174,14 @@ func truthy(s string) bool {
 		return true
 	}
 	return false
+}
+
+// envSeconds reads a non-negative integer number of seconds; anything else
+// (unset, garbage, negative) falls back to def.
+func envSeconds(k string, def int) time.Duration {
+	n, err := strconv.Atoi(strings.TrimSpace(os.Getenv(k)))
+	if err != nil || n < 0 {
+		n = def
+	}
+	return time.Duration(n) * time.Second
 }
