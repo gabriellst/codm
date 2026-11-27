@@ -80,7 +80,7 @@ export function IssueDetailSection({
 				onSuccess: () => {
 					queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(issueId) })
 					queryClient.invalidateQueries({ queryKey: getSessionIssuesQueryKey(threadId) })
-					navigate({ to: '/threads/$threadId/issues', params: { threadId } })
+					navigate({ to: '/threads/$threadId/issues', params: { threadId }, search: { done: false } })
 				},
 			},
 		)
@@ -91,6 +91,7 @@ export function IssueDetailSection({
 			<Link
 				to="/threads/$threadId/issues"
 				params={{ threadId }}
+				search={{ done: false }}
 				className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
 			>
 				<IconChevronLeft className="size-4" /> {t('session.allIssues')}

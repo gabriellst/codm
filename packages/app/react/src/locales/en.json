@@ -824,6 +824,25 @@
 		"slideBody": "CODM needs this before it can do any work on this computer.",
 		"slideTitle": "One permission is missing"
 	},
+	"task": {
+		"board": {
+			"summary": "{{needsYou}} need you · {{working}} working · {{waiting}} waiting · {{stalled}} stalled · {{queued}} queued",
+			"showDone": "Done · {{count}}",
+			"hideDone": "Hide done"
+		},
+		"columns": {
+			"queued": "Queued",
+			"working": "Working",
+			"needsYou": "Needs you",
+			"waiting": "Waiting",
+			"stalled": "Stalled",
+			"done": "Done"
+		},
+		"cardMeta": {
+			"backAt": "back at {{time}}",
+			"paused": "paused"
+		}
+	},
 	"time": {
 		"daysAgo": "{{count}} d ago",
 		"goodAfternoon": "Good afternoon",

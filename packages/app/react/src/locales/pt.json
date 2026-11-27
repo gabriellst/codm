@@ -824,6 +824,25 @@
 		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste computador.",
 		"slideTitle": "Falta uma permissão"
 	},
+	"task": {
+		"board": {
+			"summary": "{{needsYou}} precisam de você · {{working}} em andamento · {{waiting}} esperando · {{stalled}} paradas · {{queued}} na fila",
+			"showDone": "Concluídas · {{count}}",
+			"hideDone": "Esconder concluídas"
+		},
+		"columns": {
+			"queued": "Na fila",
+			"working": "Fazendo",
+			"needsYou": "Precisa de você",
+			"waiting": "Esperando",
+			"stalled": "Parada",
+			"done": "Concluída"
+		},
+		"cardMeta": {
+			"backAt": "volta às {{time}}",
+			"paused": "pausada"
+		}
+	},
 	"time": {
 		"daysAgo": "{{count}} d atrás",
 		"goodAfternoon": "Olá, boa tarde!",

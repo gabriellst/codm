@@ -8285,21 +8285,27 @@ type GetSessionIssuesResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Archived []struct {
-			Archived bool               `json:"archived"`
-			IssueId  openapi_types.UUID `json:"issueId"`
-			Key      string             `json:"key"`
-			Meta     *string            `json:"meta,omitempty"`
-			Status   IssueStatus        `json:"status"`
-			Title    string             `json:"title"`
+			Archived                bool               `json:"archived"`
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
+			Meta                    *string            `json:"meta,omitempty"`
+			Paused                  bool               `json:"paused"`
+			Status                  IssueStatus        `json:"status"`
+			Title                   string             `json:"title"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"archived"`
 		Groups []struct {
 			Items []struct {
-				Archived bool               `json:"archived"`
-				IssueId  openapi_types.UUID `json:"issueId"`
-				Key      string             `json:"key"`
-				Meta     *string            `json:"meta,omitempty"`
-				Status   IssueStatus        `json:"status"`
-				Title    string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"items"`
 			Status IssueStatus `json:"status"`
 		} `json:"groups"`
@@ -11523,21 +11529,27 @@ func ParseGetSessionIssuesResponse(rsp *http.Response) (*GetSessionIssuesRespons
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Archived []struct {
-				Archived bool               `json:"archived"`
-				IssueId  openapi_types.UUID `json:"issueId"`
-				Key      string             `json:"key"`
-				Meta     *string            `json:"meta,omitempty"`
-				Status   IssueStatus        `json:"status"`
-				Title    string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"archived"`
 			Groups []struct {
 				Items []struct {
-					Archived bool               `json:"archived"`
-					IssueId  openapi_types.UUID `json:"issueId"`
-					Key      string             `json:"key"`
-					Meta     *string            `json:"meta,omitempty"`
-					Status   IssueStatus        `json:"status"`
-					Title    string             `json:"title"`
+					Archived                bool               `json:"archived"`
+					IssueId                 openapi_types.UUID `json:"issueId"`
+					Key                     string             `json:"key"`
+					LifeState               IssueLifeState     `json:"lifeState"`
+					Meta                    *string            `json:"meta,omitempty"`
+					Paused                  bool               `json:"paused"`
+					Status                  IssueStatus        `json:"status"`
+					Title                   string             `json:"title"`
+					WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 				} `json:"items"`
 				Status IssueStatus `json:"status"`
 			} `json:"groups"`

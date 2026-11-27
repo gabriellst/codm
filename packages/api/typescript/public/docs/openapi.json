@@ -589,6 +589,15 @@
                                 },
                                 "archived": {
                                   "type": "boolean"
+                                },
+                                "lifeState": {
+                                  "$ref": "#/components/schemas/IssueLifeState"
+                                },
+                                "paused": {
+                                  "type": "boolean"
+                                },
+                                "waitingForProviderUntil": {
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -596,7 +605,9 @@
                                 "key",
                                 "title",
                                 "status",
-                                "archived"
+                                "archived",
+                                "lifeState",
+                                "paused"
                               ],
                               "additionalProperties": false
                             }
@@ -633,6 +644,15 @@
                           },
                           "archived": {
                             "type": "boolean"
+                          },
+                          "lifeState": {
+                            "$ref": "#/components/schemas/IssueLifeState"
+                          },
+                          "paused": {
+                            "type": "boolean"
+                          },
+                          "waitingForProviderUntil": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -640,7 +660,9 @@
                           "key",
                           "title",
                           "status",
-                          "archived"
+                          "archived",
+                          "lifeState",
+                          "paused"
                         ],
                         "additionalProperties": false
                       }

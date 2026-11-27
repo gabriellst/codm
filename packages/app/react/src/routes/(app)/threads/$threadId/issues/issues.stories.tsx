@@ -13,6 +13,8 @@ import type {
 	GetSessionChatQueryResponse,
 	GetSessionIssuesQueryResponse,
 	GetSettingsQueryResponse,
+	IssueLifeState,
+	IssueStatus,
 	ListWorkspacesQueryResponse,
 } from '@codm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
@@ -20,9 +22,7 @@ import { AppScreenFrame, connected, mockQuery } from '@/storybook'
 import { SessionHeader } from '../-components/SessionHeader'
 import { SessionIssuesSection } from '../-components/SessionIssuesSection'
 
-// A2 (F3-waveA) — área Conversa: Tarefas da conversa.
-// Fontes: design/fidelity/targets/screens/screen-tarefas-da-conversa.png +
-// design/system/pen/screens/screen-tarefas-da-conversa.json.
+// P2 — área Conversa: Tarefas da conversa, em kanban (slug screen-tarefas-da-conversa).
 
 const THREAD = '019e4d24-6524-7041-9e1c-8108180cdd10'
 const CHANNEL = '019e4d24-6524-7041-9e1c-8108180cdd11'
@@ -91,73 +91,47 @@ const SESSION_CHAT: DeepPartial<GetSessionChatQueryResponse> = {
 }
 
 /**
- * `GetSessionIssues` content REPRODUZIDO verbatim do alvo: "2 aguardando entrada · 2 em andamento ·
- * 1 concluída", os grupos "Precisa de entrada" (invoice-500, mobile-nav), "Em andamento"
- * (pix-payment, checkout-timeout) e "Concluída" (coupon-focus) — `coupon-focus` entra em
- * `groups` com `status: 'COMPLETED'` (não em `archived`), porque o título de seção que o alvo
- * mostra é exatamente `enumLabel('IssueStatus', 'COMPLETED')` = "Concluída"; `archived` renderiza
- * sob "Arquivadas" (`t('session.archived')`), um rótulo que o alvo não usa aqui.
- *
- * GAP (não fabricado, já documentado no componente): o alvo mostra "há 6 min"/"há 22 min"/… ao lado
- * de cada issue ativa. `IssueRowItem` (components/console/IssueRow.tsx) não tem esse campo — o
- * próprio docblock do componente já registra a ausência ("no backing field on either
- * GetIssuesOverview/GetSessionIssues … flagged as a pending backend gap rather than invented
- * client-side"). O mock abaixo não inclui nenhum "when" fabricado — reproduz só o que a wire e o
- * componente sabem carregar (key/title/status).
+ * The conversation's kanban, ported to the 0.9 line (0.13.x) — the pen's fictitious tasks spread over the five
+ * open columns with only the facts the 0.9 `GetSessionIssues` carries per item (life state, pause, the provider's
+ * quota wait): no open decision, no artifact count, no retry, no escalation. Done tasks sit behind
+ * "Concluídas · N".
  */
+const issue = (n: number, key: string, title: string, status: IssueStatus, lifeState: IssueLifeState, extra: object = {}) => ({
+	issueId: `019e4d24-6524-7041-9e1c-8108180cdd${String(40 + n)}`,
+	key,
+	title,
+	status,
+	lifeState,
+	paused: false,
+	archived: false,
+	...extra,
+})
 const SESSION_ISSUES: DeepPartial<GetSessionIssuesQueryResponse> = {
-	statsLine: { awaitingInput: 2, working: 2, completed: 1 },
+	statsLine: { awaitingInput: 2, working: 8, completed: 1 },
 	groups: [
 		{
 			status: 'NEEDS_INPUT',
 			items: [
-				{
-					issueId: '019e4d24-6524-7041-9e1c-8108180cdd40',
-					key: 'invoice-500',
-					title: 'Erro 500 ao gerar a fatura do cliente Acme',
-					status: 'NEEDS_INPUT',
-					archived: false,
-				},
-				{
-					issueId: '019e4d24-6524-7041-9e1c-8108180cdd41',
-					key: 'mobile-nav',
-					title: 'Menu não abre no iPhone — falta a versão do iOS',
-					status: 'NEEDS_INPUT',
-					archived: false,
-				},
+				issue(0, 'APP-12', 'Botão de cupom some no iPhone SE', 'NEEDS_INPUT', 'WAITING_PERSON'),
+				issue(1, 'APP-10', 'Migrar cupons antigos', 'NEEDS_INPUT', 'WAITING_PERSON'),
 			],
 		},
 		{
 			status: 'WORKING',
 			items: [
-				{
-					issueId: '019e4d24-6524-7041-9e1c-8108180cdd42',
-					key: 'pix-payment',
-					title: 'Provedor Pix atrás de feature flag',
-					status: 'WORKING',
-					archived: false,
-				},
-				{
-					issueId: '019e4d24-6524-7041-9e1c-8108180cdd43',
-					key: 'checkout-timeout',
-					title: 'Timeout no checkout acima de 8 itens',
-					status: 'WORKING',
-					archived: false,
-				},
+				issue(2, 'APP-16', 'Traduzir e-mails de carrinho abandonado', 'WORKING', 'QUEUED'),
+				issue(3, 'APP-17', 'Ajustar banner da Black Friday', 'WORKING', 'QUEUED'),
+				issue(4, 'APP-14', 'Página de frete grátis acima de R$ 199', 'WORKING', 'RUNNING'),
+				issue(5, 'APP-13', 'Corrigir ordenação da busca', 'WORKING', 'RUNNING'),
+				issue(6, 'APP-15', 'Relatório semanal de vendas', 'WORKING', 'WAITING_PROVIDER', {
+					waitingForProviderUntil: '2026-11-24T17:00:00.000Z',
+				}),
+				issue(7, 'APP-09', 'Revisar textos do app', 'WORKING', 'REMINDED'),
+				issue(8, 'APP-11', 'Integração Pix — sandbox fora do ar', 'WORKING', 'STALLED'),
+				issue(9, 'APP-08', 'Export de pedidos em CSV', 'WORKING', 'PAUSED', { paused: true }),
 			],
 		},
-		{
-			status: 'COMPLETED',
-			items: [
-				{
-					issueId: '019e4d24-6524-7041-9e1c-8108180cdd44',
-					key: 'coupon-focus',
-					title: 'Campo de cupom perdia o foco no mobile',
-					status: 'COMPLETED',
-					archived: false,
-				},
-			],
-		},
+		{ status: 'COMPLETED', items: [issue(10, 'APP-07', 'Favicon novo', 'COMPLETED', 'DONE')] },
 	],
 	archived: [],
 }
@@ -170,12 +144,13 @@ const meta = {
 		route: { id: '/(app)/threads/$threadId/issues/' },
 		msw: {
 			handlers: [
+				// FIRST: `mockQuery` matches `*<url>`, so the sidebar's `*/issues` would also answer `/threads/:id/issues`.
+				mockQuery(sessionIssuesOpts, SESSION_ISSUES),
 				mockQuery(dashboardOpts, SIDEBAR_DASHBOARD),
 				mockQuery(workspacesOpts, SIDEBAR_WORKSPACES),
 				mockQuery(issuesOverviewOpts, SIDEBAR_ISSUES_OVERVIEW),
 				mockQuery(settingsOpts, SIDEBAR_SETTINGS),
 				mockQuery(sessionChatOpts, SESSION_CHAT),
-				mockQuery(sessionIssuesOpts, SESSION_ISSUES),
 			],
 		},
 	}),
@@ -185,7 +160,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /**
- * `screen-tarefas-da-conversa` — a aba "Tarefas" de UMA conversa, agrupada por status com a nota de
+ * `screen-tarefas-da-conversa` — a aba "Tarefas" de UMA conversa, em kanban pelo estado vivo, com a nota de
  * auto-arquivamento. Renderiza a composição REAL da rota: `SessionHeader` (masthead + abas, mora no
  * `route.tsx` pai) + `SessionIssuesSection` (o `Outlet` daquele layout) dentro de `AppScreenFrame`.
  */

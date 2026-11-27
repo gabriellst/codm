@@ -2,7 +2,9 @@ import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
-import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { lifeStateByIssue } from '../utils/issueLifeState'
 
 const IssueSummarySchema = z.object({
 	issueId: z.uuid(),
@@ -11,6 +13,12 @@ const IssueSummarySchema = z.object({
 	status: z.enum(IssueStatus),
 	meta: z.string().optional(),
 	archived: z.boolean(),
+	/** Where the work stands right now, by rule (`lifeStateOf`) — the column of the conversation's kanban. */
+	lifeState: z.enum(IssueLifeState),
+	/** Someone paused THIS issue (fase 2, item 2). */
+	paused: z.boolean(),
+	/** Until when the provider's quota holds the issue back, when it does. */
+	waitingForProviderUntil: z.string().optional(),
 })
 
 export const GetSessionIssuesInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
@@ -36,6 +44,19 @@ export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const rows = await this.driver.db.select().from(issues).where(eq(issues.threadId, input.threadId))
+		// The same readings `GetIssueDetail` makes, batched over the conversation's issues, so the kanban and
+		// the detail agree. An empty conversation reads nothing more (no `IN ()` to build).
+		const ids = rows.map(r => r.id)
+		const [waiting, life] =
+			ids.length === 0
+				? [new Map<string, Date>(), new Map<string, IssueLifeState>()]
+				: await Promise.all([
+						providerWaitByIssue(this.driver, ids),
+						lifeStateByIssue(
+							this.driver,
+							rows.map(r => ({ issueId: r.id, status: r.status as IssueStatus })),
+						),
+					])
 		const items = rows.map(r => ({
 			issueId: r.id,
 			key: r.key,
@@ -43,6 +64,9 @@ export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema
 			status: r.status as IssueStatus,
 			meta: r.meta ?? undefined,
 			archived: r.archived,
+			lifeState: life.get(r.id) ?? IssueLifeState.STALLED,
+			paused: r.paused,
+			waitingForProviderUntil: waiting.get(r.id)?.toISOString(),
 		}))
 		const active = items.filter(i => !i.archived)
 		const byStatus = (s: IssueStatus) => active.filter(i => i.status === s)

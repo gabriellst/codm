@@ -290,6 +290,8 @@ export function givenIssue(
 		provider: ProviderKind
 		status: IssueStatus
 		completedAt: Date
+		/** Held (fase 2, item 2) — set through the entity's own `pause()`, so the invariants still apply. */
+		paused: boolean
 	}>,
 ): Promise<SeedIssue>
 

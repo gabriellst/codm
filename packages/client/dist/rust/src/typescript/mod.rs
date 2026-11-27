@@ -7796,6 +7796,8 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "title"
     ///        ],
@@ -7811,13 +7813,22 @@ pub mod types {
     ///          "key": {
     ///            "type": "string"
     ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
     ///          "meta": {
     ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
     ///          },
     ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -7841,6 +7852,8 @@ pub mod types {
     ///                "archived",
     ///                "issueId",
     ///                "key",
+    ///                "lifeState",
+    ///                "paused",
     ///                "status",
     ///                "title"
     ///              ],
@@ -7856,13 +7869,22 @@ pub mod types {
     ///                "key": {
     ///                  "type": "string"
     ///                },
+    ///                "lifeState": {
+    ///                  "$ref": "#/components/schemas/IssueLifeState"
+    ///                },
     ///                "meta": {
     ///                  "type": "string"
+    ///                },
+    ///                "paused": {
+    ///                  "type": "boolean"
     ///                },
     ///                "status": {
     ///                  "$ref": "#/components/schemas/IssueStatus"
     ///                },
     ///                "title": {
+    ///                  "type": "string"
+    ///                },
+    ///                "waitingForProviderUntil": {
     ///                  "type": "string"
     ///                }
     ///              },
@@ -7931,6 +7953,8 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "title"
     ///  ],
@@ -7946,13 +7970,22 @@ pub mod types {
     ///    "key": {
     ///      "type": "string"
     ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
     ///    "meta": {
     ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
     ///    },
     ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
     ///      "type": "string"
     ///    }
     ///  },
@@ -7967,10 +8000,19 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseArchivedItem>
     for GetSessionIssuesResponseArchivedItem {
@@ -7998,6 +8040,8 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "title"
     ///        ],
@@ -8013,13 +8057,22 @@ pub mod types {
     ///          "key": {
     ///            "type": "string"
     ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
     ///          "meta": {
     ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
     ///          },
     ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -8057,6 +8110,8 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "title"
     ///  ],
@@ -8072,13 +8127,22 @@ pub mod types {
     ///    "key": {
     ///      "type": "string"
     ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
     ///    "meta": {
     ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
     ///    },
     ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
     ///      "type": "string"
     ///    }
     ///  },
@@ -8093,10 +8157,19 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseGroupsItemItemsItem>
     for GetSessionIssuesResponseGroupsItemItemsItem {
