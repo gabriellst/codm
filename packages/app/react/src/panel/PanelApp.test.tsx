@@ -178,6 +178,9 @@ describe('PanelApp — the cloud panel', () => {
 		expect(all('h1').some(h => h.textContent === 'Botão de cupom some no iPhone SE')).toBe(true)
 		expect(document.querySelector('[data-testid="panel-artifacts"]')?.textContent).toContain(i18n.t('task.artifactsCount', { count: 4 }))
 
+		// Owner, 27/11: the task screen carries no "Você"/"Sair" — only the way back.
+		expect(buttonWithText(i18n.t('panel.identity.forget'))).toBeUndefined()
+		expect(document.body.textContent).not.toContain(i18n.t('panel.identity.you', { name: 'Ana' }))
 		const back = await waitFor(() => buttonWithText(i18n.t('panel.task.back')))
 		await click(back)
 		expect(window.location.hash).toBe('')
@@ -200,9 +203,12 @@ describe('PanelApp — the cloud panel', () => {
 	it('a decision that needs a releaser is shown locked to a member who may not release', async () => {
 		routes.me = PANEL_ME_MEMBER
 		await mount('#APP-12')
-		await waitFor(() => document.querySelector('[data-testid="panel-identity"]'))
-		const option = await waitFor(() => buttonWithText('Publicar agora'))
-		expect(option.hasAttribute('disabled')).toBe(true)
+		// The task screen has no identity chip any more (owner, 27/11): wait for the locked option itself — it is
+		// locked only once the member (who may not release) has loaded.
+		const option = await waitFor(() => {
+			const button = buttonWithText('Publicar agora')
+			return button?.hasAttribute('disabled') ? button : undefined
+		})
 		expect(document.querySelector('[data-testid="task-ask"]')?.textContent).toContain(i18n.t('session.ask.releaseRequired'))
 		await click(option)
 		expect(sent.some(request => request.method === 'POST')).toBe(false)

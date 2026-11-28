@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { IdentifyDialog } from './IdentifyDialog'
 import { PanelActionStatus } from './PanelActionStatus'
-import { GroupTitle, HealthLine, IdentityChip } from './PanelHeader'
+import { GroupTitle, HealthLine } from './PanelHeader'
 import { PanelTaskCard } from './PanelTaskCard'
 import { PanelTaskSurface } from './PanelTaskSurface'
 import { clearHash, openHash } from './panelHash'
@@ -179,7 +179,11 @@ function TaskTop({ issue, className, ...props }: ComponentProps<'header'> & { is
 					<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-xl">{issue.title}</h1>
 					{meta.length > 0 && <p className="font-mono text-[11.5px] text-caption-foreground">{meta.join(' · ')}</p>}
 				</div>
-				<HoldButton issue={issue} className="hidden lg:inline-flex" />
+				{/* Wide screen: the way back sits top-right, beside PAUSAR/RETOMAR (owner, 27/11 — the phone keeps it top-left). */}
+				<div className="hidden shrink-0 items-center gap-3 lg:flex">
+					<HoldButton issue={issue} />
+					<BackToBoard />
+				</div>
 			</div>
 		</header>
 	)
@@ -405,8 +409,8 @@ function TaskListColumn({ openIssueId, className, ...props }: ComponentProps<'as
 	}, [board])
 	return (
 		<aside aria-label={t('panel.task.list')} className={cn('min-h-0 flex-col gap-3 overflow-y-auto p-4 xl:p-5', className)} {...props}>
+			{/* No identity chip here (owner, 27/11): who you are and "Sair" live on the board; this screen offers the way back. */}
 			<GroupTitle />
-			<IdentityChip compact />
 			<HealthLine />
 			<div className="flex flex-col gap-2.5 pt-1">
 				{issues.map(issue => (
